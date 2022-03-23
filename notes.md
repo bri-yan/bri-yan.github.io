@@ -1,9 +1,11 @@
-To run development server:
+To install packages (if `npm i` not working):
 
 `npm i --force`
 
+To run development server:
+
 `npm start`
 
-To publish to github pages
+To publish to github pages:
 
-`npm deploy`
+`npm run deploy`

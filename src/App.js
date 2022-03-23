@@ -14,11 +14,11 @@ function Train() {
     <Merged castShadow receiveShadow meshes={meshes}>
       {(models) => (
         <group ref={ref}>
-          <Cabin models={models} color="#252525" seatColor="sandybrown" name="1A" position={[0, 0, -6]} />
-          <Cabin models={models} color="#454545" seatColor="gray" name="2B" position={[0, 0, -32]} />
-          <Cabin models={models} color="#252525" seatColor="lightskyblue" name="3A" position={[0, 0, -58]} />
-          <Cabin models={models} color="#454545" seatColor="gray" name="4B" position={[0, 0, -84]} />
-          <Cabin models={models} color="#252525" seatColor="sandybrown" name="5B" position={[0, 0, -110]} />
+          <Cabin models={models} color="#252525" seatColor="sandybrown" name="Brian Yan" position={[-6, 0, -6]} />
+          <Cabin models={models} color="#454545" seatColor="gray" name="R" position={[-6, 0, -32]} />
+          <Cabin models={models} color="#252525" seatColor="lightskyblue" name="3A" position={[-6, 0, -58]} />
+          <Cabin models={models} color="#454545" seatColor="gray" name="4B" position={[-6, 0, -84]} />
+          <Cabin models={models} color="#252525" seatColor="sandybrown" name="5B" position={[-6, 0, -110]} />
         </group>
       )}
     </Merged>
@@ -43,7 +43,7 @@ const Row = ({ models, color, ...props }) => (
 
 const Cabin = ({ models, color = 'white', seatColor = 'white', name, ...props }) => (
   <group {...props}>
-    <Text fontSize={4} color="#101020" position={[0, 6, 4]} rotation={[-Math.PI / 2, 0, 0]}>
+    <Text fontSize={4} color="#101020" position={[4, 6, 4]} rotation={[-Math.PI / 2, 0, 0]} >
       {name}
     </Text>
     <models.Cabin color={color} />
@@ -60,8 +60,8 @@ const Cabin = ({ models, color = 'white', seatColor = 'white', name, ...props })
 
 export default function App() {
   return (
-    <Canvas dpr={[1, 1.5]} shadows camera={{ position: [-15, 15, 18], fov: 35 }} gl={{ alpha: false }}>
-      <fog attach="fog" args={['#17171b', 30, 40]} />
+    <Canvas dpr={[1, 1.5]} shadows camera={{ position: [-15, 20, 18], fov: 35 }} gl={{ alpha: false }}>
+      <fog attach="fog" args={['#17171b', 32, 40]} />
       <color attach="background" args={['#17171b']} />
       <ambientLight intensity={0.25} />
       <directionalLight castShadow intensity={2} position={[10, 6, 6]} shadow-mapSize={[1024, 1024]}>
@@ -85,7 +85,7 @@ export default function App() {
             roughness={1}
           />
         </mesh>
-        <Environment preset="dawn" />
+        <Environment files="kiara_1_dawn_1k.hdr" />
       </Suspense>
     </Canvas>
   )
