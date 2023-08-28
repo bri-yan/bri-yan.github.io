@@ -1,33 +1,20 @@
-/* TO-DO: 
- * Create separate cabins for separate sections
- * Add title
- * Add links to about me
- * Change background colour
- * Load screen
- * Change camera angle on-click
- * Make camera slightly follow mouse
- * Change train model
- */
-
-/* Notes:
- * Top-down view can be achieved with [0, y, 0]
- */
 import { Suspense, useMemo, useRef } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
 import { useGLTF, useScroll, ScrollControls, Environment, Merged, MeshReflectorMaterial } from '@react-three/drei'
 import About from "./cabins/About"
 import Default from './cabins/Default'
+import Title from './components/Title'
 
 function Train() {
   // setup
   const mounted = useRef(false)
   const ref = useRef()
   const scroll = useScroll()
-  const [cabin, seat] = useGLTF(['/cabin-transformed.glb', '/seat-transformed.glb'])
+  const [cabin, seat] = useGLTF(['./models/cabin-transformed.glb', './models/seat-transformed.glb'])
   const meshes = useMemo(() => ({ Cabin: cabin.nodes.cabin_1, Seat: seat.nodes.seat }), [cabin, seat])
   
   // train details
-  const start = 8
+  const start = 11
   const spacing = 26
 
   // scroll function
@@ -49,6 +36,7 @@ function Train() {
     <Merged castShadow receiveShadow meshes={meshes}>
       {(models) => (
         <group ref={ref}>
+          <Title start={start} />
           <About models={models} color="#252525" seatColor="sandybrown" position={[0, 0, start]}/>
           <Default models={models} color="#454545" seatColor="gray" position={[0, 0, start + spacing]} />
           <Default models={models} color="#252525" seatColor="lightskyblue" name="Projects" position={[0, 0, start + spacing * 2]} />
@@ -75,7 +63,7 @@ export default function App() {
           <Train />
         </ScrollControls>
         <mesh position={[0, -1.5, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-          <planeGeometry args={[50, 50]} />
+          <planeGeometry args={[100, 100]} />
           <MeshReflectorMaterial
             blur={[400, 100]}
             resolution={1024}
