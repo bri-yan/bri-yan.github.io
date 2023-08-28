@@ -1,6 +1,17 @@
 import { Text, Text3D, useTexture } from '@react-three/drei'
 import Seats from '../components/Seats'
 
+const intro = "\
+Hi, my name is Brian and I am an Engineering Physics student at the University of British Columbia with a passion for robotics and machine learning.\
+\n\n\
+In my free time I like to hike, snowboard, read, and build robots.\
+\n\n\
+Links:\
+\nEmail\
+\nResume\
+\nLinkedIn\
+\nGithub"
+
 const Blurb = ({...props}) => {
   // Images
   const popcat = useTexture("./images/popcat.png")
@@ -15,7 +26,7 @@ const Blurb = ({...props}) => {
 
       {/* Body */}
       <Text font="./fonts/Lato-Regular.ttf" fontSize={0.75} color="#ffffff" position={[3.15, 1.92, -5.75]} rotation={[-Math.PI / 2, 0, 0]} maxWidth={15} anchorX='left' anchorY='top' >
-        {"Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed dapibus sodales purus, quis malesuada ex dignissim sit amet.\n\nFusce id risus nec justo laoreet sollicitudin et eu urna. Nulla porttitor posuere sem, ut vulputate lorem maximus eget. In hac habitasse platea dictumst. Morbi blandit ex quis viverra lobortis. Vestibulum accumsan, ipsum ac ultricies gravida, lacus mauris viverra ligula, convallis accumsan odio ante eu enim. Curabitur suscipit tellus ac viverra sodales. Nunc vitae mauris sollicitudin, molestie urna congue, rutrum sem.\n\nProin vel magna volutpat, volutpat metus sed, pharetra sapien. Etiam placerat eget ipsum eget ultricies."}
+        {intro}
       </Text>
 
       {/* Image 1 */}

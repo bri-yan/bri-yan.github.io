@@ -14,7 +14,7 @@ My personal website
 
 ## TO-DO: 
 - [ ] Create separate cabins for separate sections
-- [ ] Add title
+- [ ] Add a finger pointing icon to about me to encourage clicking the header
 - [ ] Add links to about me
 - [ ] Change background colour
 - [ ] Load screen
@@ -29,3 +29,4 @@ My personal website
 - `index.html` defines small details like webpage title and icon
 - `package.json` defines small details like project name and homepage
 - Top-down view can be achieved with coordinates [0, y, 0]
+- Consider just making headers clickable to change POV
