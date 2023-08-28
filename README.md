@@ -6,6 +6,7 @@
 - [ ] Add links to about me
 - [ ] Change background colour
 - [ ] Load screen
+- [ ] Edit webpage icon
 - [ ] Change camera angle on-click
 - [ ] Make camera slightly follow mouse
 - [ ] Change train model
