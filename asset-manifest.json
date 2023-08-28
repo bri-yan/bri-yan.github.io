@@ -1,20 +1,13 @@
 {
   "files": {
-    "main.css": "/static/css/main.c19fc06f.chunk.css",
-    "main.js": "/static/js/main.9d3c3b46.chunk.js",
-    "main.js.map": "/static/js/main.9d3c3b46.chunk.js.map",
-    "runtime-main.js": "/static/js/runtime-main.d5ea9892.js",
-    "runtime-main.js.map": "/static/js/runtime-main.d5ea9892.js.map",
-    "static/js/2.54e78892.chunk.js": "/static/js/2.54e78892.chunk.js",
-    "static/js/2.54e78892.chunk.js.map": "/static/js/2.54e78892.chunk.js.map",
-    "index.html": "/index.html",
-    "static/css/main.c19fc06f.chunk.css.map": "/static/css/main.c19fc06f.chunk.css.map",
-    "static/js/2.54e78892.chunk.js.LICENSE.txt": "/static/js/2.54e78892.chunk.js.LICENSE.txt"
+    "main.css": "/bri-yan/bri-yan.github.io/static/css/main.49927373.css",
+    "main.js": "/bri-yan/bri-yan.github.io/static/js/main.73decd6a.js",
+    "index.html": "/bri-yan/bri-yan.github.io/index.html",
+    "main.49927373.css.map": "/bri-yan/bri-yan.github.io/static/css/main.49927373.css.map",
+    "main.73decd6a.js.map": "/bri-yan/bri-yan.github.io/static/js/main.73decd6a.js.map"
   },
   "entrypoints": [
-    "static/js/runtime-main.d5ea9892.js",
-    "static/js/2.54e78892.chunk.js",
-    "static/css/main.c19fc06f.chunk.css",
-    "static/js/main.9d3c3b46.chunk.js"
+    "static/css/main.49927373.css",
+    "static/js/main.73decd6a.js"
   ]
 }
