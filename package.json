@@ -1,4 +1,5 @@
 {
+  "homepage": "https://github.com/bri-yan/bri-yan.github.io",
   "name": "night-train",
   "version": "1.0.0",
   "description": "Stacking a couple of drei helpers",
@@ -17,9 +18,10 @@
     "react-scripts": "5.0.1",
     "three": "0.139.2"
   },
-  "devDependencies": {},
   "scripts": {
     "start": "react-scripts start",
+    "predeploy": "npm run build",
+    "deploy": "gh-pages -d build",
     "build": "react-scripts build",
     "test": "react-scripts test --env=jsdom",
     "eject": "react-scripts eject"
@@ -29,5 +31,8 @@
     "not dead",
     "not ie <= 11",
     "not op_mini all"
-  ]
+  ],
+  "devDependencies": {
+    "gh-pages": "^6.0.0"
+  }
 }
