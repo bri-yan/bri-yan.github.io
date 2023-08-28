@@ -1,10 +1,10 @@
 {
   "files": {
-    "main.css": "/bri-yan/bri-yan.github.io/static/css/main.49927373.css",
-    "main.js": "/bri-yan/bri-yan.github.io/static/js/main.73decd6a.js",
-    "index.html": "/bri-yan/bri-yan.github.io/index.html",
-    "main.49927373.css.map": "/bri-yan/bri-yan.github.io/static/css/main.49927373.css.map",
-    "main.73decd6a.js.map": "/bri-yan/bri-yan.github.io/static/js/main.73decd6a.js.map"
+    "main.css": "/static/css/main.49927373.css",
+    "main.js": "/static/js/main.73decd6a.js",
+    "index.html": "/index.html",
+    "main.49927373.css.map": "/static/css/main.49927373.css.map",
+    "main.73decd6a.js.map": "/static/js/main.73decd6a.js.map"
   },
   "entrypoints": [
     "static/css/main.49927373.css",

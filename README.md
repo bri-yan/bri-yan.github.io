@@ -1,6 +1,9 @@
 # bri-yan.github.io
 
+My personal website
+
 # Overview
+- To run locally, clone repo and run: `npm start`
 - To deploy to github pages, run: `npm run deploy`
 
 ## TO-DO: 
