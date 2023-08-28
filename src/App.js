@@ -2,9 +2,8 @@
  * Create separate cabins for separate sections
  * Add title
  * Add links to about me
- * Figure out how to add pics
- * Reverse scroll and start from other end
  * Change background colour
+ * Load screen
  * Change camera angle on-click
  * Make camera slightly follow mouse
  * Change train model
@@ -17,6 +16,7 @@ import { Suspense, useMemo, useRef } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
 import { useGLTF, useScroll, ScrollControls, Environment, Merged, Text, Text3D, MeshReflectorMaterial, Plane, useTexture } from '@react-three/drei'
 import About from "./cabins/About"
+import Default from './cabins/Default'
 
 function Train() {
   const mounted = useRef(false)
@@ -25,6 +25,8 @@ function Train() {
   const [cabin, seat] = useGLTF(['/cabin-transformed.glb', '/seat-transformed.glb'])
   const meshes = useMemo(() => ({ Cabin: cabin.nodes.cabin_1, Seat: seat.nodes.seat }), [cabin, seat])
   const popcat = useTexture("./popcat.png")
+  const start = 8
+  const spacing = 26
   useFrame(() => {
     if (!mounted.current) {
       if (cabin && seat) {
@@ -42,18 +44,11 @@ function Train() {
     <Merged castShadow receiveShadow meshes={meshes}>
       {(models) => (
         <group ref={ref}>
-          <About models={models} color="#252525" seatColor="sandybrown" position={[0, 0, 0]}
-            header="About Me"
-            body={"Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed dapibus sodales purus, quis malesuada ex dignissim sit amet.\n\nFusce id risus nec justo laoreet sollicitudin et eu urna. Nulla porttitor posuere sem, ut vulputate lorem maximus eget. In hac habitasse platea dictumst. Morbi blandit ex quis viverra lobortis. Vestibulum accumsan, ipsum ac ultricies gravida, lacus mauris viverra ligula, convallis accumsan odio ante eu enim. Curabitur suscipit tellus ac viverra sodales. Nunc vitae mauris sollicitudin, molestie urna congue, rutrum sem.\n\nProin vel magna volutpat, volutpat metus sed, pharetra sapien. Etiam placerat eget ipsum eget ultricies."}
-            texture={popcat}
-          />
-          <Cabin models={models} color="#454545" seatColor="gray" position={[0, 0, 26]} 
-            header="Experience"
-            body={""}
-          />
-          <Cabin models={models} color="#252525" seatColor="lightskyblue" name="Projects" position={[0, 0, 52]} />
-          <Cabin models={models} color="#454545" seatColor="gray" name="Education" position={[0, 0, 78]} />
-          <Cabin models={models} color="#252525" seatColor="sandybrown" name="Contact" position={[0, 0, 104]} />
+          <About models={models} color="#252525" seatColor="sandybrown" position={[0, 0, start]}/>
+          <Default models={models} color="#454545" seatColor="gray" position={[0, 0, start + spacing]} />
+          <Default models={models} color="#252525" seatColor="lightskyblue" name="Projects" position={[0, 0, start + spacing * 2]} />
+          <Default models={models} color="#454545" seatColor="gray" name="Education" position={[0, 0, start + spacing * 3]} />
+          <Default models={models} color="#252525" seatColor="sandybrown" name="Contact" position={[0, 0, start + spacing * 4]} />
         </group>
       )}
     </Merged>
