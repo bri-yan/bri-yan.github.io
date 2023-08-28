@@ -6,6 +6,12 @@ My personal website
 - To run locally, clone repo and run: `npm start`
 - To deploy to github pages, run: `npm run deploy`
 
+# Structure
+- Assets are stored in the `public` folder
+- Individual sections (train cabins and associated blurbs) are stored in the `cabins` folder
+- Smaller components are stored in the `components` folder
+- Components are compiled in `App.js`
+
 ## TO-DO: 
 - [ ] Create separate cabins for separate sections
 - [ ] Add title
@@ -18,4 +24,8 @@ My personal website
 - [ ] Change train model
 
 ## NOTES:
-- Top-down view can be achieved with [0, y, 0]
+- The title (my name) is stored in `components`
+- Edit individual sections by finding that section's respective file in `cabins`
+- `index.html` defines small details like webpage title and icon
+- `package.json` defines small details like project name and homepage
+- Top-down view can be achieved with coordinates [0, y, 0]
