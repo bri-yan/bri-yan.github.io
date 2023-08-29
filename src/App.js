@@ -52,7 +52,7 @@ export default function App() {
   return (
     <Canvas dpr={[1, 1.5]} shadows camera={{ position: [-12, 18, 18], fov: 35 }} gl={{ alpha: false }}>
       {/* TO-DO: Determine fog intensity/necessity */}
-      <fog attach="fog" args={['#17171b', 34, 42]} />
+      <fog attach="fog" args={['#27272b', 30, 40]} />
       <color attach="background" args={['#17171b']} />
       <ambientLight intensity={0.25} />
       <directionalLight castShadow intensity={2} position={[10, 6, 6]} shadow-mapSize={[1024, 1024]}>

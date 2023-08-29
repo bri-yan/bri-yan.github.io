@@ -1,13 +1,14 @@
 import UnderlinedText from "./UnderlinedText"
 import Image from "./Image"
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 
 const IconLink = ({ url = null, icon, font, fontSize, color, position, rotation, ...props }) => {
-  // state and function for changing cursor
-  const [hovered, setHovered] = useState(false)
+  // code for changing cursor and color
+  const groupRef = useRef()
 
   const hoveredOver = () => {
     document.body.style.cursor = "pointer"
+    groupRef.current.color = "black"
   }
 
   const hoveredOut = () => {
@@ -27,7 +28,7 @@ const IconLink = ({ url = null, icon, font, fontSize, color, position, rotation,
   const textPosition = [position[0] + fontSize + 0.075, position[1], position[2]]
 
   return (
-    <group {...props} onPointerDown={handleClick} onPointerOver={hoveredOver} onPointerOut={hoveredOut}> 
+    <group {...props} ref={groupRef} onPointerDown={handleClick} onPointerOver={hoveredOver} onPointerOut={hoveredOut}> 
       <Image color={color} map={icon} args={[fontSize, fontSize]} position={iconPosition} rotation={rotation} />
       <UnderlinedText font={font} fontSize={fontSize} color={color} position={textPosition} rotation={rotation} >
         {text}
