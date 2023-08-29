@@ -1,17 +1,14 @@
 import UnderlinedText from "./UnderlinedText"
 import Image from "./Image"
 
-const IconLink = ({ icon, font, fontSize, color, position, rotation, ioffset = 0, ...props }) => {
+const IconLink = ({ url = null, icon, font, fontSize, color, position, rotation, ioffset = 0, ...props }) => {
   const text = props.children
   const iconPosition = [position[0] + fontSize / 2, position[1], position[2] + fontSize / 1.68]
-  const textPosition = [position[0] + fontSize, position[1], position[2]]
-  const url = "https://www.google.ca"
+  const textPosition = [position[0] + fontSize + 0.075, position[1], position[2]]
 
-  const email = "briyan@outlook.com"
   const handleClick = () => {
-    if (email) {
-      const mailtoURL = `mailto:${email}`;
-      window.location = mailtoURL; // Open email client
+    if (url) {
+      window.location = url; 
     }
   };
 

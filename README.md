@@ -29,5 +29,6 @@ My personal website
 - `index.html` defines small details like webpage title and icon
 - `package.json` defines small details like project name and homepage
 - Top-down view can be achieved with coordinates [0, y, 0]
+- Default camera position is [-12, 18, 18]
 - Consider just making headers clickable to change POV
 - Icons rgb: 180, 175, 175

@@ -20,16 +20,25 @@ const Blurb = ({...props}) => {
   const popcat = useTexture("./images/popcat.png")
   
   // Icons
+  const resumeIcon = useTexture("./icons/resume-white.png")
   const emailIcon = useTexture("./icons/envelope-white.png")
   const linkedinIcon = useTexture("./icons/linkedin-white.png")
   const githubIcon = useTexture("./icons/github-white.png")
 
   // Links
+  const resume = "resume"
   const email = "bri.yan@outlook.com"
   const linkedin = "linkedin.com/in/brian-yan"
   const github = "github.com/bri-yan"
 
-  const start = 3.6
+  // URLs
+  const resumeURL = `https://www.google.ca`
+  const emailURL = `mailto:${email}`
+  const linkedinURL = `https://www.${linkedin}`
+  const githubURL = `https://www.${github}`
+  
+  // Specifications
+  const linkStart = 1.6
 
   return (
     <group {...props}>
@@ -44,18 +53,25 @@ const Blurb = ({...props}) => {
         {intro}
       </Text>
 
-      {/* Link 1 */}
-      <IconLink icon={emailIcon} font="./fonts/Lato-Regular.ttf" fontSize={0.75} color="#ffffff" position={[3.15, 1.92, 1.6]} rotation={[-Math.PI / 2, 0, 0]}>
+      {/* Links */}
+
+      <IconLink url={resumeURL} icon={resumeIcon} font="./fonts/Lato-Regular.ttf" fontSize={0.75} color="#ffffff" position={[3.15, 1.92, linkStart]} rotation={[-Math.PI / 2, 0, 0]}>
+        {resume}
+      </IconLink>
+
+      <IconLink url={emailURL} icon={emailIcon} font="./fonts/Lato-Regular.ttf" fontSize={0.75} color="#ffffff" position={[3.15, 1.92, linkStart + 1]} rotation={[-Math.PI / 2, 0, 0]}>
         {email}
       </IconLink>
 
-      <IconLink icon={linkedinIcon} font="./fonts/Lato-Regular.ttf" fontSize={0.75} color="#ffffff" position={[3.15, 1.92, 2.6]} rotation={[-Math.PI / 2, 0, 0]}>
+      <IconLink url={linkedinURL} icon={linkedinIcon} font="./fonts/Lato-Regular.ttf" fontSize={0.75} color="#ffffff" position={[3.15, 1.92, linkStart + 2]} rotation={[-Math.PI / 2, 0, 0]}>
         {linkedin}
       </IconLink>
 
-      <IconLink icon={githubIcon} font="./fonts/Lato-Regular.ttf" fontSize={0.75} color="#ffffff" position={[3.15, 1.92, 3.6]} rotation={[-Math.PI / 2, 0, 0]}>
+      <IconLink url={githubURL} icon={githubIcon} font="./fonts/Lato-Regular.ttf" fontSize={0.75} color="#ffffff" position={[3.15, 1.92, linkStart + 3]} rotation={[-Math.PI / 2, 0, 0]}>
         {github}
       </IconLink>
+
+      
 
       {/* Image 1 */}
       <Image map={popcat} args={[1.6, 1.6]} position={[13.5, 1.92, -7.75]} rotation={[-Math.PI / 2, 0, 0]} />
