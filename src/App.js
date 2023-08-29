@@ -1,6 +1,7 @@
-import { Suspense, useMemo, useRef } from 'react'
+import { Suspense, useMemo, useRef, useState } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
 import { useGLTF, useScroll, ScrollControls, Environment, Merged, MeshReflectorMaterial } from '@react-three/drei'
+import { easing } from 'maath'
 import About from "./cabins/About"
 import Default from './cabins/Default'
 import Title from './components/Title'
@@ -37,7 +38,7 @@ function Train() {
       {(models) => (
         <group ref={ref}>
           <Title start={start} />
-          <About models={models} color="#252525" seatColor="sandybrown" position={[0, 0, start]}/>
+          <About models={models} color="#252525" seatColor="sandybrown" position={[0, 0, start]} />
           <Default models={models} color="#454545" seatColor="gray" position={[0, 0, start + spacing]} />
           <Default models={models} color="#252525" seatColor="lightskyblue" name="Projects" position={[0, 0, start + spacing * 2]} />
           <Default models={models} color="#454545" seatColor="gray" name="Education" position={[0, 0, start + spacing * 3]} />
@@ -47,12 +48,12 @@ function Train() {
     </Merged>
   )
 }
-
+const defaultCameraPosition = [-12, 18, 18]
 export default function App() {
   return (
-    <Canvas dpr={[1, 1.5]} shadows camera={{ position: [-12, 18, 18], fov: 35 }} gl={{ alpha: false }}>
+    <Canvas dpr={[1, 1.5]} shadows camera={{ position: defaultCameraPosition, fov: 35 }} gl={{ alpha: false }}>
       {/* TO-DO: Determine fog intensity/necessity */}
-      <fog attach="fog" args={['#27272b', 30, 40]} />
+      <fog attach="fog" args={['#27272b', 30, 45]} />
       <color attach="background" args={['#17171b']} />
       <ambientLight intensity={0.25} />
       <directionalLight castShadow intensity={2} position={[10, 6, 6]} shadow-mapSize={[1024, 1024]}>
@@ -78,6 +79,15 @@ export default function App() {
         </mesh>
         <Environment preset="dawn" />
       </Suspense>
+      {/* Camera movements */}
+      <CameraRig />
     </Canvas>
   )
 }
+
+function CameraRig() {
+  useFrame((state, delta) => {
+    easing.damp3(state.camera.position, [defaultCameraPosition[0] + (state.pointer.x * state.viewport.width) / 50, defaultCameraPosition[1], defaultCameraPosition[2] + (state.pointer.y * state.viewport.width) / 75 ], 0.5, delta)
+    state.camera.lookAt(0, 0, 0)
+  })
+} 

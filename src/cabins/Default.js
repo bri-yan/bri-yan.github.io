@@ -4,7 +4,7 @@ import Image from '../components/Image'
 
 const Blurb = ({...props}) => {
   // Images
-  const img = useTexture("./images/cat.jpg")
+  const img = useTexture("./images/popcat.png")
 
   return (
     <group {...props}>
