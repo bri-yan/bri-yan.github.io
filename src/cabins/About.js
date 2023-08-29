@@ -1,6 +1,7 @@
 import { Text, Text3D, useTexture } from '@react-three/drei'
 import Seats from '../components/Seats'
 import Image from '../components/Image'
+import IconLink from '../components/IconLink'
 import UnderlinedText from '../components/UnderlinedText'
 
 const header = "About Me"
@@ -10,17 +11,25 @@ Hi, my name is Brian and I am an Engineering Physics student at the University o
 \n\n\
 In my free time I like to hike, snowboard, read, and build robots.\
 \n\n\
-Links:\
-\nEmail\
-\nResume\
-\nLinkedIn\
-\nGithub"
+"
 
-const email = "bri.yan@outlook.com"
+
 
 const Blurb = ({...props}) => {
   // Images
   const popcat = useTexture("./images/popcat.png")
+  
+  // Icons
+  const emailIcon = useTexture("./icons/envelope-white.png")
+  const linkedinIcon = useTexture("./icons/linkedin-white.png")
+  const githubIcon = useTexture("./icons/github-white.png")
+
+  // Links
+  const email = "bri.yan@outlook.com"
+  const linkedin = "linkedin.com/in/brian-yan"
+  const github = "github.com/bri-yan"
+
+  const start = 3.6
 
   return (
     <group {...props}>
@@ -36,13 +45,17 @@ const Blurb = ({...props}) => {
       </Text>
 
       {/* Link 1 */}
-      <UnderlinedText font="./fonts/Lato-Regular.ttf" fontSize={0.75} color="#ffffff" position={[3.15, 1.92, 6]} rotation={[-Math.PI / 2, 0, 0]}>
+      <IconLink icon={emailIcon} font="./fonts/Lato-Regular.ttf" fontSize={0.75} color="#ffffff" position={[3.15, 1.92, 1.6]} rotation={[-Math.PI / 2, 0, 0]}>
         {email}
-      </UnderlinedText>
+      </IconLink>
 
-      <UnderlinedText font="./fonts/Lato-Regular.ttf" fontSize={1} color="#ffffff" position={[3.15, 1.92, 7]} rotation={[-Math.PI / 2, 0, 0]}>
-        {email}
-      </UnderlinedText>
+      <IconLink icon={linkedinIcon} font="./fonts/Lato-Regular.ttf" fontSize={0.75} color="#ffffff" position={[3.15, 1.92, 2.6]} rotation={[-Math.PI / 2, 0, 0]}>
+        {linkedin}
+      </IconLink>
+
+      <IconLink icon={githubIcon} font="./fonts/Lato-Regular.ttf" fontSize={0.75} color="#ffffff" position={[3.15, 1.92, 3.6]} rotation={[-Math.PI / 2, 0, 0]}>
+        {github}
+      </IconLink>
 
       {/* Image 1 */}
       <Image map={popcat} args={[1.6, 1.6]} position={[13.5, 1.92, -7.75]} rotation={[-Math.PI / 2, 0, 0]} />

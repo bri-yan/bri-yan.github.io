@@ -30,3 +30,4 @@ My personal website
 - `package.json` defines small details like project name and homepage
 - Top-down view can be achieved with coordinates [0, y, 0]
 - Consider just making headers clickable to change POV
+- Icons rgb: 180, 175, 175
