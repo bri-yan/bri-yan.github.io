@@ -32,7 +32,7 @@ const Blurb = ({...props}) => {
   const github = "github.com/bri-yan"
 
   // URLs
-  const resumeURL = `https://www.google.ca`
+  const resumeURL = `https://docs.google.com/gview?url=https://raw.githubusercontent.com/bri-yan/bri-yan.github.io/main/public/Brian_Yan_Resume.pdf`
   const emailURL = `mailto:${email}`
   const linkedinURL = `https://www.${linkedin}`
   const githubURL = `https://www.${github}`
