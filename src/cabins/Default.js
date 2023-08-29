@@ -1,5 +1,6 @@
 import { Text, Text3D, useTexture } from '@react-three/drei'
 import Seats from '../components/Seats'
+import Image from '../components/Image'
 
 const Blurb = ({...props}) => {
   // Images
@@ -19,10 +20,7 @@ const Blurb = ({...props}) => {
       </Text>
 
       {/* Header Icon */}
-      <mesh position={[11.25, 1.92, -7.75]} rotation={[-Math.PI / 2, 0, 0]}>
-        <planeBufferGeometry args={[1.6, 1.6]} /> {/* image size */}
-        <meshStandardMaterial color="white" map={img} />
-      </mesh>
+      <Image map={img} args={[1.6, 1.6]} position={[11.25, 1.92, -7.75]} rotation={[-Math.PI / 2, 0, 0]} />
 
     </group>
   )

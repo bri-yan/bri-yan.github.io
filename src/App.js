@@ -50,7 +50,7 @@ function Train() {
 
 export default function App() {
   return (
-    <Canvas dpr={[1, 1.5]} shadows camera={{ position: [-12, 18, 18], fov: 35 }} gl={{ alpha: false }}>
+    <Canvas dpr={[1, 1.5]} shadows camera={{ position: [0, 18, 0], fov: 35 }} gl={{ alpha: false }}>
       {/* TO-DO: Determine fog intensity/necessity */}
       {/* <fog attach="fog" args={['#17171b', 30, 40]} /> */}
       <color attach="background" args={['#17171b']} />
