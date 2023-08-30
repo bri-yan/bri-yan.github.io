@@ -1,8 +1,7 @@
-import { Text, Text3D, useTexture } from '@react-three/drei'
+import { Text3D, useTexture } from '@react-three/drei'
 import Seats from '../components/Seats'
 import Image from '../components/Image'
 import ProjectEntry from '../components/ProjectEntry'
-import IconLink from '../components/IconLink'
 
 const Blurb = ({...props}) => {
   // Content
@@ -33,7 +32,7 @@ const Blurb = ({...props}) => {
 
   // Details
   const projectStart = -5.75
-  const projectSpacing = 3.5
+  const projectSpacing = 6
 
   return (
     <group {...props}>
@@ -56,8 +55,8 @@ const Blurb = ({...props}) => {
       <ProjectEntry title={project3.title} link={project3.link} url={project3.url}
       position={[3.25, 1.92, projectStart + projectSpacing * 2]} rotation={[-Math.PI / 2, 0, 0]} />
 
-      <ProjectEntry title={project4.title} link={project4.link} url={project4.url}
-      position={[3.25, 1.92, projectStart + projectSpacing * 3]} rotation={[-Math.PI / 2, 0, 0]} />
+      {/* <ProjectEntry title={project4.title} link={project4.link} url={project4.url}
+      position={[3.25, 1.92, projectStart + projectSpacing * 3]} rotation={[-Math.PI / 2, 0, 0]} /> */}
 
     </group>
   )
