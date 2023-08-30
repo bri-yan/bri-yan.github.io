@@ -43,9 +43,9 @@ function Train() {
         <group ref={ref}>
           <Title start={start} />
           <About models={models} color="#252525" seatColor="lightskyblue" position={[0, 0, start]} />
-          <Experience models={models} color="#454545" seatColor="gray" position={[0, 0, start + spacing]} />
-          <Projects models={models} color="#252525" seatColor="springgreen" name="Projects" position={[0, 0, start + spacing * 2]} />
-          <Education models={models} color="#454545" seatColor="gray" name="Education" position={[0, 0, start + spacing * 3]} />
+          <Experience models={models} color="#454545" seatColor="springgreen" position={[0, 0, start + spacing]} />
+          <Projects models={models} color="#252525" seatColor="lightpink" name="Projects" position={[0, 0, start + spacing * 2]} />
+          <Education models={models} color="#454545" seatColor="silver" name="Education" position={[0, 0, start + spacing * 3]} />
           {/* <Default models={models} color="#252525" seatColor="sandybrown" name="Contact" position={[0, 0, start + spacing * 4]} /> */}
         </group>
       )}
