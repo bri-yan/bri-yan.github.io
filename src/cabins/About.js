@@ -4,20 +4,22 @@ import Image from '../components/Image'
 import IconLink from '../components/IconLink'
 import UnderlinedText from '../components/UnderlinedText'
 
-const header = "About Me"
 
-const intro = "\
-Hi, my name is Brian and I am an Engineering Physics student at the University of British Columbia with a passion for robotics and machine learning.\
-\n\n\
-In my free time I like to hike, snowboard, read, and build robots.\
-\n\n\
-"
 
 
 
 const Blurb = ({...props}) => {
+  // Content
+  const header = "About Me"
+  const body = "\
+Hi, my name is Brian and I am an Engineering Physics student at the University of British Columbia with a passion for robotics and machine learning.\
+  \n\n\
+In my free time I like to hike, snowboard, read, and build robots.\
+  \n\n\
+  "
+  
   // Images
-  const popcat = useTexture("./images/popcat.png")
+  const popcat = useTexture("./images/popcat-open.png")
   
   // Icons
   const resumeIcon = useTexture("./icons/resume-white.png")
@@ -37,7 +39,7 @@ const Blurb = ({...props}) => {
   const linkedinURL = `https://www.${linkedin}`
   const githubURL = `https://www.${github}`
   
-  // Specifications
+  // Details
   const linkStart = 1.6
 
   return (
@@ -50,7 +52,7 @@ const Blurb = ({...props}) => {
 
       {/* Body */}
       <Text font="./fonts/Lato-Regular.ttf" fontSize={0.75} color="#ffffff" position={[3.15, 1.92, -5.75]} rotation={[-Math.PI / 2, 0, 0]} maxWidth={15} anchorX='left' anchorY='top' >
-        {intro}
+        {body}
       </Text>
 
       {/* Links */}
@@ -84,7 +86,7 @@ const About = ({ models, color = 'white', seatColor = 'white', header, body, tex
   <group {...props}>
     <models.Cabin color={color} />
     <Seats models={models} seatColor={seatColor} />
-    <Blurb header={header} body={body} texture={texture} />
+    <Blurb />
   </group>
 )
 

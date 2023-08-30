@@ -5,6 +5,7 @@ import { easing } from 'maath'
 import About from "./cabins/About"
 import Default from './cabins/Default'
 import Title from './components/Title'
+import Experience from './cabins/Experience'
 
 function Train() {
   // setup
@@ -33,14 +34,15 @@ function Train() {
 
   // Merged creates THREE.InstancedMeshes out of the meshes you feed it
   // All in all we end up with just 5 draw-calls for the entire scene
+  // original seatColors: lightskyblue, gray, sandybrown, nice seatColors: springgreen violet
   return (
     <Merged castShadow receiveShadow meshes={meshes}>
       {(models) => (
         <group ref={ref}>
           <Title start={start} />
-          <About models={models} color="#252525" seatColor="sandybrown" position={[0, 0, start]} />
-          <Default models={models} color="#454545" seatColor="gray" position={[0, 0, start + spacing]} />
-          <Default models={models} color="#252525" seatColor="lightskyblue" name="Projects" position={[0, 0, start + spacing * 2]} />
+          <About models={models} color="#252525" seatColor="lightskyblue" position={[0, 0, start]} />
+          <Experience models={models} color="#454545" seatColor="gray" position={[0, 0, start + spacing]} />
+          <Default models={models} color="#252525" seatColor="springgreen" name="Projects" position={[0, 0, start + spacing * 2]} />
           <Default models={models} color="#454545" seatColor="gray" name="Education" position={[0, 0, start + spacing * 3]} />
           <Default models={models} color="#252525" seatColor="sandybrown" name="Contact" position={[0, 0, start + spacing * 4]} />
         </group>
@@ -89,7 +91,7 @@ export default function App() {
 
 function CameraRig() {
   useFrame((state, delta) => {
-    easing.damp3(state.camera.position, [defaultCameraPosition[0] + (state.pointer.x * state.viewport.width) / 50, defaultCameraPosition[1], defaultCameraPosition[2] - (state.pointer.y * state.viewport.width) / 75 ], 0.5, delta)
+    easing.damp3(state.camera.position, [defaultCameraPosition[0] + (state.pointer.x * state.viewport.width) / 50, defaultCameraPosition[1], defaultCameraPosition[2] - (state.pointer.y * state.viewport.width) / 80 ], 0.5, delta)
     state.camera.lookAt(0, 0, 0)
   })
 } 

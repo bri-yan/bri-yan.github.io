@@ -4,7 +4,7 @@ import Image from '../components/Image'
 
 const Blurb = ({...props}) => {
   // Images
-  const img = useTexture("./images/popcat.png")
+  const img = useTexture("./images/popcat-open.png")
 
   return (
     <group {...props}>
@@ -26,12 +26,11 @@ const Blurb = ({...props}) => {
   )
 }
 
-
 const Default = ({ models, color = 'white', seatColor = 'white', header, body, texture, ...props }) => (
   <group {...props}>
     <models.Cabin color={color} />
     <Seats models={models} seatColor={seatColor} />
-    <Blurb header={header} body={body} texture={texture} />
+    <Blurb />
   </group>
 )
 

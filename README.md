@@ -37,3 +37,4 @@ My personal website
 - Default camera position is [-12, 18, 18]
 - Consider just making headers clickable to change POV
 - Icons rgb: 180, 175, 175
+- useContext could be used to change camera POV
