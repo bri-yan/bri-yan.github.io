@@ -48,7 +48,9 @@ function Train() {
     </Merged>
   )
 }
+
 const defaultCameraPosition = [-12, 18, 18]
+
 export default function App() {
   return (
     <Canvas dpr={[1, 1.5]} shadows camera={{ position: defaultCameraPosition, fov: 35 }} gl={{ alpha: false }}>
@@ -87,7 +89,7 @@ export default function App() {
 
 function CameraRig() {
   useFrame((state, delta) => {
-    easing.damp3(state.camera.position, [defaultCameraPosition[0] + (state.pointer.x * state.viewport.width) / 50, defaultCameraPosition[1], defaultCameraPosition[2] + (state.pointer.y * state.viewport.width) / 75 ], 0.5, delta)
+    easing.damp3(state.camera.position, [defaultCameraPosition[0] + (state.pointer.x * state.viewport.width) / 50, defaultCameraPosition[1], defaultCameraPosition[2] - (state.pointer.y * state.viewport.width) / 75 ], 0.5, delta)
     state.camera.lookAt(0, 0, 0)
   })
 } 
