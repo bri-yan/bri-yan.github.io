@@ -29,7 +29,7 @@ function Train() {
       }
     }
     else {
-      ref.current.position.z = -scroll.offset * 120
+      ref.current.position.z = -scroll.offset * 97 // <- adjusts scroll length
       ref.current.position.x = -8
     }
   })
