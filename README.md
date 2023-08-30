@@ -31,6 +31,7 @@ My personal website
 - [ ] Change camera angle on-click
 - [ ] Make camera slightly follow mouse
 - [ ] Change train model
+- [ ] Fix links so that right click and control click work as intended
 
 ## NOTES:
 - Top-down view can be achieved with coordinates [0, y, 0]
