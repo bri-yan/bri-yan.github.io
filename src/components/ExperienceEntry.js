@@ -1,9 +1,6 @@
-import { Text, Text3D, useTexture } from '@react-three/drei'
+import { Text, useTexture } from '@react-three/drei'
 const ExperienceEntry = ({ title, organization, duration, location, position, rotation, ...props }) => {  
-    // Images
-    const img = useTexture("./images/popcat-open.png")
-
-    // Positions
+   // Positions
     const titlePosition = position
     const organizationPosition = [position[0], position[1], position[2] + .9]
     const durationPosition = [position[0], position[1], position[2] + 1.65]
