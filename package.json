@@ -1,40 +1,27 @@
 {
-  "homepage": "https://bri-yan.github.io",
   "name": "bri-yan.github.io",
-  "version": "1.0.0",
-  "description": "Stacking a couple of drei helpers",
-  "keywords": [
-    "merged",
-    "scroll-controls",
-    "meshreflectormaterial",
-    "instances"
-  ],
-  "main": "src/index.js",
-  "dependencies": {
-    "@react-three/drei": "9.77.3",
-    "@react-three/fiber": "8.0.12",
-    "maath": "^0.4.2",
-    "react": "18.0.0",
-    "react-dom": "18.0.0",
-    "react-scripts": "5.0.1",
-    "three": "^0.144.0"
-  },
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
   "scripts": {
-    "start": "react-scripts start",
-    "predeploy": "npm run build",
-    "deploy": "gh-pages -d build",
-    "build": "react-scripts build",
-    "test": "react-scripts test --env=jsdom",
-    "eject": "react-scripts eject"
+    "dev": "vite",
+    "build": "vite build",
+    "lint": "eslint .",
+    "preview": "vite preview"
   },
-  "browserslist": [
-    ">0.2%",
-    "not dead",
-    "not ie <= 11",
-    "not op_mini all"
-  ],
+  "dependencies": {
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
+  },
   "devDependencies": {
-    "@babel/plugin-proposal-private-property-in-object": "^7.21.11",
-    "gh-pages": "^6.0.0"
+    "@eslint/js": "^9.25.0",
+    "@types/react": "^19.1.2",
+    "@types/react-dom": "^19.1.2",
+    "@vitejs/plugin-react-swc": "^3.9.0",
+    "eslint": "^9.25.0",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "eslint-plugin-react-refresh": "^0.4.19",
+    "globals": "^16.0.0",
+    "vite": "^6.3.5"
   }
 }
