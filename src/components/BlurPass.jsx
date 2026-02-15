@@ -17,12 +17,19 @@ const FBO_OPTIONS = {
 /**
  * Renders children to an offscreen target, then applies a two-pass
  * (horizontal + vertical) 9-tap Gaussian blur and outputs to the screen.
+ * If outputRef is provided, renders to FBO instead of screen.
  */
-export function BlurPass({ children }) {
+export function BlurPass({ children, outputRef }) {
   const { gl, scene, camera, size } = useThree();
 
   const offscreenTarget = useFBO(size.width, size.height, FBO_OPTIONS);
   const horizontalTarget = useFBO(size.width, size.height, FBO_OPTIONS);
+  const verticalTarget = useFBO(size.width, size.height, FBO_OPTIONS);
+
+  // Store reference for compositor if provided
+  if (outputRef) {
+    outputRef.current = verticalTarget;
+  }
 
   const quadScene = useMemo(() => new THREE.Scene(), []);
   const quadCamera = useMemo(
@@ -81,7 +88,9 @@ export function BlurPass({ children }) {
 
     quadMesh.material = verticalMaterial;
     verticalMaterial.uniforms.tDiffuse.value = horizontalTarget.texture;
-    gl.setRenderTarget(null);
+
+    // If outputRef is provided, render to FBO; otherwise render to screen
+    gl.setRenderTarget(outputRef ? verticalTarget : null);
     gl.clear();
     gl.render(quadScene, quadCamera);
   }, 1);
