@@ -14,8 +14,8 @@ export default function App() {
       <Canvas camera={CANVAS_CAMERA} dpr={[1, 2]}>
         <color attach="background" args={[BACKGROUND_COLOR]} />
         <MultiPassPipeline
-          blinnPhongWeight={0.6}
-          blurWeight={0.4}
+          blinnPhongWeight={1.0}
+          blurWeight={1.0}
           blendMode={0} // 0 = additive, 1 = multiply, 2 = screen
         >
           <TorusScene />

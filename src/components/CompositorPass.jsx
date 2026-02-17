@@ -1,10 +1,8 @@
 import { useMemo } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
-import {
-  compositorVertexShader,
-  compositorFragmentShader,
-} from '../shaders/compositorShaders';
+import compositorVertexShader from '../shaders/compositorVertex.vert?raw';
+import compositorFragmentShader from '../shaders/compositorFragment.frag?raw';
 
 /**
  * Composites multiple FBO outputs into final image.
@@ -62,7 +60,7 @@ export function CompositorPass({
       compositorMaterial.uniforms.tBlinnPhong.value = blinnPhongRef.current.texture;
       compositorMaterial.uniforms.tBlur.value = blurRef.current.texture;
 
-      // Render compositor to screen
+      // Render compositor to screenx
       gl.setRenderTarget(null);
       gl.clear();
       gl.render(quadScene, quadCamera);

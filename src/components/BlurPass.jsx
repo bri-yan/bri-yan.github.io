@@ -2,11 +2,9 @@ import { useMemo } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { useFBO } from '@react-three/drei';
 import * as THREE from 'three';
-import {
-  vertexShader,
-  horizontalBlurShader,
-  verticalBlurShader,
-} from '../shaders/blurShaders';
+import vertexShader from '../shaders/blurVertex.vert?raw';
+import horizontalBlurShader from '../shaders/blurHorizontal.frag?raw';
+import verticalBlurShader from '../shaders/blurVertical.frag?raw';
 
 const FBO_OPTIONS = {
   minFilter: THREE.LinearFilter,

@@ -2,10 +2,8 @@ import { useMemo, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { useFBO } from '@react-three/drei';
 import * as THREE from 'three';
-import {
-  blinnPhongVertexShader,
-  blinnPhongFragmentShader,
-} from '../shaders/blinnPhongShaders';
+import blinnPhongVertexShader from '../shaders/blinnPhongVertex.vert?raw';
+import blinnPhongFragmentShader from '../shaders/blinnPhongFragment.frag?raw';
 
 const FBO_OPTIONS = {
   minFilter: THREE.LinearFilter,
