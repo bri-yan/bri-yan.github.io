@@ -2,6 +2,7 @@ import { useRef } from 'react';
 import {
   DEFAULT_BLINN_PHONG_WEIGHT,
   DEFAULT_BLUR_WEIGHT,
+  DEFAULT_BLUR_STRENGTH,
   BLEND_MODE,
 } from '../constants';
 import { BlinnPhongPass } from './BlinnPhongPass';
@@ -15,6 +16,7 @@ export function MultiPassPipeline({
   children,
   blinnPhongWeight = DEFAULT_BLINN_PHONG_WEIGHT,
   blurWeight = DEFAULT_BLUR_WEIGHT,
+  blurStrength = DEFAULT_BLUR_STRENGTH,
   blendMode = BLEND_MODE.ADDITIVE,
 }) {
   const blinnPhongOutputRef = useRef();
@@ -23,7 +25,7 @@ export function MultiPassPipeline({
   return (
     <>
       <BlinnPhongPass outputRef={blinnPhongOutputRef}>
-        <BlurPass outputRef={blurOutputRef}>
+        <BlurPass outputRef={blurOutputRef} blurStrength={blurStrength}>
           {children}
         </BlurPass>
       </BlinnPhongPass>
