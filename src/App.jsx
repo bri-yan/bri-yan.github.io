@@ -1,12 +1,10 @@
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
+import { CANVAS_CAMERA, BACKGROUND_COLOR, BLEND_MODE } from './constants';
 import { MultiPassPipeline } from './components/MultiPassPipeline';
 import { TorusScene } from './components/TorusScene';
 import { SceneOverlay } from './components/SceneOverlay';
 import './App.css';
-
-const CANVAS_CAMERA = { position: [0, 0, 5], fov: 75 };
-const BACKGROUND_COLOR = '#ffffff';
 
 export default function App() {
   return (
@@ -16,7 +14,7 @@ export default function App() {
         <MultiPassPipeline
           blinnPhongWeight={1.0}
           blurWeight={1.0}
-          blendMode={0} // 0 = additive, 1 = multiply, 2 = screen
+          blendMode={BLEND_MODE.ADDITIVE}
         >
           <TorusScene />
           <OrbitControls enableDamping dampingFactor={0.05} />

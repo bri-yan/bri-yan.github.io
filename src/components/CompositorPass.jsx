@@ -1,33 +1,31 @@
 import { useMemo } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
-import compositorVertexShader from '../shaders/compositorVertex.vert?raw';
+import {
+  DEFAULT_BLINN_PHONG_WEIGHT,
+  DEFAULT_BLUR_WEIGHT,
+  BLEND_MODE,
+} from '../constants';
+import { createFullscreenQuad } from '../utils/fullscreenQuad';
+import fullscreenVertex from '../shaders/blurVertex.vert?raw';
 import compositorFragmentShader from '../shaders/compositorFragment.frag?raw';
 
 /**
- * Composites multiple FBO outputs into final image.
- * Takes refs to BlinnPhong and Blur FBOs.
+ * Composites BlinnPhong and Blur FBOs into the final image.
  */
 export function CompositorPass({
   blinnPhongRef,
   blurRef,
-  blinnPhongWeight = 0.6,
-  blurWeight = 0.4,
-  blendMode = 0, // 0 = additive, 1 = multiply, 2 = screen
+  blinnPhongWeight = DEFAULT_BLINN_PHONG_WEIGHT,
+  blurWeight = DEFAULT_BLUR_WEIGHT,
+  blendMode = BLEND_MODE.ADDITIVE,
 }) {
-  const { gl, size } = useThree();
-
-  // Fullscreen quad setup
-  const quadScene = useMemo(() => new THREE.Scene(), []);
-  const quadCamera = useMemo(
-    () => new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1),
-    []
-  );
+  const { gl } = useThree();
 
   const compositorMaterial = useMemo(
     () =>
       new THREE.ShaderMaterial({
-        vertexShader: compositorVertexShader,
+        vertexShader: fullscreenVertex,
         fragmentShader: compositorFragmentShader,
         uniforms: {
           tBlinnPhong: { value: null },
@@ -40,12 +38,10 @@ export function CompositorPass({
     []
   );
 
-  const quadMesh = useMemo(() => {
-    const geometry = new THREE.PlaneGeometry(2, 2);
-    const mesh = new THREE.Mesh(geometry, compositorMaterial);
-    quadScene.add(mesh);
-    return mesh;
-  }, [quadScene, compositorMaterial]);
+  const { scene: quadScene, camera: quadCamera } = useMemo(
+    () => createFullscreenQuad(compositorMaterial),
+    [compositorMaterial]
+  );
 
   // Update uniforms from props
   useFrame(() => {
@@ -60,7 +56,6 @@ export function CompositorPass({
       compositorMaterial.uniforms.tBlinnPhong.value = blinnPhongRef.current.texture;
       compositorMaterial.uniforms.tBlur.value = blurRef.current.texture;
 
-      // Render compositor to screenx
       gl.setRenderTarget(null);
       gl.clear();
       gl.render(quadScene, quadCamera);

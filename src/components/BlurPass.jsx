@@ -2,20 +2,15 @@ import { useMemo } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { useFBO } from '@react-three/drei';
 import * as THREE from 'three';
-import vertexShader from '../shaders/blurVertex.vert?raw';
+import { FBO_OPTIONS } from '../constants';
+import { createFullscreenQuad } from '../utils/fullscreenQuad';
+import fullscreenVertex from '../shaders/blurVertex.vert?raw';
 import horizontalBlurShader from '../shaders/blurHorizontal.frag?raw';
 import verticalBlurShader from '../shaders/blurVertical.frag?raw';
 
-const FBO_OPTIONS = {
-  minFilter: THREE.LinearFilter,
-  magFilter: THREE.LinearFilter,
-  format: THREE.RGBAFormat,
-};
-
 /**
- * Renders children to an offscreen target, then applies a two-pass
- * (horizontal + vertical) 9-tap Gaussian blur and outputs to the screen.
- * If outputRef is provided, renders to FBO instead of screen.
+ * Renders scene to FBO, then two-pass (H + V) 9-tap Gaussian blur.
+ * If outputRef is provided, blur output goes to that FBO; otherwise to screen.
  */
 export function BlurPass({ children, outputRef }) {
   const { gl, scene, camera, size } = useThree();
@@ -24,21 +19,17 @@ export function BlurPass({ children, outputRef }) {
   const horizontalTarget = useFBO(size.width, size.height, FBO_OPTIONS);
   const verticalTarget = useFBO(size.width, size.height, FBO_OPTIONS);
 
-  // Store reference for compositor if provided
-  if (outputRef) {
-    outputRef.current = verticalTarget;
-  }
+  if (outputRef) outputRef.current = verticalTarget;
 
-  const quadScene = useMemo(() => new THREE.Scene(), []);
-  const quadCamera = useMemo(
-    () => new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1),
+  const { scene: quadScene, camera: quadCamera, mesh: quadMesh } = useMemo(
+    () => createFullscreenQuad(),
     []
   );
 
   const horizontalMaterial = useMemo(
     () =>
       new THREE.ShaderMaterial({
-        vertexShader,
+        vertexShader: fullscreenVertex,
         fragmentShader: horizontalBlurShader,
         uniforms: {
           tDiffuse: { value: null },
@@ -51,7 +42,7 @@ export function BlurPass({ children, outputRef }) {
   const verticalMaterial = useMemo(
     () =>
       new THREE.ShaderMaterial({
-        vertexShader,
+        vertexShader: fullscreenVertex,
         fragmentShader: verticalBlurShader,
         uniforms: {
           tDiffuse: { value: null },
@@ -60,13 +51,6 @@ export function BlurPass({ children, outputRef }) {
       }),
     []
   );
-
-  const quadMesh = useMemo(() => {
-    const geometry = new THREE.PlaneGeometry(2, 2);
-    const mesh = new THREE.Mesh(geometry, horizontalMaterial);
-    quadScene.add(mesh);
-    return mesh;
-  }, [quadScene, horizontalMaterial]);
 
   useFrame(() => {
     horizontalMaterial.uniforms.uResolution.value.set(size.width, size.height);
@@ -86,8 +70,6 @@ export function BlurPass({ children, outputRef }) {
 
     quadMesh.material = verticalMaterial;
     verticalMaterial.uniforms.tDiffuse.value = horizontalTarget.texture;
-
-    // If outputRef is provided, render to FBO; otherwise render to screen
     gl.setRenderTarget(outputRef ? verticalTarget : null);
     gl.clear();
     gl.render(quadScene, quadCamera);
