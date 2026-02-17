@@ -7,6 +7,8 @@ uniform float uShininess;
 uniform float uAmbientStrength;
 uniform float uDiffuseStrength;
 uniform float uSpecularStrength;
+uniform float uSpecularThreshold;
+uniform vec3 uHighlightColor;
 
 varying vec3 vNormal;
 varying vec3 vViewPosition;
@@ -36,8 +38,9 @@ void main() {
   float spec = pow(max(dot(normal, halfwayDir), 0.0), uShininess);
   vec3 specular = uSpecularStrength * spec * uLightColor * uSpecularColor;
 
-  // Combine all components
-  vec3 result = ambient + diffuse + specular;
+  vec3 result = length(specular) >= uSpecularThreshold
+    ? uHighlightColor
+    : ambient + diffuse + specular;
 
   gl_FragColor = vec4(result, 1.0);
 }

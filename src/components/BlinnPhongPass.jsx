@@ -34,6 +34,8 @@ export function BlinnPhongPass({ children, outputRef }) {
           uAmbientStrength: { value: 0.3 },
           uDiffuseStrength: { value: 0.7 },
           uSpecularStrength: { value: 0.5 },
+          uSpecularThreshold: { value: 0.6 },
+          uHighlightColor: { value: new THREE.Color(0xffffff) },
         },
       });
     };
