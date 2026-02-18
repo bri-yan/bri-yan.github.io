@@ -4,9 +4,10 @@ import {
   CANVAS_CAMERA,
   BACKGROUND_COLOR,
   BLEND_MODE,
-  DEFAULT_BLUR_STRENGTH,
+  DEFAULT_RAW_WEIGHT,
   DEFAULT_BLINN_PHONG_WEIGHT,
   DEFAULT_BLUR_WEIGHT,
+  DEFAULT_BLUR_STRENGTH,
 } from './constants';
 import { MultiPassPipeline } from './components/MultiPassPipeline';
 import { TorusScene } from './components/TorusScene';
@@ -19,6 +20,7 @@ export default function App() {
       <Canvas camera={CANVAS_CAMERA} dpr={[1, 2]}>
         <color attach="background" args={[BACKGROUND_COLOR]} />
         <MultiPassPipeline
+          rawWeight={DEFAULT_RAW_WEIGHT}
           blinnPhongWeight={DEFAULT_BLINN_PHONG_WEIGHT}
           blurWeight={DEFAULT_BLUR_WEIGHT}
           blurStrength={DEFAULT_BLUR_STRENGTH}
