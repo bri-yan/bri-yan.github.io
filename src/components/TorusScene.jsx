@@ -16,18 +16,17 @@ export function TorusScene() {
 
   return (
     <>
-      <ambientLight intensity={2} />
       <mesh ref={meshRef}>
         <torusGeometry args={[1, 0.4, 32, 100]} />
-        <meshStandardMaterial color="#00ffff" metalness={0.7} roughness={0.2} />
+        <meshBasicMaterial color="#00ffff" />
       </mesh>
       <mesh position={[-2.5, 0, 0]}>
         <sphereGeometry args={[0.5, 32, 32]} />
-        <meshStandardMaterial color="#ff6b6b" />
+        <meshBasicMaterial color="#ff6b6b" />
       </mesh>
       <mesh position={[2.5, 0, 0]}>
         <boxGeometry args={[0.8, 0.8, 0.8]} />
-        <meshStandardMaterial color="#4ecdc4" />
+        <meshBasicMaterial color="#ff00ff" />
       </mesh>
     </>
   );

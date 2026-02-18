@@ -15,9 +15,9 @@ export const BLEND_MODE = {
 };
 
 // —— Pipeline default weights ——
-export const DEFAULT_RAW_WEIGHT = 1.0;
-export const DEFAULT_BLINN_PHONG_WEIGHT = 0;
-export const DEFAULT_BLUR_WEIGHT = 0;
+export const DEFAULT_RAW_WEIGHT = 0;
+export const DEFAULT_BLINN_PHONG_WEIGHT = 1.0;
+export const DEFAULT_BLUR_WEIGHT = 1.0;
 export const DEFAULT_BLUR_STRENGTH = 2.0;
 
 // —— Canvas / scene ——

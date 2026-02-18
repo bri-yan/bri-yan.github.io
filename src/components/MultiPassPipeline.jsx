@@ -21,7 +21,7 @@ export function MultiPassPipeline({
   blinnPhongWeight = DEFAULT_BLINN_PHONG_WEIGHT,
   blurWeight = DEFAULT_BLUR_WEIGHT,
   blurStrength = DEFAULT_BLUR_STRENGTH,
-  blendMode = BLEND_MODE.ADDITIVE,
+  blendMode = BLEND_MODE.MULTIPLY,
 }) {
   const rawRef = useRef();
   const blinnPhongRef = useRef();
