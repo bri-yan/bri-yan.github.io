@@ -2,10 +2,10 @@ import { useMemo, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { useFBO } from '@react-three/drei';
 import * as THREE from 'three';
-import { FBO_OPTIONS, PASS_FRAME_ORDER } from '../constants';
+import { FBO_OPTIONS, PASS_FRAME_ORDER } from '../../config';
 import { populateSceneWithClonedMeshes } from '../utils/sceneWithMaterials';
-import blinnPhongVertexShader from '../shaders/blinnPhongVertex.vert?raw';
-import blinnPhongFragmentShader from '../shaders/blinnPhongFragment.frag?raw';
+import blinnPhongVertexShader from '../../shaders/blinnPhongVertex.vert?raw';
+import blinnPhongFragmentShader from '../../shaders/blinnPhongFragment.frag?raw';
 
 const LIGHT_POSITION = new THREE.Vector3(5, 5, 5);
 const WHITE = new THREE.Color(0xffffff);

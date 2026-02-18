@@ -2,20 +2,18 @@ import { useMemo } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { useFBO } from '@react-three/drei';
 import * as THREE from 'three';
-import { FBO_OPTIONS, DEFAULT_BLUR_STRENGTH, PASS_FRAME_ORDER } from '../constants';
+import { FBO_OPTIONS, DEFAULT_BLUR_STRENGTH, PASS_FRAME_ORDER } from '../../config';
 import { createFullscreenQuad } from '../utils/fullscreenQuad';
-import fullscreenVertex from '../shaders/blurVertex.vert?raw';
-import horizontalBlurShader from '../shaders/blurHorizontal.frag?raw';
-import verticalBlurShader from '../shaders/blurVertical.frag?raw';
+import fullscreenVertex from '../../shaders/blurVertex.vert?raw';
+import horizontalBlurShader from '../../shaders/blurHorizontal.frag?raw';
+import verticalBlurShader from '../../shaders/blurVertical.frag?raw';
 
 /** Renders scene to FBO, then two-pass (H + V) 9-tap Gaussian blur. Output goes to outputRef FBO or screen. */
 export function BlurPass({ outputRef, blurStrength = DEFAULT_BLUR_STRENGTH }) {
   const { gl, scene, camera, size } = useThree();
-
   const offscreenTarget = useFBO(size.width, size.height, FBO_OPTIONS);
   const horizontalTarget = useFBO(size.width, size.height, FBO_OPTIONS);
   const verticalTarget = useFBO(size.width, size.height, FBO_OPTIONS);
-  
   const { scene: quadScene, camera: quadCamera, mesh: quadMesh } = useMemo(
     () => createFullscreenQuad(),
     []

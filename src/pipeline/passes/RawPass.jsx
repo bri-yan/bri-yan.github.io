@@ -2,7 +2,7 @@ import { useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { useFBO } from '@react-three/drei';
 import * as THREE from 'three';
-import { FBO_OPTIONS, PASS_FRAME_ORDER } from '../constants';
+import { FBO_OPTIONS, PASS_FRAME_ORDER } from '../../config';
 
 /**
  * Renders the main scene directly to an FBO. Use when the scene already uses

@@ -8,10 +8,9 @@ import {
   DEFAULT_BLINN_PHONG_WEIGHT,
   DEFAULT_BLUR_WEIGHT,
   DEFAULT_BLUR_STRENGTH,
-} from './constants';
-import { MultiPassPipeline } from './components/MultiPassPipeline';
-import { TorusScene } from './components/TorusScene';
-import { SceneOverlay } from './components/SceneOverlay';
+} from './config';
+import { MultiPassPipeline } from './pipeline';
+import { TorusScene, SceneOverlay } from './components';
 import './App.css';
 
 export default function App() {

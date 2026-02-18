@@ -5,11 +5,11 @@ import {
   DEFAULT_BLUR_WEIGHT,
   DEFAULT_BLUR_STRENGTH,
   BLEND_MODE,
-} from '../constants';
-import { RawPass } from './RawPass';
-import { BlinnPhongPass } from './BlinnPhongPass';
-import { BlurPass } from './BlurPass';
-import { CompositorPass } from './CompositorPass';
+} from '../config';
+import { RawPass } from './passes/RawPass';
+import { BlinnPhongPass } from './passes/BlinnPhongPass';
+import { BlurPass } from './passes/BlurPass';
+import { CompositorPass } from './passes/CompositorPass';
 
 /**
  * Multi-pass pipeline: Raw, BlinnPhong and Blur each render to an FBO;

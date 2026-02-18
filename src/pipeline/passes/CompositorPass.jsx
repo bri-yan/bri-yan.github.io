@@ -7,10 +7,10 @@ import {
   DEFAULT_BLUR_WEIGHT,
   BLEND_MODE,
   COMPOSITOR_FRAME_ORDER,
-} from '../constants';
+} from '../../config';
 import { createFullscreenQuad } from '../utils/fullscreenQuad';
-import fullscreenVertex from '../shaders/blurVertex.vert?raw';
-import compositorFragmentShader from '../shaders/compositorFragment.frag?raw';
+import fullscreenVertex from '../../shaders/blurVertex.vert?raw';
+import compositorFragmentShader from '../../shaders/compositorFragment.frag?raw';
 
 /** Composites Raw, BlinnPhong and Blur FBOs into the final image. */
 export function CompositorPass({

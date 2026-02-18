@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { FULLSCREEN_QUAD_NDC, FULLSCREEN_QUAD_SIZE } from '../constants';
+import { FULLSCREEN_QUAD_NDC, FULLSCREEN_QUAD_SIZE } from '../../config';
 
 /**
  * Creates a fullscreen quad (scene + ortho camera + plane mesh) for post-process passes.

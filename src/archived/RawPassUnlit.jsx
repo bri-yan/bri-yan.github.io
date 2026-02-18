@@ -2,8 +2,8 @@ import { useMemo, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { useFBO } from '@react-three/drei';
 import * as THREE from 'three';
-import { FBO_OPTIONS, PASS_FRAME_ORDER } from '../constants';
-import { populateSceneWithClonedMeshes } from '../utils/sceneWithMaterials';
+import { FBO_OPTIONS, PASS_FRAME_ORDER } from '../config';
+import { populateSceneWithClonedMeshes } from '../pipeline/utils/sceneWithMaterials';
 import rawVertexShader from '../shaders/rawVertex.vert?raw';
 import rawFragmentShader from '../shaders/rawFragment.frag?raw';
 
