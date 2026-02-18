@@ -24,11 +24,10 @@ export function MultiPassPipeline({
 
   return (
     <>
-      <BlinnPhongPass outputRef={blinnPhongOutputRef}>
-        <BlurPass outputRef={blurOutputRef} blurStrength={blurStrength}>
-          {children}
-        </BlurPass>
-      </BlinnPhongPass>
+      {children}
+      
+      <BlinnPhongPass outputRef={blinnPhongOutputRef} />
+      <BlurPass outputRef={blurOutputRef} blurStrength={blurStrength} />
 
       <CompositorPass
         blinnPhongRef={blinnPhongOutputRef}
