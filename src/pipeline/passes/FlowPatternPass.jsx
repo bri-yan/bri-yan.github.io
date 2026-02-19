@@ -16,6 +16,7 @@ export function FlowPatternPass({
   outputRef,
   threshold = 0.3,
   wetness = 1.0 - threshold,
+  edgeDarkness = 0.5,
   baseOpacity = 1.0,
 }) {
   const { gl, size } = useThree();
@@ -30,9 +31,10 @@ export function FlowPatternPass({
         fragmentShader: flowPatternFragment,
         uniforms: {
           tIntensity: { value: null },
+          uBaseOpacity: { value: baseOpacity },
           uThreshold: { value: threshold },
           uWetness: { value: wetness },
-          uBaseOpacity: { value: baseOpacity },
+          uEdgeDarkness: { value: edgeDarkness },
         },
       }),
     []
