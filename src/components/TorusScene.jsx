@@ -20,14 +20,14 @@ export function TorusScene() {
         <torusGeometry args={[1, 0.4, 32, 100]} />
         <meshBasicMaterial color="#00ffff" />
       </mesh>
-      <mesh position={[-2.5, 0, 0]}>
+      {/* <mesh position={[-2.5, 0, 0]}>
         <sphereGeometry args={[0.5, 32, 32]} />
         <meshBasicMaterial color="#ff6b6b" />
       </mesh>
       <mesh position={[2.5, 0, 0]}>
         <boxGeometry args={[0.8, 0.8, 0.8]} />
         <meshBasicMaterial color="#ff00ff" />
-      </mesh>
+      </mesh> */}
     </>
   );
 }
