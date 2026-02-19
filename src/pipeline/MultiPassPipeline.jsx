@@ -6,13 +6,14 @@ import {
   DEFAULT_BLUR_STRENGTH,
   BLEND_MODE,
 } from '../config';
-import { RawPass } from './passes/RawPass';
+import { IntensityPass } from './passes/IntensityPass';
+import { FlowPatternPass } from './passes/FlowPatternPass';
 import { BlinnPhongPass } from './passes/BlinnPhongPass';
 import { BlurPass } from './passes/BlurPass';
 import { CompositorPass } from './passes/CompositorPass';
 
 /**
- * Multi-pass pipeline: Raw, BlinnPhong and Blur each render to an FBO;
+ * Multi-pass pipeline: Intensity → FlowPattern, BlinnPhong and Blur each render to an FBO;
  * CompositorPass blends them to the screen.
  */
 export function MultiPassPipeline({
@@ -23,18 +24,20 @@ export function MultiPassPipeline({
   blurStrength = DEFAULT_BLUR_STRENGTH,
   blendMode = BLEND_MODE.ADDITIVE,
 }) {
-  const rawRef = useRef();
+  const intensityRef = useRef();
+  const flowPatternRef = useRef();
   const blinnPhongRef = useRef();
   const blurRef = useRef();
 
   return (
     <>
       {children}
-      <RawPass outputRef={rawRef} />
+      <IntensityPass outputRef={intensityRef} />
+      <BlurPass inputRef={intensityRef} outputRef={blurRef} blurStrength={blurStrength} />
+      <FlowPatternPass inputRef={blurRef} outputRef={flowPatternRef} />
       <BlinnPhongPass outputRef={blinnPhongRef} />
-      <BlurPass outputRef={blurRef} blurStrength={blurStrength} />
       <CompositorPass
-        rawRef={rawRef}
+        rawRef={flowPatternRef}
         blinnPhongRef={blinnPhongRef}
         blurRef={blurRef}
         rawWeight={rawWeight}

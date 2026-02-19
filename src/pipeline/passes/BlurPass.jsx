@@ -8,10 +8,9 @@ import fullscreenVertex from '../../shaders/blurVertex.vert?raw';
 import horizontalBlurShader from '../../shaders/blurHorizontal.frag?raw';
 import verticalBlurShader from '../../shaders/blurVertical.frag?raw';
 
-/** Renders scene to FBO, then two-pass (H + V) 9-tap Gaussian blur. Output goes to outputRef FBO or screen. */
-export function BlurPass({ outputRef, blurStrength = DEFAULT_BLUR_STRENGTH }) {
-  const { gl, scene, camera, size } = useThree();
-  const offscreenTarget = useFBO(size.width, size.height, FBO_OPTIONS);
+/** Two-pass (H + V) 9-tap Gaussian blur of inputRef texture. Output goes to outputRef FBO. */
+export function BlurPass({ inputRef, outputRef, blurStrength = DEFAULT_BLUR_STRENGTH }) {
+  const { gl, size } = useThree();
   const horizontalTarget = useFBO(size.width, size.height, FBO_OPTIONS);
   const verticalTarget = useFBO(size.width, size.height, FBO_OPTIONS);
   const { scene: quadScene, camera: quadCamera, mesh: quadMesh } = useMemo(
@@ -26,7 +25,7 @@ export function BlurPass({ outputRef, blurStrength = DEFAULT_BLUR_STRENGTH }) {
       vertexShader: fullscreenVertex,
       fragmentShader,
       uniforms: {
-        tDiffuse: { value: null },
+        tInput: { value: null },
         uResolution: { value: new THREE.Vector2(size.width, size.height) },
         uBlurStrength: { value: blurStrength },
       },
@@ -44,18 +43,15 @@ export function BlurPass({ outputRef, blurStrength = DEFAULT_BLUR_STRENGTH }) {
   }, -1);
 
   useFrame(() => {
-    gl.setRenderTarget(offscreenTarget);
-    gl.clear();
-    gl.render(scene, camera);
-
+    if (!inputRef?.current) return;
     quadMesh.material = horizontalMaterial;
-    horizontalMaterial.uniforms.tDiffuse.value = offscreenTarget.texture;
+    horizontalMaterial.uniforms.tInput.value = inputRef.current.texture;
     gl.setRenderTarget(horizontalTarget);
     gl.clear();
     gl.render(quadScene, quadCamera);
 
     quadMesh.material = verticalMaterial;
-    verticalMaterial.uniforms.tDiffuse.value = horizontalTarget.texture;
+    verticalMaterial.uniforms.tInput.value = horizontalTarget.texture;
     gl.setRenderTarget(outputRef ? verticalTarget : null);
     gl.clear();
     gl.render(quadScene, quadCamera);

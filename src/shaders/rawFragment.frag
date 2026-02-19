@@ -1,5 +1,5 @@
 uniform vec3 uDiffuseColor;
 
 void main() {
-  gl_FragColor = vec4(uDiffuseColor, 1.0);
+  gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
 }
