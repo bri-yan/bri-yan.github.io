@@ -4,11 +4,11 @@ import { useFBO } from '@react-three/drei';
 import * as THREE from 'three';
 import { FBO_OPTIONS, PASS_FRAME_ORDER } from '../../config';
 import { populateSceneWithClonedMeshes } from '../utils/sceneWithMaterials';
-import rawVertexShader from '../../shaders/rawVertex.vert?raw';
-import rawFragmentShader from '../../shaders/rawFragment.frag?raw';
+import intensityVertexShader from '../../shaders/intensityVertex.vert?raw';
+import intensityFragmentShader from '../../shaders/intensityFragment.frag?raw';
 
 /**
- * Renders the scene using the raw vertex/fragment shaders to an FBO.
+ * Renders the scene using the intensity vertex/fragment shaders to an FBO.
  * Outputs intensity (RGB) for downstream FlowPatternPass.
  */
 export function IntensityPass({ outputRef }) {
@@ -22,14 +22,11 @@ export function IntensityPass({ outputRef }) {
   if (outputRef) outputRef.current = target;
 
   const getMaterial = useMemo(
-    () => (originalMaterial) => {
-      const baseColor = originalMaterial.color ?? new THREE.Color(0xffffff);
-      return new THREE.ShaderMaterial({
-        vertexShader: rawVertexShader,
-        fragmentShader: rawFragmentShader,
-        uniforms: { uDiffuseColor: { value: baseColor } },
-      });
-    },
+    () => () =>
+      new THREE.ShaderMaterial({
+        vertexShader: intensityVertexShader,
+        fragmentShader: intensityFragmentShader,
+      }),
     []
   );
 

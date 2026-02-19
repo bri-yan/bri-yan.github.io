@@ -4,7 +4,7 @@ import {
   CANVAS_CAMERA,
   BACKGROUND_COLOR,
   BLEND_MODE,
-  DEFAULT_RAW_WEIGHT,
+  DEFAULT_FLOW_PATTERN_WEIGHT,
   DEFAULT_BLINN_PHONG_WEIGHT,
   DEFAULT_BLUR_WEIGHT,
   DEFAULT_BLUR_STRENGTH,
@@ -19,7 +19,7 @@ export default function App() {
       <Canvas camera={CANVAS_CAMERA} dpr={[1, 2]}>
         <color attach="background" args={[BACKGROUND_COLOR]} />
         <MultiPassPipeline
-          rawWeight={DEFAULT_RAW_WEIGHT}
+          flowPatternWeight={DEFAULT_FLOW_PATTERN_WEIGHT}
           blinnPhongWeight={DEFAULT_BLINN_PHONG_WEIGHT}
           blurWeight={DEFAULT_BLUR_WEIGHT}
           blurStrength={DEFAULT_BLUR_STRENGTH}

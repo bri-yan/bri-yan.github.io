@@ -4,15 +4,15 @@ import { useFBO } from '@react-three/drei';
 import * as THREE from 'three';
 import { FBO_OPTIONS, PASS_FRAME_ORDER } from '../config';
 import { populateSceneWithClonedMeshes } from '../pipeline/utils/sceneWithMaterials';
-import rawVertexShader from '../shaders/rawVertex.vert?raw';
-import rawFragmentShader from '../shaders/rawFragment.frag?raw';
+import intensityVertexShader from '../shaders/intensityVertex.vert?raw';
+import intensityFragmentShader from '../shaders/intensityFragment.frag?raw';
 
 /**
  * Renders the scene unlit (base mesh color only) to an FBO by cloning meshes
  * and replacing materials with a custom shader. Uses scene background for clear color.
  * Kept for reference when the scene uses non-unlit materials (e.g. MeshStandardMaterial).
  */
-export function RawPassUnlit({ outputRef }) {
+export function IntensityPassUnlit({ outputRef }) {
   const { gl, scene, camera, size } = useThree();
   const target = useFBO(size.width, size.height, FBO_OPTIONS);
   const customScene = useMemo(() => new THREE.Scene(), []);
@@ -26,8 +26,8 @@ export function RawPassUnlit({ outputRef }) {
     () => (originalMaterial) => {
       const baseColor = originalMaterial.color ?? new THREE.Color(0xffffff);
       return new THREE.ShaderMaterial({
-        vertexShader: rawVertexShader,
-        fragmentShader: rawFragmentShader,
+        vertexShader: intensityVertexShader,
+        fragmentShader: intensityFragmentShader,
         uniforms: { uDiffuseColor: { value: baseColor } },
       });
     },

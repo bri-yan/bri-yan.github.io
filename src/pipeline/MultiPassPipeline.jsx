@@ -1,6 +1,6 @@
 import { useRef } from 'react';
 import {
-  DEFAULT_RAW_WEIGHT,
+  DEFAULT_FLOW_PATTERN_WEIGHT,
   DEFAULT_BLINN_PHONG_WEIGHT,
   DEFAULT_BLUR_WEIGHT,
   DEFAULT_BLUR_STRENGTH,
@@ -18,7 +18,7 @@ import { CompositorPass } from './passes/CompositorPass';
  */
 export function MultiPassPipeline({
   children,
-  rawWeight = DEFAULT_RAW_WEIGHT,
+  flowPatternWeight = DEFAULT_FLOW_PATTERN_WEIGHT,
   blinnPhongWeight = DEFAULT_BLINN_PHONG_WEIGHT,
   blurWeight = DEFAULT_BLUR_WEIGHT,
   blurStrength = DEFAULT_BLUR_STRENGTH,
@@ -37,10 +37,10 @@ export function MultiPassPipeline({
       <FlowPatternPass inputRef={blurRef} outputRef={flowPatternRef} />
       <BlinnPhongPass outputRef={blinnPhongRef} />
       <CompositorPass
-        rawRef={flowPatternRef}
+        flowPatternRef={flowPatternRef}
         blinnPhongRef={blinnPhongRef}
         blurRef={blurRef}
-        rawWeight={rawWeight}
+        flowPatternWeight={flowPatternWeight}
         blinnPhongWeight={blinnPhongWeight}
         blurWeight={blurWeight}
         blendMode={blendMode}

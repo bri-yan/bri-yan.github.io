@@ -1,7 +1,7 @@
-uniform sampler2D tRaw;
+uniform sampler2D tFlowPattern;
 uniform sampler2D tBlinnPhong;
 uniform sampler2D tBlur;
-uniform float uRawWeight;
+uniform float uFlowPatternWeight;
 uniform float uBlinnPhongWeight;
 uniform float uBlurWeight;
 uniform float uBlendMode; // 0 = additive, 1 = multiply, 2 = screen
@@ -21,11 +21,11 @@ vec3 blendScreen(vec3 a, vec3 b) {
 }
 
 void main() {
-  vec3 raw = texture2D(tRaw, vUv).rgb * uRawWeight;
+  vec3 flowPattern = texture2D(tFlowPattern, vUv).rgb * uFlowPatternWeight;
   vec3 blinnPhong = texture2D(tBlinnPhong, vUv).rgb * uBlinnPhongWeight;
   vec3 blur = texture2D(tBlur, vUv).rgb * uBlurWeight;
 
-  // Blend lit passes based on mode, then add raw
+  // Blend lit passes based on mode, then add flow pattern
   vec3 blended;
   if (uBlendMode < 0.5) {
     blended = blendAdditive(blinnPhong, blur);
@@ -35,6 +35,6 @@ void main() {
     blended = blendScreen(blinnPhong, blur);
   }
 
-  vec3 result = raw + blended;
+  vec3 result = flowPattern + blended;
   gl_FragColor = vec4(result, 1.0);
 }

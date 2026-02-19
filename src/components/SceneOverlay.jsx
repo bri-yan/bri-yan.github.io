@@ -1,8 +1,8 @@
 const PIPELINE_STEPS = [
-  'Pass 1: Scene → Raw (unlit base color) → FBO',
-  'Pass 2: Scene → BlinnPhong lighting → FBO (sharp + lit)',
-  'Pass 3: Scene → FBO → 9-tap separable blur (H then V) → FBO',
-  'Pass 4: Compositor blends all three FBOs (weights + blend mode) → screen',
+  'Pass 1: Scene → Intensity (mask) → FBO',
+  'Pass 2: Intensity → Blur → FlowPattern → FBO',
+  'Pass 3: Scene → BlinnPhong lighting → FBO (sharp + lit)',
+  'Pass 4: Compositor blends FlowPattern, BlinnPhong, Blur FBOs → screen',
 ];
 
 /** Presentational overlay describing the multi-pass pipeline. */
