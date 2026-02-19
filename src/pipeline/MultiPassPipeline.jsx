@@ -4,6 +4,7 @@ import {
   DEFAULT_BLINN_PHONG_WEIGHT,
   DEFAULT_BLUR_WEIGHT,
   DEFAULT_BLUR_STRENGTH,
+  DEFAULT_BLUR_ITERATIONS,
   BLEND_MODE,
 } from '../config';
 import { IntensityPass } from './passes/IntensityPass';
@@ -22,6 +23,7 @@ export function MultiPassPipeline({
   blinnPhongWeight = DEFAULT_BLINN_PHONG_WEIGHT,
   blurWeight = DEFAULT_BLUR_WEIGHT,
   blurStrength = DEFAULT_BLUR_STRENGTH,
+  blurIterations = DEFAULT_BLUR_ITERATIONS,
   blendMode = BLEND_MODE.ADDITIVE,
 }) {
   const intensityRef = useRef();
@@ -33,7 +35,12 @@ export function MultiPassPipeline({
     <>
       {children}
       <IntensityPass outputRef={intensityRef} />
-      <BlurPass inputRef={intensityRef} outputRef={blurRef} blurStrength={blurStrength} />
+      <BlurPass
+        inputRef={intensityRef}
+        outputRef={blurRef}
+        blurStrength={blurStrength}
+        blurIterations={blurIterations}
+      />
       <FlowPatternPass inputRef={blurRef} outputRef={flowPatternRef} />
       <BlinnPhongPass outputRef={blinnPhongRef} />
       <CompositorPass

@@ -15,10 +15,11 @@ export const BLEND_MODE = {
 };
 
 // —— Pipeline default weights ——
-export const DEFAULT_FLOW_PATTERN_WEIGHT = 1.0;
+export const DEFAULT_FLOW_PATTERN_WEIGHT = 0;
 export const DEFAULT_BLINN_PHONG_WEIGHT = 0;
-export const DEFAULT_BLUR_WEIGHT = 0;
-export const DEFAULT_BLUR_STRENGTH = 1.0;
+export const DEFAULT_BLUR_WEIGHT = 1.0;
+export const DEFAULT_BLUR_STRENGTH = 2.0;
+export const DEFAULT_BLUR_ITERATIONS = 20;
 
 // —— Canvas / scene ——
 export const CANVAS_CAMERA = { position: [0, 0, 5], fov: 75 };

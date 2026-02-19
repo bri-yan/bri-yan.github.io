@@ -8,6 +8,7 @@ import {
   DEFAULT_BLINN_PHONG_WEIGHT,
   DEFAULT_BLUR_WEIGHT,
   DEFAULT_BLUR_STRENGTH,
+  DEFAULT_BLUR_ITERATIONS,
 } from './config';
 import { MultiPassPipeline } from './pipeline';
 import { TorusScene, SceneOverlay } from './components';
@@ -23,6 +24,7 @@ export default function App() {
           blinnPhongWeight={DEFAULT_BLINN_PHONG_WEIGHT}
           blurWeight={DEFAULT_BLUR_WEIGHT}
           blurStrength={DEFAULT_BLUR_STRENGTH}
+          blurIterations={DEFAULT_BLUR_ITERATIONS}
           blendMode={BLEND_MODE.ADDITIVE}
         >
           <TorusScene />
