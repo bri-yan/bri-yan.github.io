@@ -1,4 +1,5 @@
 uniform sampler2D tIntensity;
+uniform vec3 uBaseColor;
 uniform float uBaseOpacity;  // c_α — Base Opacity
 uniform float uThreshold;    // κ_ρ — Intensity Threshold
 uniform float uWetness;      // κ_δ — Wetness/Transition Width
@@ -17,6 +18,6 @@ void main() {
   // Apply edge darkness
   opacity = opacity * (1.0 + uEdgeDarkness * (1.0 - intensity));
 
-  vec4 result = vec4(opacity, opacity, opacity, opacity);
+  vec4 result = vec4(uBaseColor * opacity, opacity);
   gl_FragColor = result;
 }

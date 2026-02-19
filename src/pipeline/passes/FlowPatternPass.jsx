@@ -14,10 +14,11 @@ import flowPatternFragment from '../../shaders/flowPatternFragment.frag?raw';
 export function FlowPatternPass({
   inputRef,
   outputRef,
-  threshold = 0.3,
-  wetness = 1.0 - threshold,
-  edgeDarkness = 0.5,
-  baseOpacity = 1.0,
+  baseColor,
+  threshold,
+  wetness,
+  edgeDarkness,
+  baseOpacity,
 }) {
   const { gl, size } = useThree();
   const target = useFBO(size.width, size.height, FBO_OPTIONS);
@@ -31,6 +32,7 @@ export function FlowPatternPass({
         fragmentShader: flowPatternFragment,
         uniforms: {
           tIntensity: { value: null },
+          uBaseColor: { value: baseColor },
           uBaseOpacity: { value: baseOpacity },
           uThreshold: { value: threshold },
           uWetness: { value: wetness },
@@ -44,9 +46,11 @@ export function FlowPatternPass({
   const uniforms = material.uniforms;
 
   useFrame(() => {
+    uniforms.uBaseColor.value = baseColor;
     uniforms.uThreshold.value = threshold;
     uniforms.uWetness.value = wetness;
     uniforms.uBaseOpacity.value = baseOpacity;
+    uniforms.uEdgeDarkness.value = edgeDarkness;
   }, -1);
 
   useFrame(() => {
