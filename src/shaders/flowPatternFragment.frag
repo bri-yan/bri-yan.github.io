@@ -7,9 +7,10 @@ varying vec2 vUv;
 
 void main() {
   vec3 intensity = texture2D(tIntensity, vUv).rgb;
-  float cur_opacity = texture2D(tIntensity, vUv).a;
-  float opacity = uBaseOpacity * smoothstep(uThreshold - uWetness, uThreshold + uWetness, length(intensity));
-
-  vec4 result = vec4(cur_opacity, cur_opacity, cur_opacity, 1.0);
+  float min_opacity = max(0.0, uThreshold - uWetness);
+  float max_opacity = min(1.0, uThreshold + uWetness);
+  float opacity = uBaseOpacity * smoothstep(min_opacity, max_opacity, length(intensity));
+  
+  vec4 result = vec4(opacity, opacity, opacity, 1.0);
   gl_FragColor = result;
 }

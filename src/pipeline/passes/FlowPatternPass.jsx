@@ -16,8 +16,8 @@ const FLOW_PATTERN_FRAME_ORDER = 1.5;
 export function FlowPatternPass({
   inputRef,
   outputRef,
-  threshold = 0.3,
-  wetness = 0.7,
+  threshold = 0.5,
+  wetness = 1.0 - threshold,
   baseOpacity = 1.0,
 }) {
   const { gl, size } = useThree();
