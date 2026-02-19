@@ -1,12 +1,12 @@
+import { useMemo, useRef } from 'react';
+import { useFrame, useThree } from '@react-three/fiber';
+import { useFBO } from '@react-three/drei';
 import * as THREE from 'three';
+import { FBO_OPTIONS, PASS_FRAME_ORDER } from '../../config';
 
 /**
  * Populates targetScene with clones of all meshes from sourceScene, each using
  * a material from the cache or from getMaterial(originalMaterial).
- * @param {THREE.Scene} sourceScene
- * @param {THREE.Scene} targetScene
- * @param {(material: THREE.Material) => THREE.Material} getMaterial
- * @param {Map<string, THREE.Material>} cache - keyed by source mesh uuid
  */
 export function populateSceneWithClonedMeshes(sourceScene, targetScene, getMaterial, cache) {
   targetScene.children.length = 0;
@@ -18,4 +18,30 @@ export function populateSceneWithClonedMeshes(sourceScene, targetScene, getMater
     cloned.material = cache.get(key);
     targetScene.add(cloned);
   });
+}
+
+/**
+ * Hook for passes that render the main scene with custom materials (e.g. IntensityPass, BlinnPhongPass).
+ * Returns target FBO ref for outputRef assignment.
+ */
+export function useSceneRenderPass(getMaterial) {
+  const { gl, scene, camera, size } = useThree();
+  const target = useFBO(size.width, size.height, FBO_OPTIONS);
+  const customScene = useMemo(() => new THREE.Scene(), []);
+  const materialsCache = useRef(new Map());
+  const savedClearColor = useRef(new THREE.Color());
+  const savedClearAlpha = useRef(1);
+
+  useFrame(() => {
+    populateSceneWithClonedMeshes(scene, customScene, getMaterial, materialsCache.current);
+    gl.getClearColor(savedClearColor.current);
+    savedClearAlpha.current = gl.getClearAlpha();
+    gl.setRenderTarget(target);
+    gl.clear();
+    gl.render(customScene, camera);
+    gl.setRenderTarget(null);
+    gl.setClearColor(savedClearColor.current, savedClearAlpha.current);
+  }, PASS_FRAME_ORDER);
+
+  return target;
 }

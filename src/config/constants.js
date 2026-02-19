@@ -18,8 +18,8 @@ export const BLEND_MODE = {
 export const DEFAULT_FLOW_PATTERN_WEIGHT = 1.0;
 export const DEFAULT_BLINN_PHONG_WEIGHT = 0;
 export const DEFAULT_BLUR_WEIGHT = 0;
-export const DEFAULT_BLUR_STRENGTH = 2.0;
-export const DEFAULT_BLUR_ITERATIONS = 36;
+export const DEFAULT_BLUR_STRENGTH = 2.5;
+export const DEFAULT_BLUR_ITERATIONS = 20;
 
 // —— Canvas / scene ——
 export const CANVAS_CAMERA = { position: [0, 0, 5], fov: 75 };
@@ -31,4 +31,5 @@ export const FULLSCREEN_QUAD_SIZE = 2;
 
 // —— useFrame order (higher = later) ——
 export const PASS_FRAME_ORDER = 1;
+export const FLOW_PATTERN_FRAME_ORDER = 1.5;
 export const COMPOSITOR_FRAME_ORDER = 2;

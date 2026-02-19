@@ -1,9 +1,6 @@
-import { useMemo, useRef } from 'react';
-import { useFrame, useThree } from '@react-three/fiber';
-import { useFBO } from '@react-three/drei';
+import { useMemo } from 'react';
 import * as THREE from 'three';
-import { FBO_OPTIONS, PASS_FRAME_ORDER } from '../../config';
-import { populateSceneWithClonedMeshes } from '../utils/sceneWithMaterials';
+import { useSceneRenderPass } from '../utils/sceneWithMaterials';
 import blinnPhongVertexShader from '../../shaders/blinnPhongVertex.vert?raw';
 import blinnPhongFragmentShader from '../../shaders/blinnPhongFragment.frag?raw';
 
@@ -13,16 +10,9 @@ const AMBIENT_GRAY = new THREE.Color(0x404040);
 
 /** Renders the scene with Blinn-Phong lighting to an FBO. */
 export function BlinnPhongPass({ outputRef }) {
-  const { gl, scene, camera, size } = useThree();
-  const target = useFBO(size.width, size.height, FBO_OPTIONS);
-  const customScene = useMemo(() => new THREE.Scene(), []);
-  const materialsCache = useRef(new Map());
-
-  if (outputRef) outputRef.current = target;
-
   const getMaterial = useMemo(
     () => (originalMaterial) => {
-      const baseColor = originalMaterial.color ?? new THREE.Color(0xffffff);
+      const baseColor = originalMaterial?.color ?? new THREE.Color(0xffffff);
       return new THREE.ShaderMaterial({
         vertexShader: blinnPhongVertexShader,
         fragmentShader: blinnPhongFragmentShader,
@@ -43,14 +33,7 @@ export function BlinnPhongPass({ outputRef }) {
     },
     []
   );
-
-  useFrame(() => {
-    populateSceneWithClonedMeshes(scene, customScene, getMaterial, materialsCache.current);
-    gl.setRenderTarget(target);
-    gl.clear();
-    gl.render(customScene, camera);
-    gl.setRenderTarget(null);
-  }, PASS_FRAME_ORDER);
-
+  const target = useSceneRenderPass(getMaterial);
+  if (outputRef) outputRef.current = target;
   return null;
 }

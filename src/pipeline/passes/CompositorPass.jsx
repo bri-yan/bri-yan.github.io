@@ -8,8 +8,8 @@ import {
   BLEND_MODE,
   COMPOSITOR_FRAME_ORDER,
 } from '../../config';
-import { createFullscreenQuad } from '../utils/fullscreenQuad';
-import fullscreenVertex from '../../shaders/blurVertex.vert?raw';
+import { createFullscreenQuad, renderFullscreenQuad } from '../utils/fullscreenQuad';
+import fullscreenVertex from '../../shaders/fullscreenVertex.vert?raw';
 import compositorFragmentShader from '../../shaders/compositorFragment.frag?raw';
 
 /** Composites FlowPattern, BlinnPhong and Blur FBOs into the final image. */
@@ -42,12 +42,7 @@ export function CompositorPass({
     []
   );
 
-  const { scene: quadScene, camera: quadCamera } = useMemo(
-    () => createFullscreenQuad(material),
-    [material]
-  );
-
-  const refs = [flowPatternRef, blinnPhongRef, blurRef];
+  const quad = useMemo(() => createFullscreenQuad(material), [material]);
   const uniforms = material.uniforms;
 
   useFrame(() => {
@@ -58,13 +53,11 @@ export function CompositorPass({
   }, -1);
 
   useFrame(() => {
-    if (!refs.every((r) => r?.current)) return;
+    if (!flowPatternRef?.current || !blinnPhongRef?.current || !blurRef?.current) return;
     uniforms.tFlowPattern.value = flowPatternRef.current.texture;
     uniforms.tBlinnPhong.value = blinnPhongRef.current.texture;
     uniforms.tBlur.value = blurRef.current.texture;
-    gl.setRenderTarget(null);
-    gl.clear();
-    gl.render(quadScene, quadCamera);
+    renderFullscreenQuad(gl, quad, material, null);
   }, COMPOSITOR_FRAME_ORDER);
 
   return null;
