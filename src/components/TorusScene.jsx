@@ -1,8 +1,8 @@
 import { useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 
-const ROTATION_SPEED_X = 0.3;
-const ROTATION_SPEED_Y = 0.5;
+const ROTATION_SPEED_X = 0.2;
+const ROTATION_SPEED_Y = 0.6;
 
 export function TorusScene() {
   const meshRef = useRef();
