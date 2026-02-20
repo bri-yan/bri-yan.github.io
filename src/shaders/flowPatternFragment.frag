@@ -22,9 +22,11 @@ void main() {
   float opacity = uBaseOpacity * smoothstep(min_opacity, max_opacity, intensity);
   
   // Apply edge darkness
-  opacity = opacity * (1.0 + uEdgeDarkness * (1.0 - intensity));
+//   opacity = opacity * (1.0 + uEdgeDarkness * (1.0 - intensity));
 
   vec4 result = vec4(uBaseColor * opacity, opacity);
+
+//   result = vec4(opacity);
 
   gl_FragColor = result;
 }
