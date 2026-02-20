@@ -38,7 +38,7 @@ void main() {
   float spec = pow(max(dot(normal, halfwayDir), 0.0), uShininess);
   vec3 specular = uSpecularStrength * spec * uLightColor * uSpecularColor;
 
-  vec3 result = length(specular) >= uSpecularThreshold
+  vec3 result = (length(specular) / sqrt(3.0)) >= uSpecularThreshold
     ? uHighlightColor
     : ambient + diffuse + specular;
 

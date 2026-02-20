@@ -27,17 +27,6 @@ void main() {
   vec3 flowPattern = texture2D(tFlowPattern, vUv).rgb * uFlowPatternWeight;
   vec3 blinnPhong = texture2D(tBlinnPhong, vUv).rgb * uBlinnPhongWeight;
   vec3 blur = texture2D(tBlur, vUv).rgb * uBlurWeight;
-
-  // Blend lit passes based on mode, then add flow pattern
-  vec3 blended;
-  if (uBlendMode < 0.5) {
-    blended = blendAdditive(blinnPhong, blur);
-  } else if (uBlendMode < 1.5) {
-    blended = blendMultiply(blinnPhong, blur);
-  } else {
-    blended = blendScreen(blinnPhong, blur);
-  }
-
   vec4 paper = texture2D(tPaper, vUv);
 
   if (uShowPaper > 0.5) {
@@ -45,7 +34,7 @@ void main() {
     return;
   }
 
-  vec3 result = flowPattern + blended;
+  vec3 result = flowPattern + blinnPhong + blur;
 
   // Multiply by paper alpha (ridge/valley mask) scaled by weight
   result = result * mix(1.0, paper.a, uPaperWeight);

@@ -8,7 +8,7 @@ uniform float uEdgeDarkness; // κ_ε — Edge Darkness
 varying vec2 vUv;
 
 void main() {
-  float intensity = length(texture2D(tIntensity, vUv).rgb);
+  float intensity = length(texture2D(tIntensity, vUv).rgb) / sqrt(3.0);
 
   // Calculate flow pattern opacity
   float min_opacity = max(0.0, uThreshold - uWetness);
