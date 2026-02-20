@@ -70,6 +70,7 @@ export function MultiPassPipeline({
       />
       <FlowPatternPass
         inputRef={blurRef}
+        paperRef={paperRef}
         outputRef={flowPatternRef}
         baseColor={baseColor}
         threshold={flowPatternThreshold}

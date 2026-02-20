@@ -27,8 +27,8 @@ export const DEFAULT_BLUR_ITERATIONS = 20;
 // —— Flow pattern defaults ——
 export const DEFAULT_FLOW_PATTERN_BASE_COLOR = 0x00ffff;
 export const DEFAULT_FLOW_PATTERN_BASE_OPACITY = 1.0;
-export const DEFAULT_FLOW_PATTERN_THRESHOLD = 0.3;
-export const DEFAULT_FLOW_PATTERN_EDGE_DARKNESS = 0.5;
+export const DEFAULT_FLOW_PATTERN_THRESHOLD = 1.0;
+export const DEFAULT_FLOW_PATTERN_EDGE_DARKNESS = 0.0;
 
 // —— Paper texture defaults ——
 export const DEFAULT_PAPER_REPEAT_X = 1.0;

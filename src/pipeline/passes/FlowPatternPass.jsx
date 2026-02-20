@@ -13,6 +13,7 @@ import flowPatternFragment from '../../shaders/flowPatternFragment.frag?raw';
  */
 export function FlowPatternPass({
   inputRef,
+  paperRef,
   outputRef,
   baseColor,
   threshold,
@@ -32,6 +33,7 @@ export function FlowPatternPass({
         fragmentShader: flowPatternFragment,
         uniforms: {
           tIntensity: { value: null },
+          tPaper: { value: null },
           uBaseColor: { value: baseColor },
           uBaseOpacity: { value: baseOpacity },
           uThreshold: { value: threshold },
@@ -56,6 +58,7 @@ export function FlowPatternPass({
   useFrame(() => {
     if (!inputRef?.current) return;
     uniforms.tIntensity.value = inputRef.current.texture;
+    uniforms.tPaper.value = paperRef?.current?.texture ?? null;
     renderFullscreenQuad(gl, quad, material, outputRef ? target : null);
   }, FLOW_PATTERN_FRAME_ORDER);
 
