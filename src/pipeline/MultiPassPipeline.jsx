@@ -14,6 +14,7 @@ import {
   DEFAULT_PAPER_WEIGHT,
   DEFAULT_PAPER_REPEAT_X,
   DEFAULT_PAPER_REPEAT_Y,
+  DEFAULT_COMPOSITOR_BACKGROUND,
   BLEND_MODE,
 } from '../config';
 import { IntensityPass } from './passes/IntensityPass';
@@ -43,6 +44,7 @@ export function MultiPassPipeline({
   paperWeight = DEFAULT_PAPER_WEIGHT,
   paperRepeatX = DEFAULT_PAPER_REPEAT_X,
   paperRepeatY = DEFAULT_PAPER_REPEAT_Y,
+  backgroundColor = DEFAULT_COMPOSITOR_BACKGROUND,
   showPaper = false,
   blendMode = BLEND_MODE.ADDITIVE,
 }) {
@@ -52,6 +54,13 @@ export function MultiPassPipeline({
         ? new THREE.Color(flowPatternBaseColor)
         : flowPatternBaseColor,
     [flowPatternBaseColor]
+  );
+  const bgColor = useMemo(
+    () =>
+      typeof backgroundColor === 'number'
+        ? new THREE.Color(backgroundColor)
+        : backgroundColor,
+    [backgroundColor]
   );
   const intensityRef = useRef();
   const flowPatternRef = useRef();
@@ -91,6 +100,7 @@ export function MultiPassPipeline({
         blinnPhongWeight={blinnPhongWeight}
         blurWeight={blurWeight}
         paperWeight={paperWeight}
+        backgroundColor={bgColor}
         showPaper={showPaper}
         blendMode={blendMode}
       />

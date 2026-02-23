@@ -40,7 +40,7 @@ void main() {
 
   vec3 result = (length(specular) / sqrt(3.0)) >= uSpecularThreshold
     ? uHighlightColor
-    : ambient + diffuse + specular;
+    : vec3(0.0);
 
   gl_FragColor = vec4(result, 1.0);
 }

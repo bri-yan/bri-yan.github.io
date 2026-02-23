@@ -25,8 +25,8 @@ export function BlinnPhongPass({ outputRef }) {
           uShininess: { value: 32 },
           uAmbientStrength: { value: 0.3 },
           uDiffuseStrength: { value: 0.7 },
-          uSpecularStrength: { value: 0.5 },
-          uSpecularThreshold: { value: 0.6 },
+          uSpecularStrength: { value: 0.7 },
+          uSpecularThreshold: { value: 0.3 },
           uHighlightColor: { value: WHITE.clone() },
         },
       });

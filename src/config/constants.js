@@ -16,7 +16,7 @@ export const BLEND_MODE = {
 
 // —— Pipeline weights ——
 export const DEFAULT_FLOW_PATTERN_WEIGHT = 1.0;
-export const DEFAULT_BLINN_PHONG_WEIGHT = 0.0;
+export const DEFAULT_BLINN_PHONG_WEIGHT = 1.0;
 export const DEFAULT_PAPER_WEIGHT = 0.6;
 export const DEFAULT_BLUR_WEIGHT = 0.0;
 
@@ -34,6 +34,9 @@ export const DEFAULT_FLOW_PATTERN_EDGE_SHARPNESS = 80.0;
 // —— Paper texture defaults ——
 export const DEFAULT_PAPER_REPEAT_X = 1.0;
 export const DEFAULT_PAPER_REPEAT_Y = 1.0;
+
+// —— Compositor background ——
+export const DEFAULT_COMPOSITOR_BACKGROUND = 0xffffff;
 
 // —— Canvas / scene ——
 export const CANVAS_CAMERA = { position: [0, 0, 5], fov: 75 };

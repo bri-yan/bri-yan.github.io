@@ -22,9 +22,10 @@ void main() {
   float inverseIntensity = 1.0 - intensity;
   float meshMask = intensity > edgeThickness ? 1.0 : 0.0;
 
-  float x = meshMask * inverseIntensity * 0.95 + intensity * 0.2;
+  float x = meshMask * inverseIntensity * 1.5 + intensity * 0.2;
+//   x = (1.0 - x) * meshMask;
 
-  vec4 result = vec4(x * uBaseColor, x);
+  vec4 result = vec4(uBaseColor, x);
 
   gl_FragColor = result;
 }

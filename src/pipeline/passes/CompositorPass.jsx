@@ -6,6 +6,7 @@ import {
   DEFAULT_BLINN_PHONG_WEIGHT,
   DEFAULT_BLUR_WEIGHT,
   DEFAULT_PAPER_WEIGHT,
+  DEFAULT_COMPOSITOR_BACKGROUND,
   BLEND_MODE,
   COMPOSITOR_FRAME_ORDER,
 } from '../../config';
@@ -23,6 +24,7 @@ export function CompositorPass({
   blinnPhongWeight = DEFAULT_BLINN_PHONG_WEIGHT,
   blurWeight = DEFAULT_BLUR_WEIGHT,
   paperWeight = DEFAULT_PAPER_WEIGHT,
+  backgroundColor = new THREE.Color(DEFAULT_COMPOSITOR_BACKGROUND),
   showPaper = false,
   blendMode = BLEND_MODE.ADDITIVE,
 }) {
@@ -43,6 +45,7 @@ export function CompositorPass({
           uBlurWeight: { value: blurWeight },
           uPaperWeight: { value: paperWeight },
           uShowPaper: { value: 0 },
+          uBackgroundColor: { value: backgroundColor },
           uBlendMode: { value: blendMode },
         },
       }),
@@ -58,6 +61,7 @@ export function CompositorPass({
     uniforms.uBlurWeight.value = blurWeight;
     uniforms.uPaperWeight.value = paperWeight;
     uniforms.uShowPaper.value = showPaper ? 1 : 0;
+    uniforms.uBackgroundColor.value = backgroundColor;
     uniforms.uBlendMode.value = blendMode;
   }, -1);
 

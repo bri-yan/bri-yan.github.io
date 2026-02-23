@@ -8,6 +8,7 @@ uniform float uBlurWeight;
 uniform float uPaperWeight;
 uniform float uBlendMode; // 0 = additive, 1 = multiply, 2 = screen
 uniform float uShowPaper; // debug: 1 = output raw paper FBO
+uniform vec3 uBackgroundColor;
 
 varying vec2 vUv;
 
@@ -24,7 +25,8 @@ vec3 blendScreen(vec3 a, vec3 b) {
 }
 
 void main() {
-  vec3 flowPattern = texture2D(tFlowPattern, vUv).rgb * uFlowPatternWeight;
+  vec4 flowPatternSample = texture2D(tFlowPattern, vUv);
+  vec3 flowPattern = flowPatternSample.rgb * uFlowPatternWeight;
   vec3 blinnPhong = texture2D(tBlinnPhong, vUv).rgb * uBlinnPhongWeight;
   vec3 blur = texture2D(tBlur, vUv).rgb * uBlurWeight;
   vec4 paper = texture2D(tPaper, vUv);
@@ -39,5 +41,8 @@ void main() {
   // Multiply by paper alpha (ridge/valley mask) scaled by weight
   // result = result * mix(1.0, paper.a, uPaperWeight);
 
-  gl_FragColor = vec4(result, 1.0);
+  // Blend against background: flowPattern.a encodes paint opacity (0 = bare, 1 = full)
+  vec3 finalColor = mix(uBackgroundColor, result, flowPatternSample.a);
+
+  gl_FragColor = vec4(finalColor, 1.0);
 }
