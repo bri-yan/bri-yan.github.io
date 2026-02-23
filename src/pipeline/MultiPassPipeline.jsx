@@ -85,6 +85,7 @@ export function MultiPassPipeline({
         outputRef={flowPatternRef}
         baseColor={baseColor}
         threshold={flowPatternThreshold}
+        paperWeight={paperWeight}
         wetness={flowPatternWetness}
         edgeDarkness={flowPatternEdgeDarkness}
         edgeSharpness={flowPatternEdgeSharpness}

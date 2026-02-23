@@ -17,7 +17,7 @@ export const BLEND_MODE = {
 // —— Pipeline weights ——
 export const DEFAULT_FLOW_PATTERN_WEIGHT = 1.0;
 export const DEFAULT_BLINN_PHONG_WEIGHT = 1.0;
-export const DEFAULT_PAPER_WEIGHT = 0.6;
+export const DEFAULT_PAPER_WEIGHT = 0.25;
 export const DEFAULT_BLUR_WEIGHT = 0.0;
 
 // —— Blur defaults ——
@@ -27,7 +27,7 @@ export const DEFAULT_BLUR_ITERATIONS = 25;
 // —— Flow pattern defaults ——
 export const DEFAULT_FLOW_PATTERN_BASE_COLOR = 0x00ffff;
 export const DEFAULT_FLOW_PATTERN_BASE_OPACITY = 1.0;
-export const DEFAULT_FLOW_PATTERN_THRESHOLD = 0.3; // 0.5 - 0.6
+export const DEFAULT_FLOW_PATTERN_THRESHOLD = 0.5; // 0.5 - 0.6
 export const DEFAULT_FLOW_PATTERN_EDGE_DARKNESS = 0.3;
 export const DEFAULT_FLOW_PATTERN_EDGE_SHARPNESS = 80.0;
 

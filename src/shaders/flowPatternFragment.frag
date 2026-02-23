@@ -15,17 +15,18 @@ void main() {
   float paperIntensity = length(texture2D(tPaper, vUv).rgb) / sqrt(3.0);
   
   intensity = smoothstep(max(0.0, uThreshold - uWetness), min(1.0, uThreshold + uWetness), intensity);
-  intensity = intensity * (1.0 + 0.3*(paperIntensity - 0.5) / 0.5);
+  float texturedIntensity = intensity * (1.0 + uPaperWeight*(paperIntensity - 0.5) / 0.5);
 
 
   float edgeThickness = 0.2;
-  float inverseIntensity = 1.0 - intensity;
-  float meshMask = intensity > edgeThickness ? 1.0 : 0.0;
+  float inverseIntensity = 1.0 - texturedIntensity;
+  float meshMask = texturedIntensity > edgeThickness ? 1.0 : 0.0;
+  float edge = meshMask * inverseIntensity * 1.5;
 
-  float x = meshMask * inverseIntensity * 1.5 + intensity * 0.2;
+  float finalIntensity = edge + texturedIntensity * 0.2;
 //   x = (1.0 - x) * meshMask;
 
-  vec4 result = vec4(uBaseColor, x);
+  vec4 result = vec4(uBaseColor, finalIntensity);
 
   gl_FragColor = result;
 }
