@@ -13,11 +13,11 @@ varying vec2 vUv;
 void main() {
   float intensity = length(texture2D(tIntensity, vUv).rgb) / sqrt(3.0);
   float paperIntensity = length(texture2D(tPaper, vUv).rgb) / sqrt(3.0);
-  intensity = intensity * (1.0 + 0.25*(paperIntensity - 0.5) / 0.5);
-
-  intensity = intensity / 1.0;
-  intensity = smoothstep(max(0.0, uThreshold - uWetness), min(1.0, uThreshold + uWetness), intensity);
   
+  intensity = smoothstep(max(0.0, uThreshold - uWetness), min(1.0, uThreshold + uWetness), intensity);
+  intensity = intensity * (1.0 + 0.3*(paperIntensity - 0.5) / 0.5);
+
+
   float edgeThickness = 0.2;
   float inverseIntensity = 1.0 - intensity;
   float meshMask = intensity > edgeThickness ? 1.0 : 0.0;
