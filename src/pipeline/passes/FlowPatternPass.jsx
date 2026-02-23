@@ -19,6 +19,7 @@ export function FlowPatternPass({
   threshold,
   wetness,
   edgeDarkness,
+  edgeSharpness,
   baseOpacity,
 }) {
   const { gl, size } = useThree();
@@ -39,6 +40,7 @@ export function FlowPatternPass({
           uThreshold: { value: threshold },
           uWetness: { value: wetness },
           uEdgeDarkness: { value: edgeDarkness },
+          uEdgeSharpness: { value: edgeSharpness ?? 80.0 },
         },
       }),
     []
@@ -53,6 +55,7 @@ export function FlowPatternPass({
     uniforms.uWetness.value = wetness;
     uniforms.uBaseOpacity.value = baseOpacity;
     uniforms.uEdgeDarkness.value = edgeDarkness;
+    uniforms.uEdgeSharpness.value = edgeSharpness ?? 80.0;
   }, -1);
 
   useFrame(() => {

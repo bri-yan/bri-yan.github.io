@@ -37,7 +37,7 @@ void main() {
   vec3 result = flowPattern + blinnPhong + blur;
 
   // Multiply by paper alpha (ridge/valley mask) scaled by weight
-  result = result * mix(1.0, paper.a, uPaperWeight);
+  // result = result * mix(1.0, paper.a, uPaperWeight);
 
   gl_FragColor = vec4(result, 1.0);
 }

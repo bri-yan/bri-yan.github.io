@@ -5,6 +5,7 @@ import {
   DEFAULT_FLOW_PATTERN_BASE_COLOR,
   DEFAULT_FLOW_PATTERN_THRESHOLD,
   DEFAULT_FLOW_PATTERN_EDGE_DARKNESS,
+  DEFAULT_FLOW_PATTERN_EDGE_SHARPNESS,
   DEFAULT_FLOW_PATTERN_BASE_OPACITY,
   DEFAULT_BLINN_PHONG_WEIGHT,
   DEFAULT_BLUR_WEIGHT,
@@ -33,6 +34,7 @@ export function MultiPassPipeline({
   flowPatternThreshold = DEFAULT_FLOW_PATTERN_THRESHOLD,
   flowPatternWetness = 1.0 - DEFAULT_FLOW_PATTERN_THRESHOLD,
   flowPatternEdgeDarkness = DEFAULT_FLOW_PATTERN_EDGE_DARKNESS,
+  flowPatternEdgeSharpness = DEFAULT_FLOW_PATTERN_EDGE_SHARPNESS,
   flowPatternBaseOpacity = DEFAULT_FLOW_PATTERN_BASE_OPACITY,
   blinnPhongWeight = DEFAULT_BLINN_PHONG_WEIGHT,
   blurWeight = DEFAULT_BLUR_WEIGHT,
@@ -76,6 +78,7 @@ export function MultiPassPipeline({
         threshold={flowPatternThreshold}
         wetness={flowPatternWetness}
         edgeDarkness={flowPatternEdgeDarkness}
+        edgeSharpness={flowPatternEdgeSharpness}
         baseOpacity={flowPatternBaseOpacity}
       />
       <BlinnPhongPass outputRef={blinnPhongRef} />
