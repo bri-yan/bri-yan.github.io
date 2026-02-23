@@ -23,12 +23,19 @@ export function populateSceneWithClonedMeshes(sourceScene, targetScene, getMater
 /**
  * Hook for passes that render the main scene with custom materials (e.g. IntensityPass, BlinnPhongPass).
  * Returns target FBO ref for outputRef assignment.
+ * @param getMaterial - Factory that returns a material per mesh
+ * @param cacheKey - When this changes, the materials cache is cleared (use shader source for HMR)
  */
-export function useSceneRenderPass(getMaterial) {
+export function useSceneRenderPass(getMaterial, cacheKey) {
   const { gl, scene, camera, size } = useThree();
   const target = useFBO(size.width, size.height, FBO_OPTIONS);
   const customScene = useMemo(() => new THREE.Scene(), []);
   const materialsCache = useRef(new Map());
+  const prevCacheKey = useRef(cacheKey);
+  if (prevCacheKey.current !== cacheKey) {
+    materialsCache.current.clear();
+    prevCacheKey.current = cacheKey;
+  }
   const savedClearColor = useRef(new THREE.Color());
   const savedClearAlpha = useRef(1);
 

@@ -69,10 +69,10 @@ export function BlinnPhongPass({
       materialsRef.current.add(mat);
       return mat;
     },
-    []
+    [blinnPhongVertex, blinnPhongFragment]
   );
 
-  const target = useSceneRenderPass(getMaterial);
+  const target = useSceneRenderPass(getMaterial, blinnPhongFragment);
   if (outputRef) outputRef.current = target;
   return null;
 }
