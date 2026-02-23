@@ -8,6 +8,12 @@ import {
   DEFAULT_FLOW_PATTERN_EDGE_SHARPNESS,
   DEFAULT_FLOW_PATTERN_BASE_OPACITY,
   DEFAULT_BLINN_PHONG_WEIGHT,
+  DEFAULT_BLINN_PHONG_LIGHT_POSITION,
+  DEFAULT_BLINN_PHONG_SHININESS,
+  DEFAULT_BLINN_PHONG_AMBIENT_STRENGTH,
+  DEFAULT_BLINN_PHONG_DIFFUSE_STRENGTH,
+  DEFAULT_BLINN_PHONG_SPECULAR_STRENGTH,
+  DEFAULT_BLINN_PHONG_SPECULAR_THRESHOLD,
   DEFAULT_BLUR_WEIGHT,
   DEFAULT_BLUR_STRENGTH,
   DEFAULT_BLUR_ITERATIONS,
@@ -38,6 +44,12 @@ export function MultiPassPipeline({
   flowPatternEdgeSharpness = DEFAULT_FLOW_PATTERN_EDGE_SHARPNESS,
   flowPatternBaseOpacity = DEFAULT_FLOW_PATTERN_BASE_OPACITY,
   blinnPhongWeight = DEFAULT_BLINN_PHONG_WEIGHT,
+  blinnPhongLightPosition = DEFAULT_BLINN_PHONG_LIGHT_POSITION,
+  blinnPhongShininess = DEFAULT_BLINN_PHONG_SHININESS,
+  blinnPhongAmbientStrength = DEFAULT_BLINN_PHONG_AMBIENT_STRENGTH,
+  blinnPhongDiffuseStrength = DEFAULT_BLINN_PHONG_DIFFUSE_STRENGTH,
+  blinnPhongSpecularStrength = DEFAULT_BLINN_PHONG_SPECULAR_STRENGTH,
+  blinnPhongSpecularThreshold = DEFAULT_BLINN_PHONG_SPECULAR_THRESHOLD,
   blurWeight = DEFAULT_BLUR_WEIGHT,
   blurStrength = DEFAULT_BLUR_STRENGTH,
   blurIterations = DEFAULT_BLUR_ITERATIONS,
@@ -91,7 +103,15 @@ export function MultiPassPipeline({
         edgeSharpness={flowPatternEdgeSharpness}
         baseOpacity={flowPatternBaseOpacity}
       />
-      <BlinnPhongPass outputRef={blinnPhongRef} />
+      <BlinnPhongPass
+        outputRef={blinnPhongRef}
+        lightPosition={blinnPhongLightPosition}
+        shininess={blinnPhongShininess}
+        ambientStrength={blinnPhongAmbientStrength}
+        diffuseStrength={blinnPhongDiffuseStrength}
+        specularStrength={blinnPhongSpecularStrength}
+        specularThreshold={blinnPhongSpecularThreshold}
+      />
       <CompositorPass
         flowPatternRef={flowPatternRef}
         blinnPhongRef={blinnPhongRef}
