@@ -26,9 +26,9 @@ vec3 blendScreen(vec3 a, vec3 b) {
 
 void main() {
   vec4 flowPatternSample = texture2D(tFlowPattern, vUv);
-  vec3 flowPattern = flowPatternSample.rgb * uFlowPatternWeight;
-  vec3 blinnPhong = texture2D(tBlinnPhong, vUv).rgb * uBlinnPhongWeight;
-  vec3 blur = texture2D(tBlur, vUv).rgb * uBlurWeight;
+  vec4 flowPattern = flowPatternSample * uFlowPatternWeight;
+  vec4 blinnPhong = texture2D(tBlinnPhong, vUv) * uBlinnPhongWeight;
+  vec4 blur = texture2D(tBlur, vUv) * uBlurWeight;
   vec4 paper = texture2D(tPaper, vUv);
 
   if (uShowPaper > 0.5) {
@@ -36,13 +36,7 @@ void main() {
     return;
   }
 
-  vec3 result = flowPattern + blinnPhong + blur;
+  vec4 result = flowPattern + blinnPhong + blur;
 
-  // Multiply by paper alpha (ridge/valley mask) scaled by weight
-  // result = result * mix(1.0, paper.a, uPaperWeight);
-
-  // Blend against background: flowPattern.a encodes paint opacity (0 = bare, 1 = full)
-  vec3 finalColor = mix(uBackgroundColor, result, flowPatternSample.a);
-
-  gl_FragColor = vec4(finalColor, 1.0);
+  gl_FragColor = result;
 }

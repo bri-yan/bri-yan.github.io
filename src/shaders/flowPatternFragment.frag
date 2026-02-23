@@ -26,7 +26,7 @@ void main() {
   float finalIntensity = edge + texturedIntensity * 0.2;
 //   x = (1.0 - x) * meshMask;
 
-  vec4 result = vec4(uBaseColor, finalIntensity);
+  vec4 result = vec4(finalIntensity * uBaseColor, finalIntensity);
 
   gl_FragColor = result;
 }

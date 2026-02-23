@@ -27,20 +27,30 @@ void main() {
   // Halfway vector for Blinn-Phong
   vec3 halfwayDir = normalize(lightDir + viewDir);
 
-  // Ambient component
-  vec3 ambient = uAmbientStrength * uAmbientColor;
+  // // Ambient component
+  // vec3 ambient = uAmbientStrength * uAmbientColor;
 
-  // Diffuse component (Lambertian)
+  // // Diffuse component (Lambertian)
+  // float diff = max(dot(normal, lightDir), 0.0);
+  // vec3 diffuse = uDiffuseStrength * diff * uLightColor * uDiffuseColor;
+
+  // // Specular component (Blinn-Phong)
+  // float spec = pow(max(dot(normal, halfwayDir), 0.0), uShininess);
+  // vec3 specular = uSpecularStrength * spec * uLightColor * uSpecularColor;
+
+  // vec3 result = (length(specular) / sqrt(3.0)) >= uSpecularThreshold
+  //   ? uHighlightColor
+  //   : vec3(0.0);
+
+  float ambient = uAmbientStrength;
+
   float diff = max(dot(normal, lightDir), 0.0);
-  vec3 diffuse = uDiffuseStrength * diff * uLightColor * uDiffuseColor;
+  float diffuse = uDiffuseStrength * diff;
 
-  // Specular component (Blinn-Phong)
   float spec = pow(max(dot(normal, halfwayDir), 0.0), uShininess);
-  vec3 specular = uSpecularStrength * spec * uLightColor * uSpecularColor;
+  float specular = uSpecularStrength * spec;
 
-  vec3 result = (length(specular) / sqrt(3.0)) >= uSpecularThreshold
-    ? uHighlightColor
-    : vec3(0.0);
+  float result = ambient + diffuse + specular;
 
-  gl_FragColor = vec4(result, 1.0);
+  gl_FragColor = vec4(result);
 }
