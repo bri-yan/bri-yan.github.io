@@ -76,6 +76,7 @@ export function MultiPassPipeline({
   const intensityRef = useRef();
   const flowPatternRef = useRef();
   const diffuseRef = useRef();
+  const diffuseBlurRef = useRef();
   const specularRef = useRef();
   const blurRef = useRef();
   const paperRef = useRef();
@@ -110,6 +111,12 @@ export function MultiPassPipeline({
         diffuseStrength={lightingDiffuseStrength}
         baseColor={flowPatternBaseColor}
       />
+      <BlurPass
+        inputRef={diffuseRef}
+        outputRef={diffuseBlurRef}
+        blurStrength={blurStrength}
+        blurIterations={blurIterations}
+      />
       <SpecularPass
         outputRef={specularRef}
         lightPosition={lightingLightPosition}
@@ -118,7 +125,7 @@ export function MultiPassPipeline({
       />
       <CompositorPass
         flowPatternRef={flowPatternRef}
-        diffuseRef={diffuseRef}
+        diffuseRef={diffuseBlurRef}
         specularRef={specularRef}
         blurRef={blurRef}
         paperRef={paperRef}
