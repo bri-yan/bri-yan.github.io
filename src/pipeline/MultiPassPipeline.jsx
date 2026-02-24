@@ -108,6 +108,7 @@ export function MultiPassPipeline({
         lightPosition={lightingLightPosition}
         ambientStrength={lightingAmbientStrength}
         diffuseStrength={lightingDiffuseStrength}
+        baseColor={flowPatternBaseColor}
       />
       <SpecularPass
         outputRef={specularRef}

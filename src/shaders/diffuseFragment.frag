@@ -1,6 +1,7 @@
 uniform vec3 uLightPosition;
 uniform float uAmbientStrength;
 uniform float uDiffuseStrength;
+uniform vec3 uBaseColor;
 
 varying vec3 vNormal;
 varying vec3 vViewPosition;
@@ -14,5 +15,5 @@ void main() {
   float diffuse = uDiffuseStrength * diff;
 
   float result = ambient + diffuse;
-  gl_FragColor = vec4(result);
+  gl_FragColor = vec4(uBaseColor * result, result);
 }

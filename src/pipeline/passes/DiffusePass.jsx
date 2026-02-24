@@ -16,6 +16,7 @@ export function DiffusePass({
   lightPosition = DEFAULT_BLINN_PHONG_LIGHT_POSITION,
   ambientStrength = DEFAULT_BLINN_PHONG_AMBIENT_STRENGTH,
   diffuseStrength = DEFAULT_BLINN_PHONG_DIFFUSE_STRENGTH,
+  baseColor,
 }) {
   const materialsRef = useRef(new Set());
   const lightPosVec = useRef(toVector3(lightPosition)).current;
@@ -40,6 +41,7 @@ export function DiffusePass({
           uLightPosition: { value: lightPosVec.clone() },
           uAmbientStrength: { value: ambientStrength },
           uDiffuseStrength: { value: diffuseStrength },
+          uBaseColor: { value: baseColor },
         },
       });
       materialsRef.current.add(mat);
