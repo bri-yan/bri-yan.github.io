@@ -7,7 +7,8 @@ import {
   DEFAULT_FLOW_PATTERN_EDGE_DARKNESS,
   DEFAULT_FLOW_PATTERN_EDGE_SHARPNESS,
   DEFAULT_FLOW_PATTERN_BASE_OPACITY,
-  DEFAULT_LIGHTING_WEIGHT,
+  DEFAULT_DIFFUSE_WEIGHT,
+  DEFAULT_SPECULAR_WEIGHT,
   DEFAULT_BLINN_PHONG_LIGHT_POSITION,
   DEFAULT_BLINN_PHONG_SHININESS,
   DEFAULT_BLINN_PHONG_AMBIENT_STRENGTH,
@@ -43,7 +44,8 @@ export function MultiPassPipeline({
   flowPatternEdgeDarkness = DEFAULT_FLOW_PATTERN_EDGE_DARKNESS,
   flowPatternEdgeSharpness = DEFAULT_FLOW_PATTERN_EDGE_SHARPNESS,
   flowPatternBaseOpacity = DEFAULT_FLOW_PATTERN_BASE_OPACITY,
-  lightingWeight = DEFAULT_LIGHTING_WEIGHT,
+  diffuseWeight = DEFAULT_DIFFUSE_WEIGHT,
+  specularWeight = DEFAULT_SPECULAR_WEIGHT,
   lightingLightPosition = DEFAULT_BLINN_PHONG_LIGHT_POSITION,
   lightingShininess = DEFAULT_BLINN_PHONG_SHININESS,
   lightingAmbientStrength = DEFAULT_BLINN_PHONG_AMBIENT_STRENGTH,
@@ -130,7 +132,8 @@ export function MultiPassPipeline({
         blurRef={blurRef}
         paperRef={paperRef}
         flowPatternWeight={flowPatternWeight}
-        lightingWeight={lightingWeight}
+        diffuseWeight={diffuseWeight}
+        specularWeight={specularWeight}
         blurWeight={blurWeight}
         paperWeight={paperWeight}
         backgroundColor={bgColor}

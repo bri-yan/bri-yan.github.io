@@ -3,7 +3,8 @@ import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import {
   DEFAULT_FLOW_PATTERN_WEIGHT,
-  DEFAULT_LIGHTING_WEIGHT,
+  DEFAULT_DIFFUSE_WEIGHT,
+  DEFAULT_SPECULAR_WEIGHT,
   DEFAULT_BLUR_WEIGHT,
   DEFAULT_PAPER_WEIGHT,
   DEFAULT_COMPOSITOR_BACKGROUND,
@@ -22,7 +23,8 @@ export function CompositorPass({
   blurRef,
   paperRef,
   flowPatternWeight = DEFAULT_FLOW_PATTERN_WEIGHT,
-  lightingWeight = DEFAULT_LIGHTING_WEIGHT,
+  diffuseWeight = DEFAULT_DIFFUSE_WEIGHT,
+  specularWeight = DEFAULT_SPECULAR_WEIGHT,
   blurWeight = DEFAULT_BLUR_WEIGHT,
   paperWeight = DEFAULT_PAPER_WEIGHT,
   backgroundColor = new THREE.Color(DEFAULT_COMPOSITOR_BACKGROUND),
@@ -43,7 +45,8 @@ export function CompositorPass({
           tBlur: { value: null },
           tPaper: { value: null },
           uFlowPatternWeight: { value: flowPatternWeight },
-          uLightingWeight: { value: lightingWeight },
+          uDiffuseWeight: { value: diffuseWeight },
+          uSpecularWeight: { value: specularWeight },
           uBlurWeight: { value: blurWeight },
           uPaperWeight: { value: paperWeight },
           uShowPaper: { value: 0 },
@@ -59,7 +62,8 @@ export function CompositorPass({
 
   useFrame(() => {
     uniforms.uFlowPatternWeight.value = flowPatternWeight;
-    uniforms.uLightingWeight.value = lightingWeight;
+    uniforms.uDiffuseWeight.value = diffuseWeight;
+    uniforms.uSpecularWeight.value = specularWeight;
     uniforms.uBlurWeight.value = blurWeight;
     uniforms.uPaperWeight.value = paperWeight;
     uniforms.uShowPaper.value = showPaper ? 1 : 0;

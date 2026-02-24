@@ -4,7 +4,8 @@ uniform sampler2D tSpecular;
 uniform sampler2D tBlur;
 uniform sampler2D tPaper;
 uniform float uFlowPatternWeight;
-uniform float uLightingWeight;
+uniform float uDiffuseWeight;
+uniform float uSpecularWeight;
 uniform float uBlurWeight;
 uniform float uPaperWeight;
 uniform float uBlendMode; // 0 = additive, 1 = multiply, 2 = screen
@@ -27,9 +28,8 @@ vec3 blendScreen(vec3 a, vec3 b) {
 
 void main() {
   vec4 flowPattern = texture2D(tFlowPattern, vUv) * uFlowPatternWeight;
-  vec4 diffuse = texture2D(tDiffuse, vUv);
-  vec4 specular = texture2D(tSpecular, vUv);
-  vec4 lighting = (diffuse + specular) * uLightingWeight;
+  vec4 diffuse = texture2D(tDiffuse, vUv) * uDiffuseWeight;
+  vec4 specular = texture2D(tSpecular, vUv) * uSpecularWeight;
   vec4 blur = texture2D(tBlur, vUv) * uBlurWeight;
   vec4 paper = texture2D(tPaper, vUv);
 
@@ -38,5 +38,5 @@ void main() {
     return;
   }
 
-  gl_FragColor = flowPattern + lighting + blur;
+  gl_FragColor = flowPattern + diffuse + specular + blur;
 }

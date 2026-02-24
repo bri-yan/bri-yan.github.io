@@ -15,8 +15,9 @@ export const BLEND_MODE = {
 };
 
 // —— Pipeline weights ——
-export const DEFAULT_FLOW_PATTERN_WEIGHT = 0.0;
-export const DEFAULT_LIGHTING_WEIGHT = 1.0;
+export const DEFAULT_FLOW_PATTERN_WEIGHT = 1.0;
+export const DEFAULT_DIFFUSE_WEIGHT = 1.0;
+export const DEFAULT_SPECULAR_WEIGHT = 1.0;
 export const DEFAULT_PAPER_WEIGHT = 0.25;
 export const DEFAULT_BLUR_WEIGHT = 0.0;
 
