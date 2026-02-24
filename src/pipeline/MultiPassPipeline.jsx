@@ -14,6 +14,7 @@ import {
   DEFAULT_BLINN_PHONG_AMBIENT_STRENGTH,
   DEFAULT_BLINN_PHONG_DIFFUSE_STRENGTH,
   DEFAULT_BLINN_PHONG_SPECULAR_STRENGTH,
+  DEFAULT_BLINN_PHONG_SPECULAR_THRESHOLD,
   DEFAULT_BLUR_WEIGHT,
   DEFAULT_BLUR_STRENGTH,
   DEFAULT_BLUR_ITERATIONS,
@@ -51,6 +52,7 @@ export function MultiPassPipeline({
   lightingAmbientStrength = DEFAULT_BLINN_PHONG_AMBIENT_STRENGTH,
   lightingDiffuseStrength = DEFAULT_BLINN_PHONG_DIFFUSE_STRENGTH,
   lightingSpecularStrength = DEFAULT_BLINN_PHONG_SPECULAR_STRENGTH,
+  lightingSpecularThreshold = DEFAULT_BLINN_PHONG_SPECULAR_THRESHOLD,
   blurWeight = DEFAULT_BLUR_WEIGHT,
   blurStrength = DEFAULT_BLUR_STRENGTH,
   blurIterations = DEFAULT_BLUR_ITERATIONS,
@@ -124,6 +126,7 @@ export function MultiPassPipeline({
         lightPosition={lightingLightPosition}
         shininess={lightingShininess}
         specularStrength={lightingSpecularStrength}
+        specularThreshold={lightingSpecularThreshold}
       />
       <CompositorPass
         flowPatternRef={flowPatternRef}

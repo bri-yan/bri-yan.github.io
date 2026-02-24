@@ -15,5 +15,6 @@ void main() {
   float diffuse = uDiffuseStrength * diff;
 
   float result = ambient + diffuse;
+  result = 1.0 - result;
   gl_FragColor = vec4(uBaseColor * result, result);
 }

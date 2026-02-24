@@ -5,6 +5,7 @@ import {
   DEFAULT_BLINN_PHONG_LIGHT_POSITION,
   DEFAULT_BLINN_PHONG_SHININESS,
   DEFAULT_BLINN_PHONG_SPECULAR_STRENGTH,
+  DEFAULT_BLINN_PHONG_SPECULAR_THRESHOLD,
 } from '../../config';
 import { useSceneRenderPass, toVector3 } from '../utils/sceneWithMaterials';
 import lightingVertex from '../../shaders/lightingVertex.vert?raw';
@@ -16,6 +17,7 @@ export function SpecularPass({
   lightPosition = DEFAULT_BLINN_PHONG_LIGHT_POSITION,
   shininess = DEFAULT_BLINN_PHONG_SHININESS,
   specularStrength = DEFAULT_BLINN_PHONG_SPECULAR_STRENGTH,
+  specularThreshold = DEFAULT_BLINN_PHONG_SPECULAR_THRESHOLD,
 }) {
   const materialsRef = useRef(new Set());
   const lightPosVec = useRef(toVector3(lightPosition)).current;
@@ -28,6 +30,7 @@ export function SpecularPass({
       u.uLightPosition.value.copy(lightPosVec);
       u.uShininess.value = shininess;
       u.uSpecularStrength.value = specularStrength;
+      u.uSpecularThreshold.value = specularThreshold;
     });
   }, -1);
 
@@ -40,6 +43,7 @@ export function SpecularPass({
           uLightPosition: { value: lightPosVec.clone() },
           uShininess: { value: shininess },
           uSpecularStrength: { value: specularStrength },
+          uSpecularThreshold: { value: specularThreshold },
         },
       });
       materialsRef.current.add(mat);

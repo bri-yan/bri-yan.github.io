@@ -38,5 +38,7 @@ void main() {
     return;
   }
 
-  gl_FragColor = flowPattern + diffuse + specular + blur;
+  vec4 result = flowPattern * diffuse.a * 2.5 + blur;
+  result = specular.a == 1.0 ? specular : result;
+  gl_FragColor = result;
 }

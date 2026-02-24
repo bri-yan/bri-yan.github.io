@@ -1,6 +1,7 @@
 uniform vec3 uLightPosition;
 uniform float uShininess;
 uniform float uSpecularStrength;
+uniform float uSpecularThreshold;
 
 varying vec3 vNormal;
 varying vec3 vViewPosition;
@@ -14,5 +15,7 @@ void main() {
   float spec = pow(max(dot(normal, halfwayDir), 0.0), uShininess);
   float specular = uSpecularStrength * spec;
 
-  gl_FragColor = vec4(specular);
+  float result = specular > uSpecularThreshold ? 1.0 : 0.0;
+
+  gl_FragColor = vec4(result);
 }
