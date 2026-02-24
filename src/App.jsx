@@ -12,7 +12,7 @@ import {
   DEFAULT_BLUR_ITERATIONS,
 } from './config';
 import { MultiPassPipeline } from './pipeline';
-import { TorusScene, SceneOverlay } from './components';
+import { TorusScene, TorusKnotScene, SceneOverlay } from './components';
 import './App.css';
 
 export default function App() {
@@ -29,7 +29,7 @@ export default function App() {
           blurIterations={DEFAULT_BLUR_ITERATIONS}
           blendMode={BLEND_MODE.ADDITIVE}
         >
-          <TorusScene />
+          <TorusKnotScene />
           <OrbitControls enableDamping dampingFactor={0.05} />
         </MultiPassPipeline>
       </Canvas>
