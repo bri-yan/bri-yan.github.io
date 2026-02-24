@@ -4,6 +4,10 @@ import { useFBO } from '@react-three/drei';
 import * as THREE from 'three';
 import { FBO_OPTIONS, PASS_FRAME_ORDER } from '../../config';
 
+/** Converts array or Vector3 to Vector3 for light position updates. */
+export const toVector3 = (v) =>
+  Array.isArray(v) ? new THREE.Vector3().fromArray(v) : v?.clone?.() ?? v;
+
 /**
  * Populates targetScene with clones of all meshes from sourceScene, each using
  * a material from the cache or from getMaterial(originalMaterial).
@@ -21,7 +25,7 @@ export function populateSceneWithClonedMeshes(sourceScene, targetScene, getMater
 }
 
 /**
- * Hook for passes that render the main scene with custom materials (e.g. IntensityPass, BlinnPhongPass).
+ * Hook for passes that render the main scene with custom materials (e.g. IntensityPass, DiffusePass, SpecularPass).
  * Returns target FBO ref for outputRef assignment.
  * @param getMaterial - Factory that returns a material per mesh
  * @param cacheKey - When this changes, the materials cache is cleared (use shader source for HMR)

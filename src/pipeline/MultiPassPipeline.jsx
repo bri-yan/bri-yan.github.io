@@ -7,13 +7,12 @@ import {
   DEFAULT_FLOW_PATTERN_EDGE_DARKNESS,
   DEFAULT_FLOW_PATTERN_EDGE_SHARPNESS,
   DEFAULT_FLOW_PATTERN_BASE_OPACITY,
-  DEFAULT_BLINN_PHONG_WEIGHT,
+  DEFAULT_LIGHTING_WEIGHT,
   DEFAULT_BLINN_PHONG_LIGHT_POSITION,
   DEFAULT_BLINN_PHONG_SHININESS,
   DEFAULT_BLINN_PHONG_AMBIENT_STRENGTH,
   DEFAULT_BLINN_PHONG_DIFFUSE_STRENGTH,
   DEFAULT_BLINN_PHONG_SPECULAR_STRENGTH,
-  DEFAULT_BLINN_PHONG_SPECULAR_THRESHOLD,
   DEFAULT_BLUR_WEIGHT,
   DEFAULT_BLUR_STRENGTH,
   DEFAULT_BLUR_ITERATIONS,
@@ -25,14 +24,15 @@ import {
 } from '../config';
 import { IntensityPass } from './passes/IntensityPass';
 import { FlowPatternPass } from './passes/FlowPatternPass';
-import { BlinnPhongPass } from './passes/BlinnPhongPass';
+import { DiffusePass } from './passes/DiffusePass';
+import { SpecularPass } from './passes/SpecularPass';
 import { BlurPass } from './passes/BlurPass';
 import { CompositorPass } from './passes/CompositorPass';
 import { PaperTexturePass } from './passes/PaperTexturePass';
 
 /**
- * Multi-pass pipeline: Intensity → FlowPattern, BlinnPhong and Blur each render to an FBO;
- * CompositorPass blends them to the screen.
+ * Multi-pass pipeline: Intensity → FlowPattern, Diffuse + Specular and Blur each render to FBOs;
+ * CompositorPass combines lighting (diffuse+specular) and blends all to the screen.
  */
 export function MultiPassPipeline({
   children,
@@ -43,13 +43,12 @@ export function MultiPassPipeline({
   flowPatternEdgeDarkness = DEFAULT_FLOW_PATTERN_EDGE_DARKNESS,
   flowPatternEdgeSharpness = DEFAULT_FLOW_PATTERN_EDGE_SHARPNESS,
   flowPatternBaseOpacity = DEFAULT_FLOW_PATTERN_BASE_OPACITY,
-  blinnPhongWeight = DEFAULT_BLINN_PHONG_WEIGHT,
-  blinnPhongLightPosition = DEFAULT_BLINN_PHONG_LIGHT_POSITION,
-  blinnPhongShininess = DEFAULT_BLINN_PHONG_SHININESS,
-  blinnPhongAmbientStrength = DEFAULT_BLINN_PHONG_AMBIENT_STRENGTH,
-  blinnPhongDiffuseStrength = DEFAULT_BLINN_PHONG_DIFFUSE_STRENGTH,
-  blinnPhongSpecularStrength = DEFAULT_BLINN_PHONG_SPECULAR_STRENGTH,
-  blinnPhongSpecularThreshold = DEFAULT_BLINN_PHONG_SPECULAR_THRESHOLD,
+  lightingWeight = DEFAULT_LIGHTING_WEIGHT,
+  lightingLightPosition = DEFAULT_BLINN_PHONG_LIGHT_POSITION,
+  lightingShininess = DEFAULT_BLINN_PHONG_SHININESS,
+  lightingAmbientStrength = DEFAULT_BLINN_PHONG_AMBIENT_STRENGTH,
+  lightingDiffuseStrength = DEFAULT_BLINN_PHONG_DIFFUSE_STRENGTH,
+  lightingSpecularStrength = DEFAULT_BLINN_PHONG_SPECULAR_STRENGTH,
   blurWeight = DEFAULT_BLUR_WEIGHT,
   blurStrength = DEFAULT_BLUR_STRENGTH,
   blurIterations = DEFAULT_BLUR_ITERATIONS,
@@ -76,7 +75,8 @@ export function MultiPassPipeline({
   );
   const intensityRef = useRef();
   const flowPatternRef = useRef();
-  const blinnPhongRef = useRef();
+  const diffuseRef = useRef();
+  const specularRef = useRef();
   const blurRef = useRef();
   const paperRef = useRef();
 
@@ -103,22 +103,26 @@ export function MultiPassPipeline({
         edgeSharpness={flowPatternEdgeSharpness}
         baseOpacity={flowPatternBaseOpacity}
       />
-      <BlinnPhongPass
-        outputRef={blinnPhongRef}
-        lightPosition={blinnPhongLightPosition}
-        shininess={blinnPhongShininess}
-        ambientStrength={blinnPhongAmbientStrength}
-        diffuseStrength={blinnPhongDiffuseStrength}
-        specularStrength={blinnPhongSpecularStrength}
-        specularThreshold={blinnPhongSpecularThreshold}
+      <DiffusePass
+        outputRef={diffuseRef}
+        lightPosition={lightingLightPosition}
+        ambientStrength={lightingAmbientStrength}
+        diffuseStrength={lightingDiffuseStrength}
+      />
+      <SpecularPass
+        outputRef={specularRef}
+        lightPosition={lightingLightPosition}
+        shininess={lightingShininess}
+        specularStrength={lightingSpecularStrength}
       />
       <CompositorPass
         flowPatternRef={flowPatternRef}
-        blinnPhongRef={blinnPhongRef}
+        diffuseRef={diffuseRef}
+        specularRef={specularRef}
         blurRef={blurRef}
         paperRef={paperRef}
         flowPatternWeight={flowPatternWeight}
-        blinnPhongWeight={blinnPhongWeight}
+        lightingWeight={lightingWeight}
         blurWeight={blurWeight}
         paperWeight={paperWeight}
         backgroundColor={bgColor}

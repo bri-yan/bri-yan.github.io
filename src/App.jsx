@@ -5,7 +5,7 @@ import {
   BACKGROUND_COLOR,
   BLEND_MODE,
   DEFAULT_FLOW_PATTERN_WEIGHT,
-  DEFAULT_BLINN_PHONG_WEIGHT,
+  DEFAULT_LIGHTING_WEIGHT,
   DEFAULT_BLUR_WEIGHT,
   DEFAULT_BLUR_STRENGTH,
   DEFAULT_BLUR_ITERATIONS,
@@ -21,7 +21,7 @@ export default function App() {
         <color attach="background" args={[BACKGROUND_COLOR]} />
         <MultiPassPipeline
           flowPatternWeight={DEFAULT_FLOW_PATTERN_WEIGHT}
-          blinnPhongWeight={DEFAULT_BLINN_PHONG_WEIGHT}
+          lightingWeight={DEFAULT_LIGHTING_WEIGHT}
           blurWeight={DEFAULT_BLUR_WEIGHT}
           blurStrength={DEFAULT_BLUR_STRENGTH}
           blurIterations={DEFAULT_BLUR_ITERATIONS}
