@@ -1,4 +1,4 @@
-import { useMemo, useRef } from 'react';
+import { useMemo, createRef } from 'react';
 import * as THREE from 'three';
 import {
   DEFAULT_FLOW_PATTERN_WEIGHT,
@@ -22,7 +22,7 @@ import {
   DEFAULT_PAPER_REPEAT_X,
   DEFAULT_PAPER_REPEAT_Y,
   DEFAULT_COMPOSITOR_BACKGROUND,
-  BLEND_MODE,
+  DEFAULT_COMPOSITOR_DIFFUSE_GAIN,
 } from '../config';
 import { IntensityPass } from './passes/IntensityPass';
 import { FlowPatternPass } from './passes/FlowPatternPass';
@@ -31,10 +31,15 @@ import { SpecularPass } from './passes/SpecularPass';
 import { BlurPass } from './passes/BlurPass';
 import { CompositorPass } from './passes/CompositorPass';
 import { PaperTexturePass } from './passes/PaperTexturePass';
+import { DebugViewPass } from './passes/DebugViewPass';
+
+const toColor = (value) => (value?.isColor ? value : new THREE.Color(value));
 
 /**
- * Multi-pass pipeline: Intensity → FlowPattern, Diffuse + Specular and Blur each render to FBOs;
- * CompositorPass combines lighting (diffuse+specular) and blends all to the screen.
+ * Multi-pass watercolor pipeline. Passes are flat siblings that write to
+ * per-pass FBOs (the `fbos` map) and are ordered by useFrame priority;
+ * CompositorPass blends them to the screen. Set `debugView` to any fbos key
+ * to inspect that pass's raw output instead of the composite.
  */
 export function MultiPassPipeline({
   children,
@@ -60,46 +65,42 @@ export function MultiPassPipeline({
   paperRepeatX = DEFAULT_PAPER_REPEAT_X,
   paperRepeatY = DEFAULT_PAPER_REPEAT_Y,
   backgroundColor = DEFAULT_COMPOSITOR_BACKGROUND,
-  showPaper = false,
-  blendMode = BLEND_MODE.ADDITIVE,
+  diffuseGain = DEFAULT_COMPOSITOR_DIFFUSE_GAIN,
+  debugView = 'final',
+  debugChannel = 'rgb',
 }) {
-  const baseColor = useMemo(
-    () =>
-      typeof flowPatternBaseColor === 'number'
-        ? new THREE.Color(flowPatternBaseColor)
-        : flowPatternBaseColor,
-    [flowPatternBaseColor]
+  const baseColor = useMemo(() => toColor(flowPatternBaseColor), [flowPatternBaseColor]);
+  const bgColor = useMemo(() => toColor(backgroundColor), [backgroundColor]);
+
+  // One FBO ref per pass; keys double as the debug-view names (DEBUG_VIEWS).
+  const fbos = useMemo(
+    () => ({
+      paper: createRef(),
+      intensity: createRef(),
+      blur: createRef(),
+      flowPattern: createRef(),
+      diffuse: createRef(),
+      diffuseBlur: createRef(),
+      specular: createRef(),
+    }),
+    []
   );
-  const bgColor = useMemo(
-    () =>
-      typeof backgroundColor === 'number'
-        ? new THREE.Color(backgroundColor)
-        : backgroundColor,
-    [backgroundColor]
-  );
-  const intensityRef = useRef();
-  const flowPatternRef = useRef();
-  const diffuseRef = useRef();
-  const diffuseBlurRef = useRef();
-  const specularRef = useRef();
-  const blurRef = useRef();
-  const paperRef = useRef();
 
   return (
     <>
       {children}
-      <PaperTexturePass outputRef={paperRef} repeatX={paperRepeatX} repeatY={paperRepeatY} />
-      <IntensityPass outputRef={intensityRef} />
+      <PaperTexturePass outputRef={fbos.paper} repeatX={paperRepeatX} repeatY={paperRepeatY} />
+      <IntensityPass outputRef={fbos.intensity} />
       <BlurPass
-        inputRef={intensityRef}
-        outputRef={blurRef}
+        inputRef={fbos.intensity}
+        outputRef={fbos.blur}
         blurStrength={blurStrength}
         blurIterations={blurIterations}
       />
       <FlowPatternPass
-        inputRef={blurRef}
-        paperRef={paperRef}
-        outputRef={flowPatternRef}
+        inputRef={fbos.blur}
+        paperRef={fbos.paper}
+        outputRef={fbos.flowPattern}
         baseColor={baseColor}
         threshold={flowPatternThreshold}
         paperWeight={paperWeight}
@@ -109,40 +110,38 @@ export function MultiPassPipeline({
         baseOpacity={flowPatternBaseOpacity}
       />
       <DiffusePass
-        outputRef={diffuseRef}
+        outputRef={fbos.diffuse}
         lightPosition={lightingLightPosition}
         ambientStrength={lightingAmbientStrength}
         diffuseStrength={lightingDiffuseStrength}
-        baseColor={flowPatternBaseColor}
+        baseColor={baseColor}
       />
       <BlurPass
-        inputRef={diffuseRef}
-        outputRef={diffuseBlurRef}
+        inputRef={fbos.diffuse}
+        outputRef={fbos.diffuseBlur}
         blurStrength={blurStrength}
         blurIterations={blurIterations}
       />
       <SpecularPass
-        outputRef={specularRef}
+        outputRef={fbos.specular}
         lightPosition={lightingLightPosition}
         shininess={lightingShininess}
         specularStrength={lightingSpecularStrength}
         specularThreshold={lightingSpecularThreshold}
       />
       <CompositorPass
-        flowPatternRef={flowPatternRef}
-        diffuseRef={diffuseBlurRef}
-        specularRef={specularRef}
-        blurRef={blurRef}
-        paperRef={paperRef}
+        flowPatternRef={fbos.flowPattern}
+        diffuseRef={fbos.diffuseBlur}
+        specularRef={fbos.specular}
+        blurRef={fbos.blur}
         flowPatternWeight={flowPatternWeight}
         diffuseWeight={diffuseWeight}
         specularWeight={specularWeight}
         blurWeight={blurWeight}
-        paperWeight={paperWeight}
+        diffuseGain={diffuseGain}
         backgroundColor={bgColor}
-        showPaper={showPaper}
-        blendMode={blendMode}
       />
+      <DebugViewPass passes={fbos} view={debugView} channel={debugChannel} />
     </>
   );
 }

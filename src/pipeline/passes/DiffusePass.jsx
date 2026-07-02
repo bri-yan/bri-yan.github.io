@@ -5,6 +5,7 @@ import {
   DEFAULT_BLINN_PHONG_LIGHT_POSITION,
   DEFAULT_BLINN_PHONG_AMBIENT_STRENGTH,
   DEFAULT_BLINN_PHONG_DIFFUSE_STRENGTH,
+  UNIFORM_SYNC_FRAME_ORDER,
 } from '../../config';
 import { useSceneRenderPass, toVector3 } from '../utils/sceneWithMaterials';
 import lightingVertex from '../../shaders/lightingVertex.vert?raw';
@@ -29,11 +30,12 @@ export function DiffusePass({
       u.uLightPosition.value.copy(lightPosVec);
       u.uAmbientStrength.value = ambientStrength;
       u.uDiffuseStrength.value = diffuseStrength;
+      if (baseColor) u.uBaseColor.value = baseColor;
     });
-  }, -1);
+  }, UNIFORM_SYNC_FRAME_ORDER);
 
   const getMaterial = useMemo(
-    () => (originalMaterial) => {
+    () => () => {
       const mat = new THREE.ShaderMaterial({
         vertexShader: lightingVertex,
         fragmentShader: diffuseFragment,
@@ -47,7 +49,8 @@ export function DiffusePass({
       materialsRef.current.add(mat);
       return mat;
     },
-    [diffuseFragment]
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- created once; uniforms are synced per frame
+    []
   );
 
   const target = useSceneRenderPass(getMaterial, diffuseFragment);

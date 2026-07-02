@@ -1,12 +1,12 @@
 uniform sampler2D tIntensity;
 uniform sampler2D tPaper;
 uniform vec3 uBaseColor;
-uniform float uBaseOpacity;  // c_α — Base Opacity
+uniform float uBaseOpacity;  // c_α — Base Opacity (reserved — not yet used below)
 uniform float uThreshold;    // κ_ρ — Intensity Threshold
 uniform float uWetness;      // κ_δ — Wetness/Transition Width
-uniform float uEdgeDarkness;   // κ_ε — Edge Darkness
+uniform float uEdgeDarkness;   // κ_ε — Edge Darkness (reserved — not yet used below)
 uniform float uPaperWeight;    // κ_θ — Paper Weight
-uniform float uEdgeSharpness;  // Gradient-based edge detection scale
+uniform float uEdgeSharpness;  // Gradient-based edge detection scale (reserved — not yet used below)
 
 varying vec2 vUv;
 

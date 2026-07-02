@@ -6,6 +6,7 @@ import {
   DEFAULT_BLINN_PHONG_SHININESS,
   DEFAULT_BLINN_PHONG_SPECULAR_STRENGTH,
   DEFAULT_BLINN_PHONG_SPECULAR_THRESHOLD,
+  UNIFORM_SYNC_FRAME_ORDER,
 } from '../../config';
 import { useSceneRenderPass, toVector3 } from '../utils/sceneWithMaterials';
 import lightingVertex from '../../shaders/lightingVertex.vert?raw';
@@ -32,10 +33,10 @@ export function SpecularPass({
       u.uSpecularStrength.value = specularStrength;
       u.uSpecularThreshold.value = specularThreshold;
     });
-  }, -1);
+  }, UNIFORM_SYNC_FRAME_ORDER);
 
   const getMaterial = useMemo(
-    () => (originalMaterial) => {
+    () => () => {
       const mat = new THREE.ShaderMaterial({
         vertexShader: lightingVertex,
         fragmentShader: specularFragment,
@@ -49,7 +50,8 @@ export function SpecularPass({
       materialsRef.current.add(mat);
       return mat;
     },
-    [specularFragment]
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- created once; uniforms are synced per frame
+    []
   );
 
   const target = useSceneRenderPass(getMaterial, specularFragment);

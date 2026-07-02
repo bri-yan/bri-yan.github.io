@@ -10,41 +10,64 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Commands
 
 ```bash
-pnpm dev        # start dev server
+pnpm dev        # start dev server (GLSL edits hot-reload live)
 pnpm build      # production build
 pnpm preview    # preview production build
 pnpm lint       # run ESLint
 ```
 
+## Project status — read this first
+
+The end product is a **real-time watercolor/NPR shader**; the render pipeline itself is the portfolio piece. The *architecture* described below is stable, but the *specific numbers are not*: pass weights, thresholds, and parts of the shader math are temporary testing values that get tweaked between sessions — usually via the in-browser dev panel (below). Do not treat current constants or the current visual output as settled design intent.
+
+Docs map:
+- `EXPLAINER.md` — ground-up explainer of the whole pipeline. Read it before any non-trivial pipeline work.
+- `src/README.md` — brief source-layout notes.
+
+## Dev console & pass debugging
+
+- `src/dev/usePipelineControls.js` is a **leva** panel hook exposing every pipeline tunable (flow-pattern knobs, blur, lighting, compositor weights, paper repeat), initialized from `config/constants.js`. `App.jsx` spreads its return value into `<MultiPassPipeline {...controls}>`; the per-frame uniform sync makes every control live.
+- The panel's **Debug → view** select switches the screen to any single pass's raw FBO (`intensity`, `blur`, `flowPattern`, `diffuse`, `diffuseBlur`, `specular`, `paper`); **Debug → channel** shows `rgb`, `alpha` (as grayscale), or `rgb*a` — several passes carry their meaning in alpha (diffuse's inverse-light wash, specular's mask, paper's grain). Implemented by `DebugViewPass`, which runs after the compositor and overrides the screen when a view other than `final` is selected.
+
 ## Architecture
 
-This is a React + Three.js portfolio site that renders a 3D scene using a custom multi-pass watercolor/NPR (non-photorealistic) render pipeline built with `@react-three/fiber`.
+React + Three.js site rendering a 3D scene through a custom multi-pass watercolor pipeline built on `@react-three/fiber`.
 
 ### Render Pipeline (`src/pipeline/`)
 
-The core is `MultiPassPipeline` — a React component that wraps any 3D scene content and applies a sequence of render passes, each writing to a WebGL FBO (framebuffer object):
+`MultiPassPipeline` wraps the 3D scene content and mounts a **flat list of sibling pass components** — passes are not nested and don't communicate through children/context. They coordinate via (a) the `fbos` ref map (one FBO ref per pass; keys double as debug-view names in `DEBUG_VIEWS`) and (b) `useFrame` priority numbers ordering execution within a frame. Because every pass registers a prioritized `useFrame`, R3F's automatic scene render is disabled: **only CompositorPass (or DebugViewPass, when active) ever draws to the screen**.
 
-1. **IntensityPass** — renders the scene with an intensity/grayscale shader → FBO
-2. **BlurPass** — Gaussian blur of the intensity FBO → FBO (used downstream by FlowPattern and also exposed as `blurRef`)
-3. **FlowPatternPass** — watercolor flow/edge effect using blurred intensity + paper texture → FBO
-4. **DiffusePass** — Blinn-Phong diffuse lighting render → FBO
-5. **BlurPass** (second instance) — blurs the diffuse FBO
-6. **SpecularPass** — Blinn-Phong specular highlights → FBO
-7. **PaperTexturePass** — loads paper texture from `/dist/textures/paper.jpg` → FBO
-8. **CompositorPass** — composites all FBOs into the final screen output with configurable blend mode and per-pass weights
+Per-frame execution order (priority constants in `src/config/constants.js`; equal priorities run in mount order, and that mount order is load-bearing):
 
-Passes communicate via React `ref`s (e.g. `intensityRef`, `diffuseRef`). Each pass that reads from another gets the upstream ref as a prop. `useFrame` priority ordering (`PASS_FRAME_ORDER`, `FLOW_PATTERN_FRAME_ORDER`, `COMPOSITOR_FRAME_ORDER`) ensures correct execution sequence.
+| Priority | Pass | Output ref |
+|---|---|---|
+| `-1` (UNIFORM_SYNC) | every pass syncs props → uniforms | — |
+| `1` | **PaperTexturePass** — tiles `paper.jpg`, packs brightness into alpha | `fbos.paper` |
+| `1` | **IntensityPass** — scene as a solid-white silhouette mask (`vec4(1.0)`) | `fbos.intensity` |
+| `1` | **BlurPass #1** — separable Gaussian; turns the silhouette into a soft ramp | `fbos.blur` |
+| `1` | **DiffusePass** — *inverted* Lambert shading (alpha high in shadow) | `fbos.diffuse` |
+| `1` | **BlurPass #2** — blurs the diffuse into a soft wash | `fbos.diffuseBlur` |
+| `1` | **SpecularPass** — hard-thresholded Blinn-Phong highlight stencil | `fbos.specular` |
+| `1.5` | **FlowPatternPass** — blurred silhouette + paper grain → watercolor edge/fill | `fbos.flowPattern` |
+| `2` | **CompositorPass** — combines the FBOs over the background color → **screen** | — |
+| `3` | **DebugViewPass** — dev tool; when active, blits a chosen pass FBO → **screen** | — |
+
+The watercolor look is emergent from **mask → blur → threshold**: IntensityPass makes a hard silhouette, BlurPass converts it to a gradient ramp, and FlowPatternPass thresholds that ramp (perturbed by paper grain) into the wet edge and fill. No single shader "draws" the watercolor edge.
+
+**Compositor semantics** (`compositorFragment.frag`): `result = flowPattern·flowWeight × (diffuse.a·diffuseWeight) × diffuseGain + blur·blurWeight`; where the raw specular mask is on, `result = vec4(specularWeight)`; finally the (premultiplied) result is composited over `uBackgroundColor` and written opaque. All of these knobs are live in the panel. The white default background reproduces the page-through-transparent-canvas look the site had before the compositor became opaque.
 
 ### Key Patterns
 
-- **Scene pass utility** (`pipeline/utils/sceneWithMaterials.js`): `useSceneRenderPass(getMaterial)` is the hook all geometry-based passes use. It clones the main scene, overrides materials, and renders to an FBO each frame. Pass a `cacheKey` (e.g. shader source string) to bust the materials cache on HMR.
-- **Fullscreen quad utility** (`pipeline/utils/fullscreenQuad.js`): `createFullscreenQuad` + `renderFullscreenQuad` are used by image-space passes (Blur, FlowPattern, Compositor, Paper).
-- **Shaders** (`src/shaders/`): All GLSL is imported as raw strings via Vite's `?raw` import. Each pass imports its own `.vert`/`.frag` files.
-- **Config** (`src/config/constants.js`): All tunable parameters (weights, Blinn-Phong constants, blur settings, frame order priorities) are defined here and exported via `src/config/index.js`.
+- **Two pass archetypes.** Geometry passes (Intensity, Diffuse, Specular) re-render the real scene with a swapped-in `ShaderMaterial` via `useSceneRenderPass(getMaterial, cacheKey)` (`pipeline/utils/sceneWithMaterials.js`; `cacheKey` = shader source, busts the materials cache on HMR). Image-space passes (Blur, FlowPattern, Paper, Compositor, DebugView) run a fragment shader over a fullscreen quad.
+- **Shared pass hooks** (`pipeline/utils/passHooks.js`): `useFullscreenPass(frag, makeUniforms, { offscreen })` bundles the FBO + material + quad + `render()` for image-space passes (`offscreen: false` for to-screen passes); `useUniformSync(uniforms, getValues)` is the standard props→uniforms sync at priority `-1`. BlurPass keeps a bespoke two-material ping-pong on the lower-level `createFullscreenQuad`/`renderFullscreenQuad` (`pipeline/utils/fullscreenQuad.js`).
+- **Shaders** (`src/shaders/`): all GLSL imported as raw strings via Vite's `?raw` import.
+- **Config** (`src/config/constants.js`): every default and priority lives here, exported via `src/config/index.js`.
+- **Reserved uniforms:** `uEdgeDarkness`, `uEdgeSharpness`, and `uBaseOpacity` are plumbed to the flow-pattern shader (and shown in the panel) but not yet used by the current shader — they're reserved for in-progress shader work. Don't strip them.
+- **Paper texture** loads from `/textures/paper.jpg` (served out of `public/textures/`).
 
 ### Adding a New Pass
 
-1. Create `pipeline/passes/MyPass.jsx` — use `useSceneRenderPass` (geometry-based) or `createFullscreenQuad`/`renderFullscreenQuad` (image-space).
-2. Add any shaders to `src/shaders/`.
-3. Wire the pass into `pipeline/MultiPassPipeline.jsx` with appropriate refs and `useFrame` ordering.
-4. Add defaults to `src/config/constants.js` and expose them as props on `MultiPassPipeline`.
+1. Create `pipeline/passes/MyPass.jsx` — pick an archetype: `useSceneRenderPass(getMaterial)` (geometry) or `useFullscreenPass(frag, makeUniforms)` (image-space).
+2. Add its GLSL to `src/shaders/` (import with `?raw`).
+3. Wire it into `pipeline/MultiPassPipeline.jsx`: add a key to the `fbos` map, mount it with a `useFrame` priority **after** its inputs and **before** its consumers, and add the key to `DEBUG_VIEWS` in constants to get panel debugging for free.
+4. Add defaults to `src/config/constants.js` and expose them as props on `MultiPassPipeline` (and in `src/dev/usePipelineControls.js` if tunable).

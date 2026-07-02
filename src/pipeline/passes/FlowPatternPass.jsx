@@ -1,15 +1,11 @@
-import { useMemo } from 'react';
-import { useFrame, useThree } from '@react-three/fiber';
-import { useFBO } from '@react-three/drei';
-import * as THREE from 'three';
-import { FBO_OPTIONS, FLOW_PATTERN_FRAME_ORDER } from '../../config';
-import { createFullscreenQuad, renderFullscreenQuad } from '../utils/fullscreenQuad';
-import fullscreenVertex from '../../shaders/fullscreenVertex.vert?raw';
+import { useFrame } from '@react-three/fiber';
+import { FLOW_PATTERN_FRAME_ORDER } from '../../config';
+import { useFullscreenPass, useUniformSync } from '../utils/passHooks';
 import flowPatternFragment from '../../shaders/flowPatternFragment.frag?raw';
 
 /**
- * Reads intensity from inputRef (IntensityPass output), applies flow-pattern
- * smoothstep alpha, and outputs to outputRef.
+ * The watercolor shader: carves a wet-edged, granulated shape out of the
+ * blurred intensity ramp (inputRef), perturbed by paper grain (paperRef).
  */
 export function FlowPatternPass({
   inputRef,
@@ -20,51 +16,38 @@ export function FlowPatternPass({
   paperWeight,
   wetness,
   edgeDarkness,
-  edgeSharpness,
-  baseOpacity,
+  edgeSharpness, // reserved — not yet used by the shader
+  baseOpacity, // reserved — not yet used by the shader
 }) {
-  const { gl, size } = useThree();
-  const target = useFBO(size.width, size.height, FBO_OPTIONS);
+  const { target, uniforms, render } = useFullscreenPass(flowPatternFragment, () => ({
+    tIntensity: { value: null },
+    tPaper: { value: null },
+    uBaseColor: { value: baseColor },
+    uBaseOpacity: { value: baseOpacity },
+    uThreshold: { value: threshold },
+    uPaperWeight: { value: paperWeight },
+    uWetness: { value: wetness },
+    uEdgeDarkness: { value: edgeDarkness },
+    uEdgeSharpness: { value: edgeSharpness },
+  }));
 
   if (outputRef) outputRef.current = target;
 
-  const material = useMemo(
-    () =>
-      new THREE.ShaderMaterial({
-        vertexShader: fullscreenVertex,
-        fragmentShader: flowPatternFragment,
-        uniforms: {
-          tIntensity: { value: null },
-          tPaper: { value: null },
-          uBaseColor: { value: baseColor },
-          uBaseOpacity: { value: baseOpacity },
-          uThreshold: { value: threshold },
-          uPaperWeight: { value: paperWeight },
-          uWetness: { value: wetness },
-          uEdgeDarkness: { value: edgeDarkness },
-          uEdgeSharpness: { value: edgeSharpness ?? 80.0 },
-        },
-      }),
-    []
-  );
-
-  const quad = useMemo(() => createFullscreenQuad(material), [material]);
-  const uniforms = material.uniforms;
-
-  useFrame(() => {
-    uniforms.uBaseColor.value = baseColor;
-    uniforms.uThreshold.value = threshold;
-    uniforms.uWetness.value = wetness;
-    uniforms.uBaseOpacity.value = baseOpacity;
-    uniforms.uEdgeDarkness.value = edgeDarkness;
-    uniforms.uEdgeSharpness.value = edgeSharpness ?? 80.0;
-  }, -1);
+  useUniformSync(uniforms, () => ({
+    uBaseColor: baseColor,
+    uBaseOpacity: baseOpacity,
+    uThreshold: threshold,
+    uPaperWeight: paperWeight,
+    uWetness: wetness,
+    uEdgeDarkness: edgeDarkness,
+    uEdgeSharpness: edgeSharpness,
+  }));
 
   useFrame(() => {
     if (!inputRef?.current) return;
     uniforms.tIntensity.value = inputRef.current.texture;
     uniforms.tPaper.value = paperRef?.current?.texture ?? null;
-    renderFullscreenQuad(gl, quad, material, outputRef ? target : null);
+    render();
   }, FLOW_PATTERN_FRAME_ORDER);
 
   return null;
