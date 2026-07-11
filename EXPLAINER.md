@@ -20,11 +20,11 @@
 ## 0. The 60-second version
 
 ```
-A cyan torus knot is rendered seven different ways into seven offscreen buffers,
+A cyan torus knot is rendered eight different ways into eight offscreen buffers,
 then one final shader mashes those buffers together into a watercolor-looking image.
 ```
 
-That's the whole idea. Everything below is detail on *which* seven buffers, *why* each one
+That's the whole idea. Everything below is detail on *which* eight buffers, *why* each one
 exists, *how* they're sequenced, and *where* the seams currently show.
 
 If you remember only one sentence: **the picture you see is never the 3D scene itself — it's a
@@ -50,7 +50,8 @@ siblings** in a single fragment:
   <PaperTexturePass … />
   <IntensityPass … />
   <BlurPass … />
-  <FlowPatternPass … />
+  <EdgePass … />
+  <BodyPass … />
   <DiffusePass … />
   <BlurPass … />
   <SpecularPass … />
@@ -124,12 +125,12 @@ quad**, and `pipeline/utils/fullscreenQuad.js` builds one (`createFullscreenQuad
 ### 2.3 Two archetypes of pass
 
 Every pass in this project is one of exactly two kinds. Internalize this and the `passes/` folder
-stops looking like eight unrelated files.
+stops looking like nine unrelated files.
 
 | Archetype | What it does | Helper it uses | Passes |
 |---|---|---|---|
 | **Geometry pass** | Re-renders the *3D scene* with a swapped-in shader material → FBO | `useSceneRenderPass(getMaterial)` | Intensity, Diffuse, Specular |
-| **Image-space pass** | Reads input FBO texture(s), runs a fragment shader on a fullscreen quad → FBO (or screen) | `useFullscreenPass` + `useUniformSync` (`utils/passHooks.js`, wrapping the quad helpers) | Blur*, FlowPattern, Paper, Compositor, DebugView |
+| **Image-space pass** | Reads input FBO texture(s), runs a fragment shader on a fullscreen quad → FBO (or screen) | `useFullscreenPass` + `useUniformSync` (`utils/passHooks.js`, wrapping the quad helpers) | Blur*, Edge, Body, Paper, Compositor, DebugView |
 
 \* BlurPass keeps a bespoke two-material ping-pong on the lower-level `createFullscreenQuad` /
 `renderFullscreenQuad` helpers directly.
@@ -161,12 +162,12 @@ bri-yan.github.io/
     │   └── index.js            re-exports constants
     │
     ├── dev/
-    │   └── usePipelineControls.js   the leva dev panel: every knob + the debug views
+    │   └── usePipelineControls.js   the leva dev panel: every knob, debug views, save/reset
     │
-    ├── components/             the 3D *content* (not the pipeline)
+    ├── components/             the 3D *content* (not the pipeline) + HUD
     │   ├── TorusKnotScene.jsx  the mesh currently on screen
     │   ├── TorusScene.jsx      alternate scene (unused)
-    │   └── SceneOverlay.jsx    HTML caption box overlaying the canvas
+    │   └── PipelineDiagram.jsx (+ .css)  clickable pipeline schematic overlay (probes debug views)
     │
     ├── pipeline/
     │   ├── MultiPassPipeline.jsx   ★ wires every pass + the `fbos` ref map together
@@ -177,13 +178,15 @@ bri-yan.github.io/
     │       └── fullscreenQuad.js       low-level quad helpers (used by passHooks + BlurPass)
     │
     └── shaders/                  raw GLSL, imported as strings via `?raw`
+        ├── chunks/common.glsl       shared helpers (rgbIntensity), prepended via string concat
         ├── fullscreenVertex.vert    passthrough vert for quad passes
         ├── lightingVertex.vert      view-space normal/position for lighting passes
         ├── intensityFragment.frag   `vec4(1.0)` — the silhouette
-        ├── blur{Horizontal,Vertical}.frag   9-tap separable Gaussian
-        ├── diffuseFragment.frag     Lambertian → alpha
+        ├── blur.frag                9-tap separable Gaussian, direction-parameterized (uDirection)
+        ├── diffuseFragment.frag     inverse Lambert → alpha
         ├── specularFragment.frag    Blinn-Phong specular → hard mask
-        ├── flowPatternFragment.frag ★ the watercolor shader
+        ├── edgeFragment.frag        ★ the wet-front rim, dried into the paper
+        ├── bodyFragment.frag        ★ the clean interior wash
         ├── paperTextureFragment.frag  RGB→alpha repackaging of paper
         ├── debugViewFragment.frag   blit any FBO to screen (rgb / alpha / rgb×a)
         └── compositorFragment.frag  ★ the final collage
@@ -210,7 +213,7 @@ priority ascending** (ties broken by mount order). The project uses these priori
 |---:|---|---|
 | `-1` (`UNIFORM_SYNC_FRAME_ORDER`) | every pass's uniform-sync callback | push the latest prop values into shader uniforms |
 | `1` (`PASS_FRAME_ORDER`) | Paper, Intensity, Blur×2, Diffuse, Specular | render the source FBOs |
-| `1.5` (`FLOW_PATTERN_FRAME_ORDER`) | FlowPattern | needs the blur, which finished at `1` |
+| `1.5` (`PAINT_FRAME_ORDER`) | Edge, Body | need the blur, which finished at `1` |
 | `2` (`COMPOSITOR_FRAME_ORDER`) | Compositor | needs *everything*, draws to screen |
 | `3` (`DEBUG_VIEW_FRAME_ORDER`) | DebugView | dev tool: when a debug view is selected, overwrites the screen with that pass's FBO |
 
@@ -248,10 +251,11 @@ In `MultiPassPipeline` all of these refs live in a single `fbos` map (`fbos.inte
    SpecularPass     : render knot, hard Blinn-Phong highlight mask     → fbos.specular
 
 ─── priority 1.5 ───────────────────────────────────────────────────────────
-   FlowPatternPass  : fbos.blur + fbos.paper → watercolor edge+fill    → fbos.flowPattern
+   EdgePass         : fbos.blur + fbos.paper → paper-dried rim         → fbos.edge
+   BodyPass         : fbos.blur + fbos.paper → clean interior wash     → fbos.body
 
 ─── priority 2 ─────────────────────────────────────────────────────────────
-   CompositorPass   : flowPattern × (diffuseBlur.a × diffuseGain),
+   CompositorPass   : (edge + body) × (diffuseBlur.a × diffuseGain),
                       punch in specular, composite over background      → SCREEN
 
 ─── priority 3 (only when a debug view is selected) ────────────────────────
@@ -294,51 +298,62 @@ That's it. (See Misconception B — this is the seed the watercolor look grows f
 
 ### 5.3 BlurPass (#1, on intensity) → `blurRef`
 
-**Type:** image-space. **Shaders:** `blurHorizontal.frag` + `blurVertical.frag`.
+**Type:** image-space. **Shader:** `blur.frag` — one direction-parameterized 1-D pass
+(`uDirection` = (1,0) horizontal / (0,1) vertical), run twice per iteration.
 
 A **separable 9-tap Gaussian**: blur horizontally, then vertically (2 cheap 1-D passes instead of
 one expensive 2-D pass). One "iteration" = one H + one V. It loops `blurIterations` times (default
 **5**), each iteration widening the blur. `blurStrength` scales the per-tap pixel offset.
 
 This is the pass that converts the hard silhouette into the smooth interior-to-edge ramp.
-`fbos.blur` is consumed by FlowPattern (as its "intensity" input) **and** is wired into the
-compositor as a standalone additive term (`blurWeight`, live in the panel, default `0`).
+`fbos.blur` is consumed by both paint passes (Edge, Body) **and** is wired into the compositor
+as a standalone additive term (`blurWeight`, live in the panel, default `0`).
 
-### 5.4 FlowPatternPass → `flowPatternRef`  ★ the watercolor
+### 5.4 The paint passes: BodyPass → `fbos.body` + EdgePass → `fbos.edge`  ★ the watercolor
 
-**Type:** image-space. **Shader:** `flowPatternFragment.frag`. Inputs: `blurRef` (as `tIntensity`)
-+ `paperRef` (as `tPaper`).
+**Type:** both image-space. **Shaders:** `bodyFragment.frag` / `edgeFragment.frag` (each prepended
+with `chunks/common.glsl` for `rgbIntensity`). **Inputs:** both read `fbos.blur` (as `tIntensity`)
++ `fbos.paper` (as `tPaper`) and share the Paint knobs (`uBaseColor`, `uThreshold`, `uWetness`).
+This is the heart, and where iteration happens.
 
-This is the heart, and the file most actively iterated on. The current shader:
+Both start the same way — carve a `shape` out of the blurred ramp:
 
 ```glsl
-float intensity      = length(texture2D(tIntensity, vUv).rgb) / sqrt(3.0); // the blurred ramp
-float paperIntensity = length(texture2D(tPaper, vUv).rgb) / sqrt(3.0);     // paper grain
+float intensity = rgbIntensity(texture2D(tIntensity, vUv).rgb); // the blurred ramp
+float paper     = rgbIntensity(texture2D(tPaper, vUv).rgb);     // paper relief
+float paperOffset = (paper - 0.5) * 2.0;                        // −1 valleys … +1 ridges
 
-// 1. Carve a shape out of the ramp: smoothstep over [threshold ± wetness].
-//    Narrow band = sharp edge, wide band = soft bleeding border.
-intensity = smoothstep(max(0.0, uThreshold - uWetness),
-                       min(1.0, uThreshold + uWetness), intensity);
-
-// 2. Paper grain modulates the shape (grainy fill + ragged border)
-float texturedIntensity = intensity * (1.0 + uPaperWeight * (paperIntensity - 0.5) / 0.5);
-
-// 3. Bright edge = "inside the mask" × "close to the border":
-//    inverseIntensity peaks at the rim; meshMask cuts everything below edgeThickness
-float edgeThickness = 0.2;
-float inverseIntensity = 1.0 - texturedIntensity;
-float meshMask = texturedIntensity > edgeThickness ? 1.0 : 0.0;
-float edge = meshMask * inverseIntensity * 1.5;
-
-// 4. The edge dominates; the interior is a faint wash (× 0.2)
-float finalIntensity = edge + texturedIntensity * 0.2;
-gl_FragColor = vec4(finalIntensity * uBaseColor, finalIntensity);
+float lo = max(0.0, uThreshold - uWetness);
+float hi = min(1.0, uThreshold + uWetness);
+float shape = smoothstep(lo, hi, intensity);
 ```
 
-Output (see it live via **Debug → view → flowPattern**): a bright cyan rim with a faint grainy
-fill. `.rgb` is premultiplied (color × intensity) and `.a` is coverage. Three of its uniforms —
-`uEdgeDarkness`, `uEdgeSharpness`, `uBaseOpacity` — are plumbed from config and shown in the panel
-but **reserved: the current `main()` doesn't read them.**
+**BodyPass** is the clean interior wash — the shape itself, with opt-in grain
+(`uPaperWeight`, default `0` = perfectly flat):
+
+```glsl
+float body = clamp(shape * (1.0 + uPaperWeight * paperOffset), 0.0, 1.0);
+gl_FragColor = vec4(body * uBaseColor, body);   // premultiplied + coverage
+```
+
+**EdgePass** is the wet-front rim, dried into the paper relief in two steps:
+
+```glsl
+// (1) the wet front snags on the relief: paper shifts the ramp, gated by
+// (1 − shape) so the perturbation can never speckle the interior
+float snag = paperOffset * uEdgePaperWeight * EDGE_SNAG_SCALE * (1.0 - shape);
+float edgeShape = smoothstep(lo, hi, intensity + snag);
+float edge = step(EDGE_MASK_CUTOFF, shape) * (1.0 - edgeShape) * EDGE_GAIN;
+
+// (2) drying: pigment survives in the valleys, breaks on the ridges;
+// uEdgeSharpness sets the cut contrast (80 ≈ near-binary ribs)
+float halfBand = 0.5 / max(uEdgeSharpness, 1.0);
+edge *= 1.0 - uEdgePaperWeight * smoothstep(0.5 - halfBand, 0.5 + halfBand, paper);
+```
+
+(`EDGE_GAIN = 3.0`, `EDGE_MASK_CUTOFF = 0.2`, `EDGE_SNAG_SCALE = 0.5` — named consts at the top
+of the shader.) Inspect either layer live via **Debug → view → `body` / `edge`**. One reserved
+uniform each — `uBaseOpacity` (body), `uEdgeDarkness` (edge) — is plumbed but **unused**.
 
 > **A physically-motivated rewrite was prototyped and reverted** (2026-07). Its recipe, preserved
 > for when the experiment resumes: (1) paper perturbs the ramp *before* thresholding
@@ -347,7 +362,7 @@ but **reserved: the current `main()` doesn't read them.**
 > κ·paperOffset)` — adds grain inside the fill; (4) edge darkening — `alpha ×= 1 +
 > uEdgeDarkness·(1−shape)`, with the color darkened by the same factor — pools pigment at the rim.
 > Steps 1–4 map to the ragged-edge / granulation / edge-darkening effects from the academic
-> watercolor-rendering paper cited in the shader comments.
+> watercolor-rendering paper the original shader comments cited.
 
 ### 5.5 DiffusePass → `diffuseRef`, then BlurPass (#2) → `diffuseBlurRef`
 
@@ -391,15 +406,17 @@ currently cuts corners. See §6.
 
 ## 6. The compositor — where it all comes together
 
-`compositorFragment.frag` receives four textures plus weights — all live in the panel:
+`compositorFragment.frag` receives five textures plus weights — all live in the panel:
 
 ```glsl
-vec4 flowPattern = texture2D(tFlowPattern, vUv) * uFlowPatternWeight;
-vec4 diffuse     = texture2D(tDiffuse,     vUv) * uDiffuseWeight;   // the BLURRED diffuse
-vec4 blur        = texture2D(tBlur,        vUv) * uBlurWeight;      // default weight 0
-float specularMask = texture2D(tSpecular,  vUv).a;                  // sampled unweighted
+vec4 edge    = texture2D(tEdge, vUv) * uEdgeWeight;
+vec4 body    = texture2D(tBody, vUv) * uBodyWeight;
+vec4 diffuse = texture2D(tDiffuse, vUv) * uDiffuseWeight;   // the BLURRED diffuse
+vec4 blur    = texture2D(tBlur, vUv) * uBlurWeight;         // default weight 0
+float specularMask = texture2D(tSpecular, vUv).a;           // sampled unweighted
 
-vec4 result = flowPattern * diffuse.a * uDiffuseGain + blur;
+vec4 paint = clamp(edge + body, 0.0, 1.0);                  // rim over wash, capped
+vec4 result = paint * diffuse.a * uDiffuseGain + blur;
 if (specularMask > 0.5) result = vec4(uSpecularWeight);
 
 result = clamp(result, 0.0, 1.0);
@@ -408,7 +425,8 @@ gl_FragColor = vec4(result.rgb + uBackgroundColor * (1.0 - result.a), 1.0);
 
 Read in English:
 
-1. Take the **watercolor** image.
+1. Assemble the **paint**: the edge layer over the body layer, each with its own weight, capped
+   so overlaps don't bloom when shaded.
 2. Multiply it by the **blurred inverse-diffuse alpha × `uDiffuseGain`** (default `2.5`) — dim it
    toward the lit side, keep it bright in shadow: a stylized, deliberately non-physical shading
    wash. The gain rescales `diffuse.a` (which tops out near 0.5) back toward 1.
@@ -416,9 +434,9 @@ Read in English:
 4. Wherever the **specular stencil** is on, replace the pixel with `vec4(uSpecularWeight)` — solid
    white at the default weight. The mask is sampled *unweighted* and compared with `> 0.5`, so
    changing the weight dims the highlights instead of silently deleting them.
-5. Composite over **`uBackgroundColor`** and write opaque. `flowPattern.rgb` is premultiplied, so
-   the correct blend is `rgb + bg × (1 − a)`. The white default reproduces the site's earlier
-   look, when the canvas was transparent and the white page showed through.
+5. Composite over **`uBackgroundColor`** and write opaque. The paint layers' rgb is
+   premultiplied, so the correct blend is `rgb + bg × (1 − a)`. The white default reproduces the
+   site's earlier look, when the canvas was transparent and the white page showed through.
 
 History note: this shader used to hardcode the `2.5` gain, ignore its own `blendMode` /
 `backgroundColor` uniforms, and rely on a fragile `specular.a == 1.0` exact compare. The dead
@@ -439,15 +457,26 @@ To make a tuned value permanent, copy it back into `constants.js`.
 pass's raw FBO (`intensity`, `blur`, `flowPattern`, `diffuse`, `diffuseBlur`, `specular`,
 `paper`); `channel` shows `rgb`, `alpha` (as grayscale), or `rgb*a`. The alpha view matters —
 diffuse (inverse-light wash), specular (the stencil), and paper (the grain) all carry their
-signal in alpha.
+signal in alpha. The **pipeline diagram** (top-left overlay, `components/PipelineDiagram.jsx`)
+drives the same state: click a pass node to probe it, click again / click out / press Escape /
+click `final` to return. Its wires show the live compositor weights; a zero-weight wire renders
+dashed.
+
+**The Session folder controls persistence.** Values start from `constants.js` defaults (or your
+last save). `save` writes the current values to localStorage so they survive refresh; `reset to
+defaults` restores the constants and clears the save; `copy values` puts the values JSON on the
+clipboard for baking into `constants.js`. Nothing persists unless you explicitly save; the debug
+view/channel are never persisted.
 
 | Knob (panel name) | Default | Effect |
 |---|---|---|
 | Flow Pattern → `baseColor` | `#00ffff` | the pigment color |
 | Flow Pattern → `threshold` | `0.3` | where the wet edge sits on the ramp (smaller = fatter shape) |
 | Flow Pattern → `wetness` | `0.7` | half-width of the smoothstep band (bigger = softer). Bounds clamp to [0,1], so at wetness `0.7` every threshold ≤ `0.6` looks identical |
-| Flow Pattern → `paperWeight` | `0.1` | how much paper grain modulates fill + border |
-| Flow Pattern → `edgeDarkness` / `edgeSharpness` / `baseOpacity` | `0.3` / `80` / `1.0` | ⚠️ **reserved** — plumbed to the shader but unused by the current `main()` (§5.4) |
+| Flow Pattern → `paperWeight` | `0.1` | mild grain on the **fill** only |
+| Flow Pattern → `edgePaperWeight` | `0.6` | how much the **edge** dries into the paper grain (0 = smooth rim) |
+| Flow Pattern → `edgeSharpness` | `80` | contrast of the edge's valley/ridge drying cut (low = soft, high = crisp ribs) |
+| Flow Pattern → `edgeDarkness` / `baseOpacity` | `0.3` / `1.0` | ⚠️ **reserved** — plumbed to the shader but unused by the current `main()` (§5.4) |
 | Blur → `iterations` / `strength` | `5` / `1.0` | how soft the silhouette ramp (and diffuse wash) get |
 | Lighting → `lightPosition`, `shininess`, `ambientStrength`, `diffuseStrength`, `specularStrength`, `specularThreshold` | `[5,5,5]`, `32`, `0.5`, `0.5`, `0.7`, `0.3` | Blinn-Phong inputs for the diffuse wash + specular stencil |
 | Compositor → `flowPatternWeight` / `diffuseWeight` / `blurWeight` | `1` / `1` / `0` | per-layer gains in the composite (§6) |
@@ -497,8 +526,8 @@ deleted, and the compositor's knobs were made real (§6). What remains:
   (negated view-space position), then the fragment shaders do `normalize(uLightPosition - vViewPosition)`
   — mixing a constant world-ish light `[5,5,5]` with a negated view position. It *looks* fine but
   isn't a correct view-space light. If lighting ever needs to be trustworthy, fix the spaces.
-- `uEdgeDarkness`, `uEdgeSharpness`, `uBaseOpacity` are **reserved no-ops** in the current flow
-  shader (§5.4). Intentional — but easy to mistake for working knobs when tuning in the panel.
+- `uEdgeDarkness` and `uBaseOpacity` are **reserved no-ops** in the current flow shader (§5.4).
+  Intentional — but easy to mistake for working knobs when tuning in the panel.
 
 **Performance**
 - Geometry passes re-clone the scene every frame (§8). Cache the clones; only update uniforms.

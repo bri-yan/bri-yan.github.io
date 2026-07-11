@@ -3,7 +3,10 @@ import { useTexture } from '@react-three/drei';
 import * as THREE from 'three';
 import { PASS_FRAME_ORDER, UNIFORM_SYNC_FRAME_ORDER } from '../../config';
 import { useFullscreenPass } from '../utils/passHooks';
+import common from '../../shaders/chunks/common.glsl?raw';
 import paperTextureFragment from '../../shaders/paperTextureFragment.frag?raw';
+
+const fragment = `${common}\n${paperTextureFragment}`;
 
 /**
  * Loads the paper texture and outputs it at pipeline resolution:
@@ -14,7 +17,7 @@ export function PaperTexturePass({ outputRef, repeatX = 1, repeatY = 1 }) {
     t.wrapS = t.wrapT = THREE.RepeatWrapping;
   });
 
-  const { target, uniforms, render } = useFullscreenPass(paperTextureFragment, () => ({
+  const { target, uniforms, render } = useFullscreenPass(fragment, () => ({
     tPaper: { value: null },
     uRepeat: { value: new THREE.Vector2(repeatX, repeatY) },
   }));

@@ -1,3 +1,6 @@
+// Specular stencil: Blinn-Phong highlight hard-thresholded to a binary mask.
+// The compositor punches these pixels through the watercolor as glossy pops.
+
 uniform vec3 uLightPosition;
 uniform float uShininess;
 uniform float uSpecularStrength;
@@ -12,10 +15,8 @@ void main() {
   vec3 viewDir = normalize(vViewPosition);
   vec3 halfwayDir = normalize(lightDir + viewDir);
 
-  float spec = pow(max(dot(normal, halfwayDir), 0.0), uShininess);
-  float specular = uSpecularStrength * spec;
+  float specular = uSpecularStrength * pow(max(dot(normal, halfwayDir), 0.0), uShininess);
+  float mask = specular > uSpecularThreshold ? 1.0 : 0.0;
 
-  float result = specular > uSpecularThreshold ? 1.0 : 0.0;
-
-  gl_FragColor = vec4(result);
+  gl_FragColor = vec4(mask);
 }

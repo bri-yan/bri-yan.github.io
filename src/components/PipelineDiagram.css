@@ -1,0 +1,171 @@
+/* Instrument-panel HUD for the render pipeline. One accent — the pigment
+   cyan — over a blue-black glass; wires read like a signal-flow schematic. */
+
+.pipeline-diagram {
+  --pd-bg: rgba(9, 13, 17, 0.82);
+  --pd-line: rgba(148, 186, 196, 0.32);
+  --pd-line-strong: rgba(190, 226, 236, 0.55);
+  --pd-text: rgba(205, 230, 236, 0.85);
+  --pd-text-dim: rgba(160, 195, 205, 0.55);
+  --pd-accent: #6fe0ee;
+  --pd-accent-soft: rgba(0, 216, 240, 0.14);
+  --pd-glow: rgba(110, 230, 245, 0.55);
+
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  padding: 10px 14px 8px;
+  background: var(--pd-bg);
+  border: 1px solid rgba(127, 222, 235, 0.14);
+  border-radius: 10px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 8px 28px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(10px) saturate(1.2);
+  -webkit-backdrop-filter: blur(10px) saturate(1.2);
+  font-family: 'IBM Plex Mono', 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+  user-select: none;
+}
+
+/* ── header ─────────────────────────────────────────────── */
+
+.pd-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 6px;
+}
+
+.pd-header__title {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--pd-text-dim);
+}
+
+.pd-header__probe {
+  font-size: 10px;
+  color: var(--pd-text-dim);
+  transition: color 150ms ease;
+}
+
+.pd-header__probe--on {
+  color: var(--pd-accent);
+  text-shadow: 0 0 8px var(--pd-glow);
+}
+
+/* ── wires ──────────────────────────────────────────────── */
+
+.pd-edge {
+  fill: none;
+  stroke: var(--pd-line);
+  stroke-width: 1;
+  transition:
+    stroke 150ms ease,
+    opacity 150ms ease;
+}
+
+.pd-edge--off {
+  stroke-dasharray: 3 3;
+  opacity: 0.45;
+}
+
+.pd-arrowhead {
+  fill: var(--pd-line);
+}
+
+/* ── weight badges ──────────────────────────────────────── */
+
+.pd-badge rect {
+  fill: rgba(8, 12, 15, 0.92);
+  stroke: rgba(148, 186, 196, 0.22);
+}
+
+.pd-badge text {
+  fill: var(--pd-text-dim);
+  font-size: 8px;
+  text-anchor: middle;
+  font-family: inherit;
+}
+
+.pd-badge--off {
+  opacity: 0.45;
+}
+
+/* ── nodes ──────────────────────────────────────────────── */
+
+.pd-node rect {
+  fill: rgba(255, 255, 255, 0.03);
+  stroke: var(--pd-line);
+  stroke-width: 1;
+  transition:
+    fill 150ms ease,
+    stroke 150ms ease,
+    filter 150ms ease;
+}
+
+.pd-node text {
+  fill: var(--pd-text);
+  font-size: 10px;
+  text-anchor: middle;
+  font-family: inherit;
+  pointer-events: none;
+}
+
+.pd-node__sub {
+  fill: var(--pd-text-dim);
+  font-size: 7.5px;
+}
+
+.pd-node[role='button'] {
+  cursor: pointer;
+  outline: none;
+}
+
+.pd-node[role='button']:hover rect,
+.pd-node[role='button']:focus-visible rect {
+  stroke: var(--pd-line-strong);
+  fill: rgba(0, 216, 240, 0.06);
+}
+
+.pd-node--active rect {
+  fill: var(--pd-accent-soft);
+  stroke: var(--pd-accent);
+  animation: pd-pulse 1.6s ease-in-out infinite alternate;
+}
+
+.pd-node--active text {
+  fill: #e6fbff;
+}
+
+/* the untouched source chip (scene) */
+.pd-node--source rect {
+  stroke-dasharray: 3 3;
+  fill: none;
+}
+
+.pd-node--source text {
+  fill: var(--pd-text-dim);
+}
+
+@keyframes pd-pulse {
+  from {
+    filter: drop-shadow(0 0 1px var(--pd-glow));
+  }
+  to {
+    filter: drop-shadow(0 0 6px var(--pd-glow));
+  }
+}
+
+/* ── footer hint ────────────────────────────────────────── */
+
+.pd-footer {
+  margin-top: 4px;
+  font-size: 8px;
+  letter-spacing: 0.04em;
+  color: var(--pd-text-dim);
+  opacity: 0.8;
+  text-align: right;
+}

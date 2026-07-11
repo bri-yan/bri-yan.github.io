@@ -1,12 +1,16 @@
 import { useMemo, createRef } from 'react';
 import * as THREE from 'three';
 import {
-  DEFAULT_FLOW_PATTERN_WEIGHT,
-  DEFAULT_FLOW_PATTERN_BASE_COLOR,
-  DEFAULT_FLOW_PATTERN_THRESHOLD,
-  DEFAULT_FLOW_PATTERN_EDGE_DARKNESS,
-  DEFAULT_FLOW_PATTERN_EDGE_SHARPNESS,
-  DEFAULT_FLOW_PATTERN_BASE_OPACITY,
+  DEFAULT_PAINT_BASE_COLOR,
+  DEFAULT_PAINT_THRESHOLD,
+  DEFAULT_PAINT_WETNESS,
+  DEFAULT_EDGE_WEIGHT,
+  DEFAULT_EDGE_PAPER_WEIGHT,
+  DEFAULT_EDGE_SHARPNESS,
+  DEFAULT_EDGE_DARKNESS,
+  DEFAULT_BODY_WEIGHT,
+  DEFAULT_BODY_PAPER_WEIGHT,
+  DEFAULT_BODY_OPACITY,
   DEFAULT_DIFFUSE_WEIGHT,
   DEFAULT_SPECULAR_WEIGHT,
   DEFAULT_BLINN_PHONG_LIGHT_POSITION,
@@ -18,14 +22,14 @@ import {
   DEFAULT_BLUR_WEIGHT,
   DEFAULT_BLUR_STRENGTH,
   DEFAULT_BLUR_ITERATIONS,
-  DEFAULT_PAPER_WEIGHT,
   DEFAULT_PAPER_REPEAT_X,
   DEFAULT_PAPER_REPEAT_Y,
   DEFAULT_COMPOSITOR_BACKGROUND,
   DEFAULT_COMPOSITOR_DIFFUSE_GAIN,
 } from '../config';
 import { IntensityPass } from './passes/IntensityPass';
-import { FlowPatternPass } from './passes/FlowPatternPass';
+import { EdgePass } from './passes/EdgePass';
+import { BodyPass } from './passes/BodyPass';
 import { DiffusePass } from './passes/DiffusePass';
 import { SpecularPass } from './passes/SpecularPass';
 import { BlurPass } from './passes/BlurPass';
@@ -43,13 +47,16 @@ const toColor = (value) => (value?.isColor ? value : new THREE.Color(value));
  */
 export function MultiPassPipeline({
   children,
-  flowPatternWeight = DEFAULT_FLOW_PATTERN_WEIGHT,
-  flowPatternBaseColor = DEFAULT_FLOW_PATTERN_BASE_COLOR,
-  flowPatternThreshold = DEFAULT_FLOW_PATTERN_THRESHOLD,
-  flowPatternWetness = 1.0 - DEFAULT_FLOW_PATTERN_THRESHOLD,
-  flowPatternEdgeDarkness = DEFAULT_FLOW_PATTERN_EDGE_DARKNESS,
-  flowPatternEdgeSharpness = DEFAULT_FLOW_PATTERN_EDGE_SHARPNESS,
-  flowPatternBaseOpacity = DEFAULT_FLOW_PATTERN_BASE_OPACITY,
+  paintBaseColor = DEFAULT_PAINT_BASE_COLOR,
+  paintThreshold = DEFAULT_PAINT_THRESHOLD,
+  paintWetness = DEFAULT_PAINT_WETNESS,
+  edgeWeight = DEFAULT_EDGE_WEIGHT,
+  edgePaperWeight = DEFAULT_EDGE_PAPER_WEIGHT,
+  edgeSharpness = DEFAULT_EDGE_SHARPNESS,
+  edgeDarkness = DEFAULT_EDGE_DARKNESS,
+  bodyWeight = DEFAULT_BODY_WEIGHT,
+  bodyPaperWeight = DEFAULT_BODY_PAPER_WEIGHT,
+  bodyOpacity = DEFAULT_BODY_OPACITY,
   diffuseWeight = DEFAULT_DIFFUSE_WEIGHT,
   specularWeight = DEFAULT_SPECULAR_WEIGHT,
   lightingLightPosition = DEFAULT_BLINN_PHONG_LIGHT_POSITION,
@@ -61,7 +68,6 @@ export function MultiPassPipeline({
   blurWeight = DEFAULT_BLUR_WEIGHT,
   blurStrength = DEFAULT_BLUR_STRENGTH,
   blurIterations = DEFAULT_BLUR_ITERATIONS,
-  paperWeight = DEFAULT_PAPER_WEIGHT,
   paperRepeatX = DEFAULT_PAPER_REPEAT_X,
   paperRepeatY = DEFAULT_PAPER_REPEAT_Y,
   backgroundColor = DEFAULT_COMPOSITOR_BACKGROUND,
@@ -69,7 +75,7 @@ export function MultiPassPipeline({
   debugView = 'final',
   debugChannel = 'rgb',
 }) {
-  const baseColor = useMemo(() => toColor(flowPatternBaseColor), [flowPatternBaseColor]);
+  const baseColor = useMemo(() => toColor(paintBaseColor), [paintBaseColor]);
   const bgColor = useMemo(() => toColor(backgroundColor), [backgroundColor]);
 
   // One FBO ref per pass; keys double as the debug-view names (DEBUG_VIEWS).
@@ -78,7 +84,8 @@ export function MultiPassPipeline({
       paper: createRef(),
       intensity: createRef(),
       blur: createRef(),
-      flowPattern: createRef(),
+      edge: createRef(),
+      body: createRef(),
       diffuse: createRef(),
       diffuseBlur: createRef(),
       specular: createRef(),
@@ -97,17 +104,27 @@ export function MultiPassPipeline({
         blurStrength={blurStrength}
         blurIterations={blurIterations}
       />
-      <FlowPatternPass
+      <EdgePass
+        blurRef={fbos.blur}
+        intensityRef={fbos.intensity}
+        paperRef={fbos.paper}
+        outputRef={fbos.edge}
+        baseColor={baseColor}
+        threshold={paintThreshold}
+        wetness={paintWetness}
+        paperWeight={edgePaperWeight}
+        sharpness={edgeSharpness}
+        darkness={edgeDarkness}
+      />
+      <BodyPass
         inputRef={fbos.blur}
         paperRef={fbos.paper}
-        outputRef={fbos.flowPattern}
+        outputRef={fbos.body}
         baseColor={baseColor}
-        threshold={flowPatternThreshold}
-        paperWeight={paperWeight}
-        wetness={flowPatternWetness}
-        edgeDarkness={flowPatternEdgeDarkness}
-        edgeSharpness={flowPatternEdgeSharpness}
-        baseOpacity={flowPatternBaseOpacity}
+        threshold={paintThreshold}
+        wetness={paintWetness}
+        paperWeight={bodyPaperWeight}
+        opacity={bodyOpacity}
       />
       <DiffusePass
         outputRef={fbos.diffuse}
@@ -130,11 +147,13 @@ export function MultiPassPipeline({
         specularThreshold={lightingSpecularThreshold}
       />
       <CompositorPass
-        flowPatternRef={fbos.flowPattern}
+        edgeRef={fbos.edge}
+        bodyRef={fbos.body}
         diffuseRef={fbos.diffuseBlur}
         specularRef={fbos.specular}
         blurRef={fbos.blur}
-        flowPatternWeight={flowPatternWeight}
+        edgeWeight={edgeWeight}
+        bodyWeight={bodyWeight}
         diffuseWeight={diffuseWeight}
         specularWeight={specularWeight}
         blurWeight={blurWeight}

@@ -7,34 +7,42 @@ export const FBO_OPTIONS = {
   format: THREE.RGBAFormat,
 };
 
-// —— Pipeline weights ——
-export const DEFAULT_FLOW_PATTERN_WEIGHT = 1.0;
-export const DEFAULT_DIFFUSE_WEIGHT = 1.0;
-export const DEFAULT_SPECULAR_WEIGHT = 1.0;
-export const DEFAULT_PAPER_WEIGHT = 0.1;
-export const DEFAULT_BLUR_WEIGHT = 0.0;
+// —— Paint (shared by the edge + body passes) ——
+export const DEFAULT_PAINT_BASE_COLOR = new THREE.Color(0x00ffff);
+export const DEFAULT_PAINT_THRESHOLD = 0.3; // where the wet edge sits on the blurred ramp
+export const DEFAULT_PAINT_WETNESS = 0.7; // half-width of the shape transition band
 
-// —— Blur defaults ——
+// —— Edge (wet-front rim) ——
+export const DEFAULT_EDGE_WEIGHT = 1.0;
+// How much the edge dries into the paper grain (0 = smooth rim).
+export const DEFAULT_EDGE_PAPER_WEIGHT = 0.6;
+// Contrast of the edge's valley/ridge drying cut (higher = crisper ribs).
+export const DEFAULT_EDGE_SHARPNESS = 80.0;
+// Reserved: plumbed through to the shader but not yet used by it.
+export const DEFAULT_EDGE_DARKNESS = 0.3;
+
+// —— Body (interior wash) ——
+export const DEFAULT_BODY_WEIGHT = 1.0;
+export const DEFAULT_BODY_PAPER_WEIGHT = 0.0; // grain within the wash (0 = flat)
+// Reserved: plumbed through to the shader but not yet used by it.
+export const DEFAULT_BODY_OPACITY = 1.0;
+
+// —— Blur ——
 export const DEFAULT_BLUR_STRENGTH = 1.0;
 export const DEFAULT_BLUR_ITERATIONS = 5;
+export const DEFAULT_BLUR_WEIGHT = 0.0; // standalone blur term in the compositor
 
-// —— Flow pattern defaults ——
-export const DEFAULT_FLOW_PATTERN_BASE_COLOR = new THREE.Color(0x00ffff);
-export const DEFAULT_FLOW_PATTERN_THRESHOLD = 0.3;
-export const DEFAULT_FLOW_PATTERN_EDGE_DARKNESS = 0.3;
-// Reserved: plumbed through to the shader but not yet used by it.
-export const DEFAULT_FLOW_PATTERN_BASE_OPACITY = 1.0;
-export const DEFAULT_FLOW_PATTERN_EDGE_SHARPNESS = 80.0;
-
-// —— Blinn-Phong defaults ——
+// —— Blinn-Phong lighting ——
 export const DEFAULT_BLINN_PHONG_LIGHT_POSITION = [5, 5, 5];
 export const DEFAULT_BLINN_PHONG_SHININESS = 32;
 export const DEFAULT_BLINN_PHONG_AMBIENT_STRENGTH = 0.5;
 export const DEFAULT_BLINN_PHONG_DIFFUSE_STRENGTH = 0.5;
 export const DEFAULT_BLINN_PHONG_SPECULAR_STRENGTH = 0.7;
 export const DEFAULT_BLINN_PHONG_SPECULAR_THRESHOLD = 0.3;
+export const DEFAULT_DIFFUSE_WEIGHT = 1.0;
+export const DEFAULT_SPECULAR_WEIGHT = 1.0;
 
-// —— Paper texture defaults ——
+// —— Paper texture ——
 export const DEFAULT_PAPER_REPEAT_X = 1.0;
 export const DEFAULT_PAPER_REPEAT_Y = 1.0;
 
@@ -50,13 +58,13 @@ export const DEBUG_VIEWS = [
   'final',
   'intensity',
   'blur',
-  'flowPattern',
+  'edge',
+  'body',
   'diffuse',
   'diffuseBlur',
   'specular',
   'paper',
 ];
-// Uniform index = position in this list.
 export const DEBUG_CHANNELS = ['rgb', 'alpha', 'rgb*a'];
 
 // —— Canvas / scene ——
@@ -69,6 +77,6 @@ export const FULLSCREEN_QUAD_SIZE = 2;
 // —— useFrame order (higher = later) ——
 export const UNIFORM_SYNC_FRAME_ORDER = -1;
 export const PASS_FRAME_ORDER = 1;
-export const FLOW_PATTERN_FRAME_ORDER = 1.5;
+export const PAINT_FRAME_ORDER = 1.5; // edge + body need the blur, which finishes at 1
 export const COMPOSITOR_FRAME_ORDER = 2;
 export const DEBUG_VIEW_FRAME_ORDER = 3;

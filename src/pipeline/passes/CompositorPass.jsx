@@ -3,13 +3,15 @@ import { COMPOSITOR_FRAME_ORDER } from '../../config';
 import { useFullscreenPass, useUniformSync } from '../utils/passHooks';
 import compositorFragment from '../../shaders/compositorFragment.frag?raw';
 
-/** Composites the FlowPattern, blurred-Diffuse, Specular, and Blur FBOs over the background color — the only pass that draws to the screen. */
+/** Composites the paint layers (edge + body), blurred-diffuse shading, specular, and blur FBOs over the background color — the only pass that draws to the screen. */
 export function CompositorPass({
-  flowPatternRef,
+  edgeRef,
+  bodyRef,
   diffuseRef,
   specularRef,
   blurRef,
-  flowPatternWeight,
+  edgeWeight,
+  bodyWeight,
   diffuseWeight,
   specularWeight,
   blurWeight,
@@ -19,11 +21,13 @@ export function CompositorPass({
   const { uniforms, render } = useFullscreenPass(
     compositorFragment,
     () => ({
-      tFlowPattern: { value: null },
+      tEdge: { value: null },
+      tBody: { value: null },
       tDiffuse: { value: null },
       tSpecular: { value: null },
       tBlur: { value: null },
-      uFlowPatternWeight: { value: flowPatternWeight },
+      uEdgeWeight: { value: edgeWeight },
+      uBodyWeight: { value: bodyWeight },
       uDiffuseWeight: { value: diffuseWeight },
       uSpecularWeight: { value: specularWeight },
       uBlurWeight: { value: blurWeight },
@@ -34,7 +38,8 @@ export function CompositorPass({
   );
 
   useUniformSync(uniforms, () => ({
-    uFlowPatternWeight: flowPatternWeight,
+    uEdgeWeight: edgeWeight,
+    uBodyWeight: bodyWeight,
     uDiffuseWeight: diffuseWeight,
     uSpecularWeight: specularWeight,
     uBlurWeight: blurWeight,
@@ -44,13 +49,15 @@ export function CompositorPass({
 
   useFrame(() => {
     if (
-      !flowPatternRef?.current ||
+      !edgeRef?.current ||
+      !bodyRef?.current ||
       !diffuseRef?.current ||
       !specularRef?.current ||
       !blurRef?.current
     )
       return;
-    uniforms.tFlowPattern.value = flowPatternRef.current.texture;
+    uniforms.tEdge.value = edgeRef.current.texture;
+    uniforms.tBody.value = bodyRef.current.texture;
     uniforms.tDiffuse.value = diffuseRef.current.texture;
     uniforms.tSpecular.value = specularRef.current.texture;
     uniforms.tBlur.value = blurRef.current.texture;
