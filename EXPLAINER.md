@@ -11,9 +11,11 @@ scene ──> color ──> output
 
 `RawColorPass` captures original-material RGBA color. `RawDepthPass` separately
 captures the same scene: red is unnormalized linear view-space distance and
-alpha is coverage. `NormalizedDepthPass` renders registered watercolor subjects,
-reduces each visible subject to a GPU min/max pair, and writes nearest visible
-surface as 0 and farthest as 1. `OutputPass` composites only color.
+alpha is coverage. `NormalizedDepthPass` isolates each registered watercolor
+subject to calculate min/max from its camera-facing geometry, including portions
+hidden by other scene objects. Its final image still compares each subject to
+full-scene raw depth, so only visible pixels are written. `OutputPass` composites
+only color.
 
 ## Empty pixels and inspection
 

@@ -52,9 +52,10 @@ priority order.
 - `raw-depth` is unnormalized linear camera-view distance in scene units. Its
   debug view maps camera near/far to grayscale, but downstream shaders must not
   treat that preview mapping as stored data.
-- `normalized-depth` is exact for visible registered-subject surfaces: 0 is the
-  subject's nearest visible surface and 1 its farthest. Hidden geometry does not
-  participate.
+- `normalized-depth` ranges include each registered subject's camera-facing
+  geometry even when another scene object hides it. Its final image is still
+  visibility-tested against `raw-depth`: 0 is the subject's nearest range depth,
+  1 its farthest, and hidden pixels are absent.
 - Register a mesh/group for normalization with `useWatercolorSubject(ref, id)`.
   Keep the registered set small; every subject has a half-resolution reduction
   chain.

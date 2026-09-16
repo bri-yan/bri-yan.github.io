@@ -40,7 +40,7 @@ function useReductionTargets(width, height) {
   return targets;
 }
 
-function SubjectDepthRangePass({ subject, rawDepthRef, rangeRefs }) {
+function SubjectDepthRangePass({ subject, rangeRefs }) {
   const { gl, camera, size } = useThree();
   const capture = useFBO(
     Math.max(1, Math.ceil(size.width * REDUCTION_SCALE)),
@@ -53,10 +53,6 @@ function SubjectDepthRangePass({ subject, rawDepthRef, rangeRefs }) {
       new THREE.ShaderMaterial({
         vertexShader: rawDepthVertex,
         fragmentShader: subjectDepthFragment,
-        uniforms: {
-          tRawDepth: { value: null },
-          uResolution: { value: new THREE.Vector2() },
-        },
         depthTest: true,
         depthWrite: true,
       }),
@@ -78,11 +74,8 @@ function SubjectDepthRangePass({ subject, rawDepthRef, rangeRefs }) {
 
   useFrame(() => {
     const object = subject.ref.current;
-    const rawDepth = rawDepthRef.current;
-    if (!object || !rawDepth) return;
+    if (!object) return;
 
-    captureMaterial.uniforms.tRawDepth.value = rawDepth.texture;
-    captureMaterial.uniforms.uResolution.value.set(capture.width, capture.height);
     gl.setRenderTarget(capture);
     gl.setClearColor(0x000000, 0);
     gl.clear(true, true, true);
@@ -147,7 +140,6 @@ export function NormalizedDepthPass({ rawDepthRef, outputRef }) {
     <SubjectDepthRangePass
       key={subject.id}
       subject={subject}
-      rawDepthRef={rawDepthRef}
       rangeRefs={rangeRefs}
     />
   ));
