@@ -1,4 +1,4 @@
-// Passthrough vertex for fullscreen-quad (image-space) passes.
+// Fullscreen vertex for image-space passes.
 
 varying vec2 vUv;
 

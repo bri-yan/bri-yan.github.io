@@ -21,15 +21,6 @@ export default function App() {
       </Canvas>
       <PipelineDiagram
         activeView={controls.debugView}
-        weights={{
-          edge: controls.edgeWeight,
-          body: controls.bodyWeight,
-          diffuse: controls.diffuseWeight,
-          specular: controls.specularWeight,
-          blur: controls.blurWeight,
-          paper: controls.edgePaperWeight,
-          diffuseGain: controls.diffuseGain,
-        }}
         onSelectView={setDebugView}
       />
     </div>

@@ -1,11 +1,13 @@
 import { useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
+import { useWatercolorSubject } from '../pipeline/WatercolorSubjects';
 
 const ROTATION_SPEED_X = 0;
 const ROTATION_SPEED_Y = 0;
 
 export function TorusKnotScene() {
   const meshRef = useRef();
+  useWatercolorSubject(meshRef, 'torus-knot');
 
   useFrame((state) => {
     if (!meshRef.current) return;

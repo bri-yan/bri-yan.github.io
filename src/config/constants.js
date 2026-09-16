@@ -1,82 +1,92 @@
 import * as THREE from 'three';
 
-// —— FBO (render targets) ——
+// Shared source of truth for the debug selector and the on-screen graph.
+// `inputs` names the stages whose output a stage consumes.
+export const PIPELINE_STAGES = [
+  {
+    key: 'scene',
+    label: 'scene',
+    kind: 'source',
+    debugView: 'color',
+    hint: 'the live Three.js scene',
+    inputs: [],
+  },
+  {
+    key: 'color',
+    label: 'color',
+    kind: 'pass',
+    fboKey: 'color',
+    debugView: 'color',
+    hint: 'unstyled scene captured with its original materials',
+    inputs: ['scene'],
+  },
+  {
+    key: 'raw-depth',
+    label: 'raw depth',
+    kind: 'pass',
+    fboKey: 'rawDepth',
+    debugView: 'raw-depth',
+    hint: 'unnormalized linear camera-view distance with coverage',
+    inputs: ['scene'],
+  },
+  {
+    key: 'output',
+    label: 'output',
+    kind: 'output',
+    debugView: 'output',
+    hint: 'color composited over the background and drawn to screen',
+    inputs: ['color'],
+  },
+  {
+    key: 'normalized-depth',
+    label: 'normalized depth',
+    kind: 'pass',
+    fboKey: 'normalizedDepth',
+    debugView: 'normalized-depth',
+    hint: 'per-subject visible depth normalized from nearest to farthest',
+    inputs: ['raw-depth'],
+  },
+];
+
+export const PIPELINE_FBO_KEYS = PIPELINE_STAGES.filter(
+  ({ kind }) => kind === 'pass'
+).map(({ fboKey }) => fboKey);
+
+export const DEBUG_VIEWS = [
+  'output',
+  ...new Set(
+    PIPELINE_STAGES.filter(
+      ({ debugView }) => debugView && debugView !== 'output'
+    ).map(({ debugView }) => debugView)
+  ),
+];
+export const DEBUG_CHANNELS = ['rgb', 'alpha', 'rgb*a'];
+
 export const FBO_OPTIONS = {
   minFilter: THREE.LinearFilter,
   magFilter: THREE.LinearFilter,
   format: THREE.RGBAFormat,
 };
 
-// —— Paint (shared by the edge + body passes) ——
-export const DEFAULT_PAINT_BASE_COLOR = new THREE.Color(0x00ffff);
-export const DEFAULT_PAINT_THRESHOLD = 0.3; // where the wet edge sits on the blurred ramp
-export const DEFAULT_PAINT_WETNESS = 0.7; // half-width of the shape transition band
+export const RAW_DEPTH_FBO_OPTIONS = {
+  minFilter: THREE.NearestFilter,
+  magFilter: THREE.NearestFilter,
+  format: THREE.RGBAFormat,
+  type: THREE.HalfFloatType,
+};
 
-// —— Edge (wet-front rim) ——
-export const DEFAULT_EDGE_WEIGHT = 1.0;
-// How much the edge dries into the paper grain (0 = smooth rim).
-export const DEFAULT_EDGE_PAPER_WEIGHT = 0.6;
-// Contrast of the edge's valley/ridge drying cut (higher = crisper ribs).
-export const DEFAULT_EDGE_SHARPNESS = 80.0;
-// Reserved: plumbed through to the shader but not yet used by it.
-export const DEFAULT_EDGE_DARKNESS = 0.3;
-
-// —— Body (interior wash) ——
-export const DEFAULT_BODY_WEIGHT = 1.0;
-export const DEFAULT_BODY_PAPER_WEIGHT = 0.0; // grain within the wash (0 = flat)
-// Reserved: plumbed through to the shader but not yet used by it.
-export const DEFAULT_BODY_OPACITY = 1.0;
-
-// —— Blur ——
-export const DEFAULT_BLUR_STRENGTH = 1.0;
-export const DEFAULT_BLUR_ITERATIONS = 5;
-export const DEFAULT_BLUR_WEIGHT = 0.0; // standalone blur term in the compositor
-
-// —— Blinn-Phong lighting ——
-export const DEFAULT_BLINN_PHONG_LIGHT_POSITION = [5, 5, 5];
-export const DEFAULT_BLINN_PHONG_SHININESS = 32;
-export const DEFAULT_BLINN_PHONG_AMBIENT_STRENGTH = 0.5;
-export const DEFAULT_BLINN_PHONG_DIFFUSE_STRENGTH = 0.5;
-export const DEFAULT_BLINN_PHONG_SPECULAR_STRENGTH = 0.7;
-export const DEFAULT_BLINN_PHONG_SPECULAR_THRESHOLD = 0.3;
-export const DEFAULT_DIFFUSE_WEIGHT = 1.0;
-export const DEFAULT_SPECULAR_WEIGHT = 1.0;
-
-// —— Paper texture ——
-export const DEFAULT_PAPER_REPEAT_X = 1.0;
-export const DEFAULT_PAPER_REPEAT_Y = 1.0;
-
-// —— Compositor ——
-// White matches the page background that used to show through the transparent canvas.
-export const DEFAULT_COMPOSITOR_BACKGROUND = 0xffffff;
-// diffuse.a (inverse-light wash) peaks well below 1; this gain rescales it toward full brightness.
-export const DEFAULT_COMPOSITOR_DIFFUSE_GAIN = 2.5;
-
-// —— Debug view ——
-// 'final' shows the compositor output; every other entry names a pass FBO in MultiPassPipeline.
-export const DEBUG_VIEWS = [
-  'final',
-  'intensity',
-  'blur',
-  'edge',
-  'body',
-  'diffuse',
-  'diffuseBlur',
-  'specular',
-  'paper',
-];
-export const DEBUG_CHANNELS = ['rgb', 'alpha', 'rgb*a'];
-
-// —— Canvas / scene ——
+export const DEFAULT_BACKGROUND_COLOR = new THREE.Color(0xffffff);
 export const CANVAS_CAMERA = { position: [0, 0, 5], fov: 75 };
 
-// —— Fullscreen quad (NDC for orthographic camera) ——
 export const FULLSCREEN_QUAD_NDC = [-1, 1, 1, -1, 0, 1];
 export const FULLSCREEN_QUAD_SIZE = 2;
 
-// —— useFrame order (higher = later) ——
+// Prioritized frame callbacks disable R3F's automatic render. The pipeline
+// therefore owns the complete frame: captures first, then reductions, output, debug.
 export const UNIFORM_SYNC_FRAME_ORDER = -1;
-export const PASS_FRAME_ORDER = 1;
-export const PAINT_FRAME_ORDER = 1.5; // edge + body need the blur, which finishes at 1
-export const COMPOSITOR_FRAME_ORDER = 2;
-export const DEBUG_VIEW_FRAME_ORDER = 3;
+export const RAW_COLOR_PASS_FRAME_ORDER = 1;
+export const RAW_DEPTH_PASS_FRAME_ORDER = 2;
+export const SUBJECT_RANGE_FRAME_ORDER = 3;
+export const NORMALIZED_DEPTH_FRAME_ORDER = 4;
+export const OUTPUT_FRAME_ORDER = 5;
+export const DEBUG_VIEW_FRAME_ORDER = 6;

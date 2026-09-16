@@ -1,9 +1,12 @@
 # Source structure
 
-- **`config/`** — App and pipeline configuration (constants, defaults). Import via `./config` or `./config/constants`.
-- **`dev/`** — Developer tooling: `usePipelineControls`, the leva control-panel hook that exposes every pipeline tunable live.
-- **`pipeline/`** — Multi-pass render pipeline. Entry: `MultiPassPipeline` from `./pipeline`. Contains `passes/` (Intensity, Blur, Edge, Body, Diffuse, Specular, Paper, Compositor, DebugView) and `utils/` (fullscreen quad, shared pass hooks, scene clone helpers).
-- **`shaders/`** — All GLSL `.vert` and `.frag` files used by the pipeline.
-- **`components/`** — UI and scene content (e.g. `PipelineDiagram` — the clickable pipeline schematic — and `TorusKnotScene`). Import via `./components`.
+- `config/`: shared pipeline definition, defaults, render-target options, and
+  frame priorities.
+- `dev/`: Leva controls for active parameters and debug views only.
+- `pipeline/`: raw-color, raw-depth, normalized-depth, output, and debug passes plus fullscreen-
+  quad helpers.
+- `shaders/`: GLSL used by the active image-space passes.
+- `components/`: the test scene and pipeline graph UI.
 
-To add a new pass: add a component under `pipeline/passes/` (use the hooks in `pipeline/utils/passHooks.js`), wire it in `pipeline/MultiPassPipeline.jsx`, and add any shaders under `shaders/`.
+Before adding or removing a pass, read the synchronization rules in
+`../AGENTS.md`.

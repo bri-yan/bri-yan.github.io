@@ -1,71 +1,85 @@
-import { useEffect, useRef } from 'react';
-import { DEBUG_VIEWS } from '../config';
+import { useEffect, useMemo, useRef } from 'react';
+import { PIPELINE_STAGES } from '../config';
 import './PipelineDiagram.css';
 
-/**
- * Interactive schematic of the render pipeline. Nodes are the passes (keys
- * match DEBUG_VIEWS); clicking one "probes" it — the screen switches to that
- * pass's raw FBO via the debug view. Click again / click out / press Escape /
- * click `final` to return to the composite. Wires into the compositor carry
- * live weight badges; a zero weight renders its wire dashed and dimmed.
- */
+const NODE_WIDTH = 72;
+const NODE_HEIGHT = 24;
+const COLUMN_GAP = 48;
+const ROW_GAP = 18;
+const PADDING = 12;
 
-const NODES = {
-  scene: { x: 8, y: 81, w: 48, h: 22, hint: 'the 3D content' },
-  paper: { x: 8, y: 160, w: 48, h: 22, hint: 'paper grain — color in rgb, height in alpha' },
-  intensity: { x: 88, y: 25, w: 74, h: 22, hint: 'solid-white silhouette mask' },
-  diffuse: { x: 88, y: 81, w: 74, h: 22, hint: 'inverse Lambert — alpha high in shadow' },
-  specular: { x: 88, y: 123, w: 74, h: 22, hint: 'hard Blinn-Phong highlight stencil' },
-  blur: { x: 192, y: 25, w: 64, h: 22, hint: 'silhouette → soft gradient ramp' },
-  diffuseBlur: { x: 192, y: 81, w: 84, h: 22, hint: 'shading softened into a wash' },
-  body: { x: 306, y: 25, w: 56, h: 22, hint: 'clean interior wash (+ optional paper grain)' },
-  edge: { x: 306, y: 57, w: 56, h: 22, hint: 'wet-front rim, dried into the paper relief' },
-  final: { x: 462, y: 60, w: 46, h: 44, hint: 'compositor → screen' },
-};
+function layoutStages(stages) {
+  const byKey = new Map(stages.map((stage) => [stage.key, stage]));
+  const depths = new Map();
 
-// Orthogonal wires; `weight` names a key in the weights prop, shown as a
-// badge at `badge` [x, y] and dashing the wire when the weight is 0.
-const EDGES = [
-  { d: 'M 56 92 H 72 V 36 H 84' }, // scene → intensity
-  { d: 'M 56 92 H 84' }, // scene → diffuse
-  { d: 'M 56 92 H 72 V 134 H 84' }, // scene → specular
-  { d: 'M 162 36 H 188' }, // intensity → blur
-  { d: 'M 256 36 H 302' }, // blur → body
-  { d: 'M 256 36 H 280 V 68 H 302' }, // blur → edge
-  { d: 'M 56 171 H 334 V 83', weight: 'paper', badge: [180, 171] }, // paper → edge
-  { d: 'M 362 36 H 485 V 56', weight: 'body', badge: [410, 36] }, // body → final
-  { d: 'M 362 68 H 458', weight: 'edge', badge: [410, 68] }, // edge → final
-  { d: 'M 276 92 H 458', weight: 'diffuse', badge: [375, 92] }, // diffuseBlur → final
-  { d: 'M 162 134 H 485 V 108', weight: 'specular', badge: [375, 134] }, // specular → final
-  { d: 'M 224 47 V 52 H 470 V 56', weight: 'blur', badge: [330, 52] }, // blur → final (standalone)
-];
+  const getDepth = (stage) => {
+    if (depths.has(stage.key)) return depths.get(stage.key);
+    const depth = stage.inputs.length
+      ? 1 + Math.max(...stage.inputs.map((key) => getDepth(byKey.get(key))))
+      : 0;
+    depths.set(stage.key, depth);
+    return depth;
+  };
 
-const fmtWeight = (w) => `×${Math.round(w * 100) / 100}`;
+  stages.forEach(getDepth);
+  const columns = new Map();
+  stages.forEach((stage) => {
+    const depth = depths.get(stage.key);
+    columns.set(depth, [...(columns.get(depth) ?? []), stage]);
+  });
 
-export function PipelineDiagram({ activeView = 'final', weights = {}, onSelectView }) {
+  const maxRows = Math.max(...[...columns.values()].map((column) => column.length));
+  const contentHeight = maxRows * NODE_HEIGHT + (maxRows - 1) * ROW_GAP;
+  const nodes = new Map();
+
+  columns.forEach((column, depth) => {
+    const columnHeight = column.length * NODE_HEIGHT + (column.length - 1) * ROW_GAP;
+    column.forEach((stage, row) => {
+      nodes.set(stage.key, {
+        ...stage,
+        x: PADDING + depth * (NODE_WIDTH + COLUMN_GAP),
+        y: PADDING + (contentHeight - columnHeight) / 2 + row * (NODE_HEIGHT + ROW_GAP),
+      });
+    });
+  });
+
+  const maxDepth = Math.max(...depths.values());
+  return {
+    nodes,
+    width: PADDING * 2 + (maxDepth + 1) * NODE_WIDTH + maxDepth * COLUMN_GAP,
+    height: PADDING * 2 + contentHeight,
+  };
+}
+
+/** Interactive graph generated from the same stage definition as Debug.view. */
+export function PipelineDiagram({ activeView = 'output', onSelectView }) {
   const rootRef = useRef(null);
-  const probing = activeView !== 'final';
+  const probing = activeView !== 'output';
+  const layout = useMemo(() => layoutStages(PIPELINE_STAGES), []);
+  const edges = PIPELINE_STAGES.flatMap((stage) =>
+    stage.inputs.map((input) => ({ from: layout.nodes.get(input), to: layout.nodes.get(stage.key) }))
+  );
 
-  const select = (key) => onSelectView?.(key === activeView ? 'final' : key);
+  const select = (stage) => {
+    if (!stage.debugView) return;
+    onSelectView?.(stage.debugView === activeView ? 'output' : stage.debugView);
+  };
 
-  // While probing: Escape or a plain click outside the diagram (and outside
-  // the leva panel) returns to the final view. Orbit drags don't count as
-  // clicks — pointer travel beyond a few px is ignored.
   useEffect(() => {
     if (!probing) return undefined;
     const down = { x: 0, y: 0 };
-    const onPointerDown = (e) => {
-      down.x = e.clientX;
-      down.y = e.clientY;
+    const onPointerDown = (event) => {
+      down.x = event.clientX;
+      down.y = event.clientY;
     };
-    const onClick = (e) => {
-      if (Math.hypot(e.clientX - down.x, e.clientY - down.y) > 5) return;
-      if (rootRef.current?.contains(e.target)) return;
-      if (e.target.closest?.('[class*="leva"]')) return;
-      onSelectView?.('final');
+    const onClick = (event) => {
+      if (Math.hypot(event.clientX - down.x, event.clientY - down.y) > 5) return;
+      if (rootRef.current?.contains(event.target)) return;
+      if (event.target.closest?.('[class*="leva"]')) return;
+      onSelectView?.('output');
     };
-    const onKeyDown = (e) => {
-      if (e.key === 'Escape') onSelectView?.('final');
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') onSelectView?.('output');
     };
     document.addEventListener('pointerdown', onPointerDown, true);
     document.addEventListener('click', onClick, true);
@@ -86,7 +100,12 @@ export function PipelineDiagram({ activeView = 'final', weights = {}, onSelectVi
         </span>
       </div>
 
-      <svg className="pd-svg" viewBox="0 0 520 192" width="520" height="192">
+      <svg
+        className="pd-svg"
+        viewBox={`0 0 ${layout.width} ${layout.height}`}
+        width={layout.width}
+        height={layout.height}
+      >
         <defs>
           <marker
             id="pd-arrow"
@@ -95,44 +114,24 @@ export function PipelineDiagram({ activeView = 'final', weights = {}, onSelectVi
             refY="3"
             markerWidth="6"
             markerHeight="6"
-            orient="auto-start-reverse"
+            orient="auto"
           >
             <path d="M 0 0 L 6 3 L 0 6 z" className="pd-arrowhead" />
           </marker>
         </defs>
 
-        {EDGES.map((edge) => {
-          const off = edge.weight != null && (weights[edge.weight] ?? 0) === 0;
-          return (
-            <path
-              key={edge.d}
-              d={edge.d}
-              className={`pd-edge${off ? ' pd-edge--off' : ''}`}
-              markerEnd="url(#pd-arrow)"
-            />
-          );
-        })}
+        {edges.map(({ from, to }) => (
+          <path
+            key={`${from.key}-${to.key}`}
+            d={`M ${from.x + NODE_WIDTH} ${from.y + NODE_HEIGHT / 2} H ${(from.x + NODE_WIDTH + to.x - 4) / 2} V ${to.y + NODE_HEIGHT / 2} H ${to.x - 4}`}
+            className="pd-edge"
+            markerEnd="url(#pd-arrow)"
+          />
+        ))}
 
-        {EDGES.filter((e) => e.weight != null).map((edge) => {
-          const value = weights[edge.weight] ?? 0;
-          const [bx, by] = edge.badge;
-          return (
-            <g
-              key={`badge-${edge.weight}`}
-              className={`pd-badge${value === 0 ? ' pd-badge--off' : ''}`}
-              data-weight={edge.weight}
-            >
-              <rect x={bx - 17} y={by - 6} width="34" height="12" rx="6" />
-              <text x={bx} y={by + 2.5}>
-                {fmtWeight(value)}
-              </text>
-            </g>
-          );
-        })}
-
-        {Object.entries(NODES).map(([key, n]) => {
-          const clickable = key === 'final' || DEBUG_VIEWS.includes(key);
-          const active = probing ? activeView === key : key === 'final';
+        {[...layout.nodes.values()].map((stage) => {
+          const clickable = Boolean(stage.debugView);
+          const active = probing ? stage.debugView === activeView : stage.debugView === 'output';
           const classes = [
             'pd-node',
             active && 'pd-node--active',
@@ -140,36 +139,37 @@ export function PipelineDiagram({ activeView = 'final', weights = {}, onSelectVi
           ]
             .filter(Boolean)
             .join(' ');
+
           return (
             <g
-              key={key}
+              key={stage.key}
               className={classes}
-              data-view={clickable ? key : undefined}
               role={clickable ? 'button' : undefined}
               tabIndex={clickable ? 0 : undefined}
               aria-pressed={clickable ? active : undefined}
-              onClick={clickable ? () => select(key) : undefined}
+              onClick={clickable ? () => select(stage) : undefined}
               onKeyDown={
                 clickable
-                  ? (e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        select(key);
+                  ? (event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        select(stage);
                       }
                     }
                   : undefined
               }
             >
-              <title>{n.hint}</title>
-              <rect x={n.x} y={n.y} width={n.w} height={n.h} rx="5" />
-              <text x={n.x + n.w / 2} y={n.y + (key === 'final' ? 15 : n.h / 2 + 3.5)}>
-                {key}
+              <title>{stage.hint}</title>
+              <rect
+                x={stage.x}
+                y={stage.y}
+                width={NODE_WIDTH}
+                height={NODE_HEIGHT}
+                rx="5"
+              />
+              <text x={stage.x + NODE_WIDTH / 2} y={stage.y + NODE_HEIGHT / 2 + 3.5}>
+                {stage.label}
               </text>
-              {key === 'final' && (
-                <text className="pd-node__sub" x={n.x + n.w / 2} y={n.y + 31}>
-                  {`gain ${fmtWeight(weights.diffuseGain ?? 0)}`}
-                </text>
-              )}
             </g>
           );
         })}
