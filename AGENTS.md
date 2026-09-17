@@ -36,7 +36,7 @@ scene ──> color ──> output
 | `2` | `RawDepthPass` | Independent capture in `fbos.rawDepth`; R = linear view distance, A = coverage. |
 | `4` | `NormalizedDepthPass` | Per-subject 0–1 visible depth in `fbos.normalizedDepth`. |
 | `5` | `OutputPass` | Composites `fbos.color` over the configured background to screen. |
-| `6` | `DebugViewPass` | Replaces output with the selected probe. |
+| `6` | `DebugPass` | Replaces output with the selected probe. |
 
 Prioritized `useFrame` callbacks disable React Three Fiber's automatic render.
 `MultiPassPipeline` mounts flat sibling passes that communicate by FBO refs in
@@ -72,7 +72,9 @@ lower lane is `scene → raw-depth → normalized-depth`. Update metadata, mount
 debug sources, controls, and docs together when changing passes.
 
 The Leva panel exposes only live controls: output background, Debug view, and
-RGB/alpha channels only when inspecting color. Escape, click-out, and re-click
+RGB/alpha channels only when inspecting color. `show bounding boxes` appears
+only while inspecting normalized depth; `DebugPass` draws its orange overlay
+after the FBO probe without changing the FBO. Escape, click-out, and re-click
 return the debug view to `output`.
 
 ## Source layout

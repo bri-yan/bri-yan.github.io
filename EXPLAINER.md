@@ -22,9 +22,13 @@ are written. `OutputPass` composites only color.
 
 Intermediate targets stay neutral: color clears to transparent black; raw and
 normalized depth clear to zero with alpha coverage zero. The checkerboard exists
-only in `DebugViewPass`, marking absent data in every non-output probe. Output
+only in `DebugPass`, marking absent data in every non-output probe. Output
 is the only opaque/composited view. Its checker cells are fixed screen-space
 squares, so resizing the window does not stretch them.
+
+While inspecting normalized depth, `show bounding boxes` draws the registered
+subjects' transformed per-mesh bounds in orange after `DebugPass` displays the
+FBO. It never changes normalized-depth data or output.
 
 Raw depth is previewed through the active camera near/far range, but its stored
 value remains a scene-unit distance for later edge and pigment effects.

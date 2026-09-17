@@ -11,7 +11,7 @@ const float CHECKER_CELL_SIZE = 32.0;
 void main() {
   vec4 t = texture2D(tInput, vUv);
   vec3 checker = vec3(
-    mod(floor(gl_FragCoord.x / CHECKER_CELL_SIZE) + floor(gl_FragCoord.y / CHECKER_CELL_SIZE), 2.0) * 0.33 + 0.33
+    mod(floor(gl_FragCoord.x / CHECKER_CELL_SIZE) + floor(gl_FragCoord.y / CHECKER_CELL_SIZE), 2.0) * 0.125 + 0.125
   );
   if (t.a < 0.5) {
     gl_FragColor = vec4(checker, 1.0);

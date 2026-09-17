@@ -5,7 +5,7 @@ import { RawColorPass } from './passes/RawColorPass';
 import { RawDepthPass } from './passes/RawDepthPass';
 import { NormalizedDepthPass } from './passes/NormalizedDepthPass';
 import { OutputPass } from './passes/OutputPass';
-import { DebugViewPass } from './passes/DebugViewPass';
+import { DebugPass } from './passes/DebugPass';
 import { WatercolorSubjectsProvider } from './WatercolorSubjects';
 
 const toColor = (value) => (value?.isColor ? value : new THREE.Color(value));
@@ -19,6 +19,7 @@ export function MultiPassPipeline({
   backgroundColor = DEFAULT_BACKGROUND_COLOR,
   debugView = 'output',
   debugChannel = 'rgb',
+  showBoundingBoxes = false,
 }) {
   const background = useMemo(() => toColor(backgroundColor), [backgroundColor]);
   const fbos = useMemo(
@@ -34,7 +35,7 @@ export function MultiPassPipeline({
         <RawDepthPass outputRef={fbos.rawDepth} />
         <NormalizedDepthPass rawDepthRef={fbos.rawDepth} outputRef={fbos.normalizedDepth} />
         <OutputPass colorRef={fbos.color} backgroundColor={background} />
-        <DebugViewPass
+        <DebugPass
           passes={{
             color: fbos.color,
             'raw-depth': fbos.rawDepth,
@@ -42,6 +43,7 @@ export function MultiPassPipeline({
           }}
           view={debugView}
           channel={debugChannel}
+          showBoundingBoxes={showBoundingBoxes}
         />
       </WatercolorSubjectsProvider>
     </>
