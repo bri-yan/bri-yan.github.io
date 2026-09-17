@@ -11,11 +11,12 @@ scene ──> color ──> output
 
 `RawColorPass` captures original-material RGBA color. `RawDepthPass` separately
 captures the same scene: red is unnormalized linear view-space distance and
-alpha is coverage. `NormalizedDepthPass` isolates each registered watercolor
-subject to calculate min/max from its camera-facing geometry, including portions
-hidden by other scene objects. Its final image still compares each subject to
-full-scene raw depth, so only visible pixels are written. `OutputPass` composites
-only color.
+alpha is coverage. `NormalizedDepthPass` calculates each registered subject's
+range on the CPU from the eight corners of every mesh's local bounding box after
+transforming them into camera view space. The range is stable and inexpensive,
+but approximate: actual mesh pixels may not reach exactly 0 or 1. Its final
+image still compares each subject to full-scene raw depth, so only visible pixels
+are written. `OutputPass` composites only color.
 
 ## Empty pixels and inspection
 
@@ -28,6 +29,11 @@ squares, so resizing the window does not stretch them.
 Raw depth is previewed through the active camera near/far range, but its stored
 value remains a scene-unit distance for later edge and pigment effects.
 
+All intermediate targets follow the canvas's device-pixel ratio. Normalized
+depth samples raw depth with each fragment's projected screen UV, rather than
+assuming its FBO has the same pixel grid. This keeps the captures aligned when
+browser zoom changes.
+
 ## Tooling and subjects
 
 `PIPELINE_STAGES` is the shared graph/debug definition. Clicking `scene` probes
@@ -35,4 +41,5 @@ the same color capture as clicking `color`, so both nodes highlight together.
 
 `useWatercolorSubject(ref, id)` registers a mesh or group for object-local
 normalization. The torus knot is registered as `torus-knot`; add only intentional
-watercolor subjects because each receives a half-resolution reduction chain.
+watercolor subjects because each has its transformed mesh bounds evaluated every
+rendered frame.

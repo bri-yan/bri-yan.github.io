@@ -34,7 +34,6 @@ scene ──> color ──> output
 |---:|---|---|
 | `1` | `RawColorPass` | Original-material RGBA scene capture in `fbos.color`. |
 | `2` | `RawDepthPass` | Independent capture in `fbos.rawDepth`; R = linear view distance, A = coverage. |
-| `3` | subject range passes | Half-resolution GPU min/max reductions for registered subjects. |
 | `4` | `NormalizedDepthPass` | Per-subject 0–1 visible depth in `fbos.normalizedDepth`. |
 | `5` | `OutputPass` | Composites `fbos.color` over the configured background to screen. |
 | `6` | `DebugViewPass` | Replaces output with the selected probe. |
@@ -52,13 +51,19 @@ priority order.
 - `raw-depth` is unnormalized linear camera-view distance in scene units. Its
   debug view maps camera near/far to grayscale, but downstream shaders must not
   treat that preview mapping as stored data.
-- `normalized-depth` ranges include each registered subject's camera-facing
-  geometry even when another scene object hides it. Its final image is still
-  visibility-tested against `raw-depth`: 0 is the subject's nearest range depth,
-  1 its farthest, and hidden pixels are absent.
+- FBOs are allocated at the canvas's active device-pixel ratio. Cross-target
+  depth lookups use each fragment's projected screen UV rather than
+  `gl_FragCoord`, so browser zoom and transient target-size changes cannot
+  misalign color/depth samples.
+- `normalized-depth` derives each subject range on the CPU from all eight corners
+  of every mesh's transformed local bounding box in camera view space. This is
+  stable and inexpensive but approximate: visible mesh pixels need not reach
+  exactly 0 or 1. Its final image remains visibility-tested against `raw-depth`,
+  so hidden pixels are absent.
 - Register a mesh/group for normalization with `useWatercolorSubject(ref, id)`.
-  Keep the registered set small; every subject has a half-resolution reduction
-  chain.
+  Each subject's mesh bounds are evaluated once per rendered frame.
+- Scene-capture passes save and restore the renderer's active target and clear
+  color state, so they remain isolated as the pipeline gains new stages.
 
 `PIPELINE_STAGES` in `src/config/constants.js` is the source of truth for graph
 nodes, edges, and debug views. `scene` maps to the `color` probe, so both nodes
@@ -74,9 +79,9 @@ return the debug view to `output`.
 
 - `src/pipeline/passes/RawColorPass.jsx`: independent color scene capture.
 - `src/pipeline/passes/RawDepthPass.jsx`: independent floating-point depth capture.
-- `src/pipeline/passes/NormalizedDepthPass.jsx`: subject reductions and normalized image.
+- `src/pipeline/passes/NormalizedDepthPass.jsx`: transformed-bounds ranges and normalized image.
 - `src/pipeline/WatercolorSubjects.jsx`: registration context and hook.
-- `src/shaders/`: capture, reduction, normalized-depth, output, and debug shaders.
+- `src/shaders/`: capture, normalized-depth, output, and debug shaders.
 - `src/components/PipelineDiagram.jsx`: graph derived from `PIPELINE_STAGES`.
 - `EXPLAINER.md`: implemented behavior overview.
 

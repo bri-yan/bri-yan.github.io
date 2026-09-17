@@ -16,9 +16,13 @@ import fullscreenVertex from '../../shaders/fullscreenVertex.vert?raw';
  * @returns { target, uniforms, render } - render(to = target) draws the quad
  */
 export function useFullscreenPass(fragmentShader, makeUniforms, { offscreen = true } = {}) {
-  const { gl, size } = useThree();
+  const { gl } = useThree();
   // Hooks can't be conditional; to-screen passes get a dummy 1×1 FBO.
-  const fbo = useFBO(offscreen ? size.width : 1, offscreen ? size.height : 1, FBO_OPTIONS);
+  const fbo = useFBO(
+    offscreen ? FBO_OPTIONS : 1,
+    offscreen ? undefined : 1,
+    offscreen ? undefined : FBO_OPTIONS
+  );
   const target = offscreen ? fbo : null;
 
   const material = useMemo(

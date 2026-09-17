@@ -8,8 +8,8 @@ import rawDepthFragment from '../../shaders/rawDepthFragment.frag?raw';
 
 /** Independent scene capture: R = linear view distance, A = coverage. */
 export function RawDepthPass({ outputRef }) {
-  const { gl, scene, camera, size } = useThree();
-  const target = useFBO(size.width, size.height, RAW_DEPTH_FBO_OPTIONS);
+  const { gl, scene, camera } = useThree();
+  const target = useFBO(RAW_DEPTH_FBO_OPTIONS);
   const savedClearColor = useRef(new THREE.Color());
   const material = useMemo(
     () =>

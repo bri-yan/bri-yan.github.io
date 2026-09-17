@@ -6,8 +6,8 @@ import { FBO_OPTIONS, RAW_COLOR_PASS_FRAME_ORDER } from '../../config';
 
 /** Captures the unstyled scene with its original materials. */
 export function RawColorPass({ outputRef }) {
-  const { gl, scene, camera, size } = useThree();
-  const target = useFBO(size.width, size.height, FBO_OPTIONS);
+  const { gl, scene, camera } = useThree();
+  const target = useFBO(FBO_OPTIONS);
   const savedClearColor = useRef(new THREE.Color()).current;
 
   if (outputRef) outputRef.current = target;

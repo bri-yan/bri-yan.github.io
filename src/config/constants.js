@@ -86,7 +86,6 @@ export const FULLSCREEN_QUAD_SIZE = 2;
 export const UNIFORM_SYNC_FRAME_ORDER = -1;
 export const RAW_COLOR_PASS_FRAME_ORDER = 1;
 export const RAW_DEPTH_PASS_FRAME_ORDER = 2;
-export const SUBJECT_RANGE_FRAME_ORDER = 3;
 export const NORMALIZED_DEPTH_FRAME_ORDER = 4;
 export const OUTPUT_FRAME_ORDER = 5;
 export const DEBUG_VIEW_FRAME_ORDER = 6;
