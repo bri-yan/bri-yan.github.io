@@ -103,7 +103,7 @@ export function DebugPass({ passes, view = 'output', channel = 'rgb', showBoundi
     if (!source?.current) return;
     uniforms.tInput.value = source.current.texture;
     uniforms.uChannel.value = Math.max(0, DEBUG_CHANNELS.indexOf(channel));
-    uniforms.uMode.value = view === 'raw-depth' ? 1 : view === 'normalized-depth' ? 2 : 0;
+    uniforms.uMode.value = view === 'raw-depth' ? 1 : view === 'normalized-depth' ? 2 : view === 'dilution' ? 3 : 0;
     uniforms.uNear.value = camera.near;
     uniforms.uFar.value = camera.far;
     render();

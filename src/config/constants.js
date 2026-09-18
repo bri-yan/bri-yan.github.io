@@ -30,6 +30,24 @@ export const PIPELINE_STAGES = [
     inputs: ['scene'],
   },
   {
+    key: 'diffuse',
+    label: 'diffuse',
+    kind: 'pass',
+    fboKey: 'diffuse',
+    debugView: 'diffuse',
+    hint: 'flat-to-Lambert scene response with coverage',
+    inputs: ['scene'],
+  },
+  {
+    key: 'specular',
+    label: 'specular',
+    kind: 'pass',
+    fboKey: 'specular',
+    debugView: 'specular',
+    hint: 'thresholded Blinn–Phong highlight mask',
+    inputs: ['scene'],
+  },
+  {
     key: 'output',
     label: 'output',
     kind: 'output',
@@ -45,6 +63,24 @@ export const PIPELINE_STAGES = [
     debugView: 'normalized-depth',
     hint: 'per-subject visible depth normalized from nearest to farthest',
     inputs: ['raw-depth'],
+  },
+  {
+    key: 'color-override',
+    label: 'color override',
+    kind: 'pass',
+    fboKey: 'colorOverride',
+    debugView: 'color-override',
+    hint: 'diffuse response mapped from shadow to base pigment color',
+    inputs: ['diffuse'],
+  },
+  {
+    key: 'dilution',
+    label: 'dilution',
+    kind: 'pass',
+    fboKey: 'dilution',
+    debugView: 'dilution',
+    hint: 'diffuse-driven light thinning coverage',
+    inputs: ['diffuse'],
   },
 ];
 
@@ -76,6 +112,14 @@ export const RAW_DEPTH_FBO_OPTIONS = {
 };
 
 export const DEFAULT_BACKGROUND_COLOR = new THREE.Color(0xffffff);
+export const DEFAULT_LIGHT_POSITION = [5, 5, 5];
+export const DEFAULT_DIFFUSE_AMOUNT = 1;
+export const DEFAULT_COLOR_OVERRIDE_BASE_COLOR = new THREE.Color(0x00ffff);
+export const DEFAULT_COLOR_OVERRIDE_SHADOW_COLOR = new THREE.Color(0x172554);
+export const DEFAULT_DILUTION_STRENGTH = 0.35;
+export const DEFAULT_SPECULAR_SHININESS = 32;
+export const DEFAULT_SPECULAR_STRENGTH = 0.7;
+export const DEFAULT_SPECULAR_THRESHOLD = 0.3;
 export const CANVAS_CAMERA = { position: [0, 0, 5], fov: 75 };
 
 export const FULLSCREEN_QUAD_NDC = [-1, 1, 1, -1, 0, 1];
@@ -86,6 +130,10 @@ export const FULLSCREEN_QUAD_SIZE = 2;
 export const UNIFORM_SYNC_FRAME_ORDER = -1;
 export const RAW_COLOR_PASS_FRAME_ORDER = 1;
 export const RAW_DEPTH_PASS_FRAME_ORDER = 2;
+export const DIFFUSE_PASS_FRAME_ORDER = 3;
+export const COLOR_OVERRIDE_PASS_FRAME_ORDER = 3.1;
+export const DILUTION_PASS_FRAME_ORDER = 3.1;
+export const SPECULAR_PASS_FRAME_ORDER = 3.2;
 export const NORMALIZED_DEPTH_FRAME_ORDER = 4;
 export const OUTPUT_FRAME_ORDER = 5;
 export const DEBUG_VIEW_FRAME_ORDER = 6;

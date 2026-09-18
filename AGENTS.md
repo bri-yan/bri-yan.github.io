@@ -27,13 +27,19 @@ not runtime inputs. Do not edit/delete user-owned
 
 ```text
 scene ──> color ──> output
-   └───> raw-depth ──> normalized-depth
+   ├───> raw-depth ──> normalized-depth
+   ├───> diffuse ──> color-override
+   │                 └──> dilution
+   └───> specular
 ```
 
 | Priority | Stage | Result |
 |---:|---|---|
 | `1` | `RawColorPass` | Original-material RGBA scene capture in `fbos.color`. |
 | `2` | `RawDepthPass` | Independent capture in `fbos.rawDepth`; R = linear view distance, A = coverage. |
+| `3` | `DiffusePass` | Scene capture of flat-to-Lambert response in RGB, with coverage alpha. |
+| `3.1` | `ColorOverridePass`, `DilutionPass` | Parallel fullscreen transforms of `fbos.diffuse`. |
+| `3.2` | `SpecularPass` | Independent thresholded Blinn–Phong highlight mask. |
 | `4` | `NormalizedDepthPass` | Per-subject 0–1 visible depth in `fbos.normalizedDepth`. |
 | `5` | `OutputPass` | Composites `fbos.color` over the configured background to screen. |
 | `6` | `DebugPass` | Replaces output with the selected probe. |
@@ -51,6 +57,12 @@ priority order.
 - `raw-depth` is unnormalized linear camera-view distance in scene units. Its
   debug view maps camera near/far to grayscale, but downstream shaders must not
   treat that preview mapping as stored data.
+- `diffuse` is a grayscale flat-to-Lambert response in RGB with geometric
+  coverage in alpha. `color-override` maps that response from shadow to base
+  pigment color; when disabled it applies the base pigment color under the
+  Lambert response. `dilution`
+  is a diffuse-driven coverage signal written identically to RGB and alpha.
+  `specular` is an independent binary Blinn–Phong RGBA mask.
 - FBOs are allocated at the canvas's active device-pixel ratio. Cross-target
   depth lookups use each fragment's projected screen UV rather than
   `gl_FragCoord`, so browser zoom and transient target-size changes cannot
@@ -71,16 +83,19 @@ highlight together. The graph's upper lane is `scene → color → output`; its
 lower lane is `scene → raw-depth → normalized-depth`. Update metadata, mounts,
 debug sources, controls, and docs together when changing passes.
 
-The Leva panel exposes only live controls: output background, Debug view, and
-RGB/alpha channels only when inspecting color. `show bounding boxes` appears
-only while inspecting normalized depth; `DebugPass` draws its orange overlay
-after the FBO probe without changing the FBO. Escape, click-out, and re-click
-return the debug view to `output`.
+The Leva panel exposes only live controls: output background; a Lighting folder
+with Diffuse, Color Override, Specular, and Dilution subfolders; and Debug view.
+`show bounding boxes` appears while probing normalized depth, and RGB/alpha
+channels only while inspecting color.
+`DebugPass` draws bounds after the FBO probe without changing it. Escape,
+click-out, and re-click return the debug view to `output`.
 
 ## Source layout
 
 - `src/pipeline/passes/RawColorPass.jsx`: independent color scene capture.
 - `src/pipeline/passes/RawDepthPass.jsx`: independent floating-point depth capture.
+- `src/pipeline/passes/DiffusePass.jsx`, `SpecularPass.jsx`: geometry lighting captures.
+- `src/pipeline/passes/ColorOverridePass.jsx`, `DilutionPass.jsx`: diffuse-derived image passes.
 - `src/pipeline/passes/NormalizedDepthPass.jsx`: transformed-bounds ranges and normalized image.
 - `src/pipeline/WatercolorSubjects.jsx`: registration context and hook.
 - `src/shaders/`: capture, normalized-depth, output, and debug shaders.
@@ -91,6 +106,7 @@ return the debug view to `output`.
 
 1. Add the pass/shader and explicit frame priority.
 2. Update `PIPELINE_STAGES`, FBO wiring, debug source, and only live controls.
-3. Preserve the neutral empty-pixel/coverage convention.
+3. Preserve the neutral empty-pixel/coverage convention and keep new signals
+   debug-only until their output blend is explicitly designed.
 4. Update this file and `EXPLAINER.md`.
 5. Run lint/build and visually inspect output plus every debug view.

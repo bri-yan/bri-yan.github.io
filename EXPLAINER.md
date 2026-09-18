@@ -6,7 +6,10 @@ This branch establishes render data, not a watercolor look.
 
 ```text
 scene ──> color ──> output
-   └───> raw-depth ──> normalized-depth
+   ├───> raw-depth ──> normalized-depth
+   ├───> diffuse ──> color override
+   │                 └──> dilution
+   └───> specular
 ```
 
 `RawColorPass` captures original-material RGBA color. `RawDepthPass` separately
@@ -17,6 +20,17 @@ transforming them into camera view space. The range is stable and inexpensive,
 but approximate: actual mesh pixels may not reach exactly 0 or 1. Its final
 image still compares each subject to full-scene raw depth, so only visible pixels
 are written. `OutputPass` composites only color.
+
+The lighting branch is debug-only. `DiffusePass` captures a flat-to-Lambert
+response from the scene; `ColorOverridePass` maps it from navy shadow to cyan
+base pigment. Its Color Override enable toggle instead leaves the base pigment
+under the Lambert response when disabled. `DilutionPass`
+uses the same diffuse response to thin coverage in lit areas. `SpecularPass`
+is an independent thresholded Blinn–Phong mask. These probes share one
+world-space light position but do not affect output yet.
+
+The Leva Lighting folder groups the controls into Diffuse, Color Override,
+Specular, and Dilution subfolders.
 
 ## Empty pixels and inspection
 
@@ -37,6 +51,9 @@ All intermediate targets follow the canvas's device-pixel ratio. Normalized
 depth samples raw depth with each fragment's projected screen UV, rather than
 assuming its FBO has the same pixel grid. This keeps the captures aligned when
 browser zoom changes.
+
+Dilution is inspected as coverage grayscale; its checkerboard appears only for
+zero coverage, rather than for partially diluted pixels.
 
 ## Tooling and subjects
 
