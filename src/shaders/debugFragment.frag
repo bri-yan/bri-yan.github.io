@@ -24,11 +24,11 @@ vec3 checkerboard() {
   return vec3(checker * 0.125 + 0.125);
 }
 
-vec3 colorChannels(vec4 sample) {
-  if (uChannel == RGB_CHANNEL) return sample.rgb;
-  if (uChannel == ALPHA_CHANNEL) return vec3(sample.a);
-  if (uChannel == PREMULTIPLIED_RGB_CHANNEL) return sample.rgb * sample.a;
-  return sample.rgb;
+vec3 colorChannels(vec4 inputSample) {
+  if (uChannel == RGB_CHANNEL) return inputSample.rgb;
+  if (uChannel == ALPHA_CHANNEL) return vec3(inputSample.a);
+  if (uChannel == PREMULTIPLIED_RGB_CHANNEL) return inputSample.rgb * inputSample.a;
+  return inputSample.rgb;
 }
 
 float normalizedRawDepth(float depth) {
@@ -36,30 +36,30 @@ float normalizedRawDepth(float depth) {
 }
 
 void main() {
-  vec4 sample = texture2D(tInput, vUv);
+  vec4 inputSample = texture2D(tInput, vUv);
   vec3 checker = checkerboard();
 
   if (uMode == DILUTION_MODE) {
-    gl_FragColor = sample.a <= 0.0
+    gl_FragColor = inputSample.a <= 0.0
       ? vec4(checker, 1.0)
-      : vec4(vec3(sample.a), 1.0);
+      : vec4(vec3(inputSample.a), 1.0);
     return;
   }
 
-  if (sample.a < 0.5) {
+  if (inputSample.a < 0.5) {
     gl_FragColor = vec4(checker, 1.0);
     return;
   }
 
   if (uMode == RAW_DEPTH_MODE) {
-    gl_FragColor = vec4(vec3(normalizedRawDepth(sample.r)), 1.0);
+    gl_FragColor = vec4(vec3(normalizedRawDepth(inputSample.r)), 1.0);
     return;
   }
 
   if (uMode == NORMALIZED_DEPTH_MODE) {
-    gl_FragColor = vec4(vec3(clamp(sample.r, 0.0, 1.0)), 1.0);
+    gl_FragColor = vec4(vec3(clamp(inputSample.r, 0.0, 1.0)), 1.0);
     return;
   }
 
-  gl_FragColor = vec4(colorChannels(sample), 1.0);
+  gl_FragColor = vec4(colorChannels(inputSample), 1.0);
 }
