@@ -140,7 +140,7 @@ export const DEFAULT_SPECULAR_STRENGTH = 0.7;
 export const DEFAULT_SPECULAR_THRESHOLD = 0.3;
 export const DEFAULT_SOBEL_STRENGTH = 1;
 export const DEFAULT_SOBEL_RADIUS = 1;
-export const DEFAULT_SUBSTRATE_COLOR = new THREE.Color(0xf3ead7);
+export const DEFAULT_SUBSTRATE_COLOR = new THREE.Color(0xf4f2ec);
 export const DEFAULT_SUBSTRATE_SCALE = 5;
 export const CANVAS_CAMERA = { position: [0, 0, 5], fov: 75 };
 

@@ -24,8 +24,13 @@ image still compares each subject to full-scene raw depth, so only visible pixel
 are written. `OutputPass` composites only color.
 
 `SubstratePass` generates stationary procedural paper independently of the
-scene. Its RGB channels are a tinted paper image and alpha stores normalized
-paper height for later effects. Substrate is currently debug-only: it does not
+scene, modeled on a photo of cold-press watercolor paper. Alpha stores a
+normalized 0–1 height: small, slightly vertically elongated, gently warped
+noise bumps that form the paper's tooth, with fine grain and a faint broad
+drift. RGB is the near-white paper tint lit softly from the upper left across
+that height, so the visible bumps are the stored height. The pattern is anchored
+to CSS pixels, so it stays put under camera movement, resizing, and browser
+zoom. Substrate is currently debug-only: it does not
 alter output. Its Debug/Substrate `show height` toggle displays alpha as
 grayscale; normal substrate inspection displays the paper RGB without a
 checkerboard.

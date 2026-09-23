@@ -58,8 +58,15 @@ priority order.
   `normalized-depth` empty pixels have alpha zero. Checkerboards exist only in
   debug presentation, never in stored data; cells are fixed screen-space squares
   rather than UV-scaled tiles.
-- `substrate` is opaque procedural paper: RGB is a color-tinted layered noise
-  field and A is its normalized height. Unlike coverage signals, its debug view
+- `substrate` is opaque procedural cold-press paper tuned against a real paper
+  photo. A is a clamped 0–1 height: a 3-octave gradient-noise fBm, slightly
+  vertically elongated and laterally warped (the paper tooth), plus fine grain
+  and a faint broad drift. It uses a sin-free hash for GPU stability and is
+  evaluated in top-left-anchored CSS pixels divided by `scale`, so it stays
+  fixed through camera moves, resizes, and browser zoom. RGB is the paper color
+  lit softly from the upper left across the height's slope (plus a slight
+  height tint), so the visible tooth is the stored height. Default color is the
+  near-white `#f4f2ec`. Unlike coverage signals, its debug view
   never checkerboards; its Debug/Substrate toggle displays alpha as grayscale.
   It is debug-only and does not yet affect output.
 - `raw-depth` is unnormalized linear camera-view distance in scene units. Its
