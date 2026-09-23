@@ -4,6 +4,15 @@ import * as THREE from 'three';
 // `inputs` names the stages whose output a stage consumes.
 export const PIPELINE_STAGES = [
   {
+    key: 'substrate',
+    label: 'substrate',
+    kind: 'source',
+    fboKey: 'substrate',
+    debugView: 'substrate',
+    hint: 'stationary procedural paper: RGB color with height in alpha',
+    inputs: [],
+  },
+  {
     key: 'scene',
     label: 'scene',
     kind: 'source',
@@ -82,11 +91,20 @@ export const PIPELINE_STAGES = [
     hint: 'diffuse-driven light thinning coverage',
     inputs: ['diffuse'],
   },
+  {
+    key: 'sobel',
+    label: 'sobel',
+    kind: 'pass',
+    fboKey: 'sobel',
+    debugView: 'sobel',
+    hint: 'continuous edge strength from normalized depth',
+    inputs: ['normalized-depth'],
+  },
 ];
 
-export const PIPELINE_FBO_KEYS = PIPELINE_STAGES.filter(
-  ({ kind }) => kind === 'pass'
-).map(({ fboKey }) => fboKey);
+export const PIPELINE_FBO_KEYS = PIPELINE_STAGES.filter(({ fboKey }) => fboKey).map(
+  ({ fboKey }) => fboKey
+);
 
 export const DEBUG_VIEWS = [
   'output',
@@ -120,6 +138,10 @@ export const DEFAULT_DILUTION_STRENGTH = 0.35;
 export const DEFAULT_SPECULAR_SHININESS = 32;
 export const DEFAULT_SPECULAR_STRENGTH = 0.7;
 export const DEFAULT_SPECULAR_THRESHOLD = 0.3;
+export const DEFAULT_SOBEL_STRENGTH = 1;
+export const DEFAULT_SOBEL_RADIUS = 1;
+export const DEFAULT_SUBSTRATE_COLOR = new THREE.Color(0xf3ead7);
+export const DEFAULT_SUBSTRATE_SCALE = 5;
 export const CANVAS_CAMERA = { position: [0, 0, 5], fov: 75 };
 
 export const FULLSCREEN_QUAD_NDC = [-1, 1, 1, -1, 0, 1];
@@ -128,6 +150,7 @@ export const FULLSCREEN_QUAD_SIZE = 2;
 // Prioritized frame callbacks disable R3F's automatic render. The pipeline
 // therefore owns the complete frame: captures first, then reductions, output, debug.
 export const UNIFORM_SYNC_FRAME_ORDER = -1;
+export const SUBSTRATE_PASS_FRAME_ORDER = 0;
 export const RAW_COLOR_PASS_FRAME_ORDER = 1;
 export const RAW_DEPTH_PASS_FRAME_ORDER = 2;
 export const DIFFUSE_PASS_FRAME_ORDER = 3;
@@ -135,5 +158,6 @@ export const COLOR_OVERRIDE_PASS_FRAME_ORDER = 3.1;
 export const DILUTION_PASS_FRAME_ORDER = 3.1;
 export const SPECULAR_PASS_FRAME_ORDER = 3.2;
 export const NORMALIZED_DEPTH_FRAME_ORDER = 4;
+export const SOBEL_PASS_FRAME_ORDER = 4.1;
 export const OUTPUT_FRAME_ORDER = 5;
 export const DEBUG_VIEW_FRAME_ORDER = 6;

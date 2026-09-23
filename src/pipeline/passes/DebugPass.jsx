@@ -84,7 +84,13 @@ function useNormalizedDepthBoundsOverlay() {
  * output. `passes` maps view names to FBO refs; when `view` has no entry
  * (e.g. 'output') the pass does nothing and the normal output stands.
  */
-export function DebugPass({ passes, view = 'output', channel = 'rgb', showBoundingBoxes = false }) {
+export function DebugPass({
+  passes,
+  view = 'output',
+  channel = 'rgb',
+  showBoundingBoxes = false,
+  showSubstrateHeight = false,
+}) {
   const renderBounds = useNormalizedDepthBoundsOverlay();
   const { uniforms, render } = useFullscreenPass(
     debugFragment,
@@ -94,6 +100,7 @@ export function DebugPass({ passes, view = 'output', channel = 'rgb', showBoundi
       uMode: { value: 0 },
       uNear: { value: 0.1 },
       uFar: { value: 1000 },
+      uShowSubstrateHeight: { value: 0 },
     }),
     { offscreen: false }
   );
@@ -103,9 +110,10 @@ export function DebugPass({ passes, view = 'output', channel = 'rgb', showBoundi
     if (!source?.current) return;
     uniforms.tInput.value = source.current.texture;
     uniforms.uChannel.value = Math.max(0, DEBUG_CHANNELS.indexOf(channel));
-    uniforms.uMode.value = view === 'raw-depth' ? 1 : view === 'normalized-depth' ? 2 : view === 'dilution' ? 3 : 0;
+    uniforms.uMode.value = view === 'raw-depth' ? 1 : view === 'normalized-depth' ? 2 : view === 'dilution' ? 3 : view === 'substrate' ? 4 : 0;
     uniforms.uNear.value = camera.near;
     uniforms.uFar.value = camera.far;
+    uniforms.uShowSubstrateHeight.value = showSubstrateHeight ? 1 : 0;
     render();
     if (showBoundingBoxes && view === 'normalized-depth') renderBounds(gl, camera);
   }, DEBUG_VIEW_FRAME_ORDER);

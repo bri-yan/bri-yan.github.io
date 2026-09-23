@@ -26,8 +26,10 @@ not runtime inputs. Do not edit/delete user-owned
 ## Current pipeline
 
 ```text
+substrate
+
 scene ──> color ──> output
-   ├───> raw-depth ──> normalized-depth
+   ├───> raw-depth ──> normalized-depth ──> sobel
    ├───> diffuse ──> color-override
    │                 └──> dilution
    └───> specular
@@ -35,12 +37,14 @@ scene ──> color ──> output
 
 | Priority | Stage | Result |
 |---:|---|---|
+| `0` | `SubstratePass` | Procedural paper in `fbos.substrate`; RGB = paper color, A = height. |
 | `1` | `RawColorPass` | Original-material RGBA scene capture in `fbos.color`. |
 | `2` | `RawDepthPass` | Independent capture in `fbos.rawDepth`; R = linear view distance, A = coverage. |
 | `3` | `DiffusePass` | Scene capture of flat-to-Lambert response in RGB, with coverage alpha. |
 | `3.1` | `ColorOverridePass`, `DilutionPass` | Parallel fullscreen transforms of `fbos.diffuse`. |
 | `3.2` | `SpecularPass` | Independent thresholded Blinn–Phong highlight mask. |
 | `4` | `NormalizedDepthPass` | Per-subject 0–1 visible depth in `fbos.normalizedDepth`. |
+| `4.1` | `SobelPass` | Debug-only continuous edge magnitude in `fbos.sobel`. |
 | `5` | `OutputPass` | Composites `fbos.color` over the configured background to screen. |
 | `6` | `DebugPass` | Replaces output with the selected probe. |
 
@@ -54,6 +58,10 @@ priority order.
   `normalized-depth` empty pixels have alpha zero. Checkerboards exist only in
   debug presentation, never in stored data; cells are fixed screen-space squares
   rather than UV-scaled tiles.
+- `substrate` is opaque procedural paper: RGB is a color-tinted layered noise
+  field and A is its normalized height. Unlike coverage signals, its debug view
+  never checkerboards; its Debug/Substrate toggle displays alpha as grayscale.
+  It is debug-only and does not yet affect output.
 - `raw-depth` is unnormalized linear camera-view distance in scene units. Its
   debug view maps camera near/far to grayscale, but downstream shaders must not
   treat that preview mapping as stored data.
@@ -72,6 +80,9 @@ priority order.
   stable and inexpensive but approximate: visible mesh pixels need not reach
   exactly 0 or 1. Its final image remains visibility-tested against `raw-depth`,
   so hidden pixels are absent.
+- `sobel` combines private horizontal and vertical normalized-depth gradients
+  into continuous grayscale edge magnitude. It keeps normalized-depth coverage
+  in alpha, so absent pixels remain checkerboard in debug; it does not affect output.
 - Register a mesh/group for normalization with `useWatercolorSubject(ref, id)`.
   Each subject's mesh bounds are evaluated once per rendered frame.
 - Scene-capture passes save and restore the renderer's active target and clear
@@ -80,11 +91,14 @@ priority order.
 `PIPELINE_STAGES` in `src/config/constants.js` is the source of truth for graph
 nodes, edges, and debug views. `scene` maps to the `color` probe, so both nodes
 highlight together. The graph's upper lane is `scene → color → output`; its
-lower lane is `scene → raw-depth → normalized-depth`. Update metadata, mounts,
+lower lane is `scene → raw-depth → normalized-depth → sobel`. Update metadata, mounts,
 debug sources, controls, and docs together when changing passes.
 
 The Leva panel exposes only live controls: output background; a Lighting folder
 with Diffuse, Color Override, Specular, and Dilution subfolders; and Debug view.
+The Sobel section exposes edge strength and an integer source-pixel radius.
+The Substrate section exposes paper color and scale; Debug/Substrate exposes its
+height preview while probing substrate.
 `show bounding boxes` appears while probing normalized depth, and RGB/alpha
 channels only while inspecting color.
 `DebugPass` draws bounds after the FBO probe without changing it. Escape,
@@ -93,12 +107,14 @@ click-out, and re-click return the debug view to `output`.
 ## Source layout
 
 - `src/pipeline/passes/RawColorPass.jsx`: independent color scene capture.
+- `src/pipeline/passes/SubstratePass.jsx`: procedural paper source capture.
 - `src/pipeline/passes/RawDepthPass.jsx`: independent floating-point depth capture.
 - `src/pipeline/passes/DiffusePass.jsx`, `SpecularPass.jsx`: geometry lighting captures.
 - `src/pipeline/passes/ColorOverridePass.jsx`, `DilutionPass.jsx`: diffuse-derived image passes.
 - `src/pipeline/passes/NormalizedDepthPass.jsx`: transformed-bounds ranges and normalized image.
+- `src/pipeline/passes/SobelPass.jsx`: normalized-depth Sobel edge composite.
 - `src/pipeline/WatercolorSubjects.jsx`: registration context and hook.
-- `src/shaders/`: capture, normalized-depth, output, and debug shaders.
+- `src/shaders/`: capture, substrate, normalized-depth, output, and debug shaders.
 - `src/components/PipelineDiagram.jsx`: graph derived from `PIPELINE_STAGES`.
 - `EXPLAINER.md`: implemented behavior overview.
 

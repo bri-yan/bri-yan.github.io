@@ -13,6 +13,10 @@ import {
   DEFAULT_SPECULAR_SHININESS,
   DEFAULT_SPECULAR_STRENGTH,
   DEFAULT_SPECULAR_THRESHOLD,
+  DEFAULT_SOBEL_RADIUS,
+  DEFAULT_SOBEL_STRENGTH,
+  DEFAULT_SUBSTRATE_COLOR,
+  DEFAULT_SUBSTRATE_SCALE,
 } from '../config';
 
 const STORAGE_KEY = 'watercolor-pipeline-controls-v2';
@@ -29,6 +33,11 @@ const DEFAULTS = {
   specularShininess: DEFAULT_SPECULAR_SHININESS,
   specularStrength: DEFAULT_SPECULAR_STRENGTH,
   specularThreshold: DEFAULT_SPECULAR_THRESHOLD,
+  sobelStrength: DEFAULT_SOBEL_STRENGTH,
+  sobelRadius: DEFAULT_SOBEL_RADIUS,
+  substrateColor: `#${DEFAULT_SUBSTRATE_COLOR.getHexString()}`,
+  substrateScale: DEFAULT_SUBSTRATE_SCALE,
+  showSubstrateHeight: false,
 };
 
 function loadSaved() {
@@ -60,6 +69,13 @@ export function usePipelineControls() {
       value: saved.showBoundingBoxes ?? DEFAULTS.showBoundingBoxes,
       render: (get) => get('Debug.view') === 'normalized-depth',
     },
+    Substrate: folder({
+      showSubstrateHeight: {
+        label: 'show height',
+        value: saved.showSubstrateHeight ?? DEFAULTS.showSubstrateHeight,
+        render: (get) => get('Debug.view') === 'substrate',
+      },
+    }),
   }));
 
   const [lighting, setLighting] = useControls('Lighting', () => ({
@@ -115,6 +131,31 @@ export function usePipelineControls() {
     backgroundColor: saved.backgroundColor ?? DEFAULTS.backgroundColor,
   }));
 
+  const [sobel, setSobel] = useControls('Sobel', () => ({
+    strength: {
+      value: saved.sobelStrength ?? DEFAULTS.sobelStrength,
+      min: 0,
+      max: 4,
+      step: 0.01,
+    },
+    radius: {
+      value: saved.sobelRadius ?? DEFAULTS.sobelRadius,
+      min: 1,
+      max: 6,
+      step: 1,
+    },
+  }));
+
+  const [substrate, setSubstrate] = useControls('Substrate', () => ({
+    color: saved.substrateColor ?? DEFAULTS.substrateColor,
+    scale: {
+      value: saved.substrateScale ?? DEFAULTS.substrateScale,
+      min: 0.5,
+      max: 12,
+      step: 0.1,
+    },
+  }));
+
   const values = {
     backgroundColor: output.backgroundColor,
     showBoundingBoxes: debug['show bounding boxes'],
@@ -127,6 +168,11 @@ export function usePipelineControls() {
     specularShininess: lighting.specularShininess,
     specularStrength: lighting.specularStrength,
     specularThreshold: lighting.specularThreshold,
+    sobelStrength: sobel.strength,
+    sobelRadius: sobel.radius,
+    substrateColor: substrate.color,
+    substrateScale: substrate.scale,
+    showSubstrateHeight: debug.showSubstrateHeight,
   };
   const valuesRef = useRef(values);
   valuesRef.current = values;
@@ -140,6 +186,7 @@ export function usePipelineControls() {
       setOutput({ backgroundColor: DEFAULTS.backgroundColor });
       setDebug({
         'show bounding boxes': DEFAULTS.showBoundingBoxes,
+        showSubstrateHeight: DEFAULTS.showSubstrateHeight,
       });
       setLighting({
         lightPosition: DEFAULTS.lightPosition,
@@ -151,6 +198,14 @@ export function usePipelineControls() {
         specularShininess: DEFAULTS.specularShininess,
         specularStrength: DEFAULTS.specularStrength,
         specularThreshold: DEFAULTS.specularThreshold,
+      });
+      setSobel({
+        strength: DEFAULTS.sobelStrength,
+        radius: DEFAULTS.sobelRadius,
+      });
+      setSubstrate({
+        color: DEFAULTS.substrateColor,
+        scale: DEFAULTS.substrateScale,
       });
     }),
     'copy values': button(() => {
@@ -164,6 +219,7 @@ export function usePipelineControls() {
     debugChannel: debug.channel,
     showBoundingBoxes: debug['show bounding boxes'],
     colorOverrideEnabled: lighting.enabled,
+    showSubstrateHeight: debug.showSubstrateHeight,
     setDebugView: (view) => setDebug({ view }),
   };
 }

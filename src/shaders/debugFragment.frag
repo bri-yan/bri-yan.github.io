@@ -1,8 +1,9 @@
 uniform sampler2D tInput;
 uniform int uChannel; // 0 = rgb, 1 = alpha as grayscale, 2 = rgb × alpha
-uniform int uMode; // 0 = color, 1 = raw depth, 2 = normalized depth, 3 = dilution
+uniform int uMode; // 0 = color, 1 = raw depth, 2 = normalized depth, 3 = dilution, 4 = substrate
 uniform float uNear;
 uniform float uFar;
+uniform int uShowSubstrateHeight;
 
 varying vec2 vUv;
 
@@ -14,6 +15,7 @@ const int COLOR_MODE = 0;
 const int RAW_DEPTH_MODE = 1;
 const int NORMALIZED_DEPTH_MODE = 2;
 const int DILUTION_MODE = 3;
+const int SUBSTRATE_MODE = 4;
 
 vec3 checkerboard() {
   float checker = mod(
@@ -38,6 +40,12 @@ float normalizedRawDepth(float depth) {
 void main() {
   vec4 inputSample = texture2D(tInput, vUv);
   vec3 checker = checkerboard();
+
+  if (uMode == SUBSTRATE_MODE) {
+    vec3 substrate = uShowSubstrateHeight == 1 ? vec3(inputSample.a) : inputSample.rgb;
+    gl_FragColor = vec4(substrate, 1.0);
+    return;
+  }
 
   if (uMode == DILUTION_MODE) {
     gl_FragColor = inputSample.a <= 0.0

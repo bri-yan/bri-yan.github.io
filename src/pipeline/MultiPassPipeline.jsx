@@ -10,6 +10,10 @@ import {
   DEFAULT_SPECULAR_SHININESS,
   DEFAULT_SPECULAR_STRENGTH,
   DEFAULT_SPECULAR_THRESHOLD,
+  DEFAULT_SUBSTRATE_COLOR,
+  DEFAULT_SUBSTRATE_SCALE,
+  DEFAULT_SOBEL_RADIUS,
+  DEFAULT_SOBEL_STRENGTH,
   PIPELINE_FBO_KEYS,
 } from '../config';
 import { ColorOverridePass } from './passes/ColorOverridePass';
@@ -18,6 +22,8 @@ import { DilutionPass } from './passes/DilutionPass';
 import { RawColorPass } from './passes/RawColorPass';
 import { RawDepthPass } from './passes/RawDepthPass';
 import { SpecularPass } from './passes/SpecularPass';
+import { SobelPass } from './passes/SobelPass';
+import { SubstratePass } from './passes/SubstratePass';
 import { NormalizedDepthPass } from './passes/NormalizedDepthPass';
 import { OutputPass } from './passes/OutputPass';
 import { DebugPass } from './passes/DebugPass';
@@ -44,10 +50,16 @@ export function MultiPassPipeline({
   specularShininess = DEFAULT_SPECULAR_SHININESS,
   specularStrength = DEFAULT_SPECULAR_STRENGTH,
   specularThreshold = DEFAULT_SPECULAR_THRESHOLD,
+  sobelStrength = DEFAULT_SOBEL_STRENGTH,
+  sobelRadius = DEFAULT_SOBEL_RADIUS,
+  substrateColor = DEFAULT_SUBSTRATE_COLOR,
+  substrateScale = DEFAULT_SUBSTRATE_SCALE,
+  showSubstrateHeight = false,
 }) {
   const background = useMemo(() => toColor(backgroundColor), [backgroundColor]);
   const colorOverrideBase = useMemo(() => toColor(colorOverrideBaseColor), [colorOverrideBaseColor]);
   const colorOverrideShadow = useMemo(() => toColor(colorOverrideShadowColor), [colorOverrideShadowColor]);
+  const substrate = useMemo(() => toColor(substrateColor), [substrateColor]);
   const fbos = useMemo(
     () => Object.fromEntries(PIPELINE_FBO_KEYS.map((key) => [key, createRef()])),
     []
@@ -57,6 +69,7 @@ export function MultiPassPipeline({
     <>
       <WatercolorSubjectsProvider>
         {children}
+        <SubstratePass outputRef={fbos.substrate} color={substrate} scale={substrateScale} />
         <RawColorPass outputRef={fbos.color} />
         <RawDepthPass outputRef={fbos.rawDepth} />
         <DiffusePass
@@ -84,12 +97,20 @@ export function MultiPassPipeline({
           threshold={specularThreshold}
         />
         <NormalizedDepthPass rawDepthRef={fbos.rawDepth} outputRef={fbos.normalizedDepth} />
+        <SobelPass
+          normalizedDepthRef={fbos.normalizedDepth}
+          outputRef={fbos.sobel}
+          strength={sobelStrength}
+          radius={sobelRadius}
+        />
         <OutputPass colorRef={fbos.color} backgroundColor={background} />
         <DebugPass
           passes={{
             color: fbos.color,
+            substrate: fbos.substrate,
             'raw-depth': fbos.rawDepth,
             'normalized-depth': fbos.normalizedDepth,
+            sobel: fbos.sobel,
             diffuse: fbos.diffuse,
             'color-override': fbos.colorOverride,
             dilution: fbos.dilution,
@@ -98,6 +119,7 @@ export function MultiPassPipeline({
           view={debugView}
           channel={debugChannel}
           showBoundingBoxes={showBoundingBoxes}
+          showSubstrateHeight={showSubstrateHeight}
         />
       </WatercolorSubjectsProvider>
     </>

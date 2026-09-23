@@ -5,8 +5,10 @@ This branch establishes render data, not a watercolor look.
 ## One frame
 
 ```text
+substrate
+
 scene ──> color ──> output
-   ├───> raw-depth ──> normalized-depth
+   ├───> raw-depth ──> normalized-depth ──> sobel
    ├───> diffuse ──> color override
    │                 └──> dilution
    └───> specular
@@ -21,6 +23,19 @@ but approximate: actual mesh pixels may not reach exactly 0 or 1. Its final
 image still compares each subject to full-scene raw depth, so only visible pixels
 are written. `OutputPass` composites only color.
 
+`SubstratePass` generates stationary procedural paper independently of the
+scene. Its RGB channels are a tinted paper image and alpha stores normalized
+paper height for later effects. Substrate is currently debug-only: it does not
+alter output. Its Debug/Substrate `show height` toggle displays alpha as
+grayscale; normal substrate inspection displays the paper RGB without a
+checkerboard.
+
+`SobelPass` is a debug-only normalized-depth edge probe. A shared directional
+shader produces private horizontal and vertical gradients, then a combine pass
+writes their continuous grayscale magnitude. Its alpha follows normalized-depth
+coverage, so only absent pixels checkerboard. Strength scales edge brightness;
+integer radius selects the source-pixel sampling distance. It does not affect output.
+
 The lighting branch is debug-only. `DiffusePass` captures a flat-to-Lambert
 response from the scene; `ColorOverridePass` maps it from navy shadow to cyan
 base pigment. Its Color Override enable toggle instead leaves the base pigment
@@ -30,7 +45,8 @@ is an independent thresholded Blinn–Phong mask. These probes share one
 world-space light position but do not affect output yet.
 
 The Leva Lighting folder groups the controls into Diffuse, Color Override,
-Specular, and Dilution subfolders.
+Specular, and Dilution subfolders. The Sobel section controls edge strength and
+integer source-pixel radius.
 
 ## Empty pixels and inspection
 
