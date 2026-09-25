@@ -1,7 +1,7 @@
 import { useEffect, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
-import { DEBUG_VIEW_FRAME_ORDER, DEBUG_CHANNELS } from '../../config';
+import { DEBUG_CHANNELS, DEBUG_MODES, DEBUG_VIEW_FRAME_ORDER, PIPELINE_STAGES } from '../../config';
 import { useFullscreenPass } from '../utils/passHooks';
 import { useWatercolorSubjects } from '../WatercolorSubjects';
 import debugFragment from '../../shaders/debugFragment.frag?raw';
@@ -79,6 +79,13 @@ function useNormalizedDepthBoundsOverlay() {
   };
 }
 
+const VIEW_MODES = Object.fromEntries(
+  PIPELINE_STAGES.filter(({ debugMode }) => debugMode).map(({ debugView, debugMode }) => [
+    debugView,
+    DEBUG_MODES[debugMode],
+  ])
+);
+
 /**
  * Dev tool: draws a single pass's FBO to the screen, replacing the compositor
  * output. `passes` maps view names to FBO refs; when `view` has no entry
@@ -110,7 +117,7 @@ export function DebugPass({
     if (!source?.current) return;
     uniforms.tInput.value = source.current.texture;
     uniforms.uChannel.value = Math.max(0, DEBUG_CHANNELS.indexOf(channel));
-    uniforms.uMode.value = view === 'raw-depth' ? 1 : view === 'normalized-depth' ? 2 : view === 'dilution' ? 3 : view === 'substrate' ? 4 : 0;
+    uniforms.uMode.value = VIEW_MODES[view] ?? DEBUG_MODES.color;
     uniforms.uNear.value = camera.near;
     uniforms.uFar.value = camera.far;
     uniforms.uShowSubstrateHeight.value = showSubstrateHeight ? 1 : 0;

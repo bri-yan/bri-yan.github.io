@@ -14,9 +14,13 @@ import {
   DEFAULT_SUBSTRATE_SCALE,
   DEFAULT_SOBEL_RADIUS,
   DEFAULT_SOBEL_STRENGTH,
+  DEFAULT_BLUR_RADIUS,
   PIPELINE_FBO_KEYS,
+  PIPELINE_STAGES,
 } from '../config';
+import { BlurPass } from './passes/BlurPass';
 import { ColorOverridePass } from './passes/ColorOverridePass';
+import { DiffuseCompositionPass } from './passes/DiffuseCompositionPass';
 import { DiffusePass } from './passes/DiffusePass';
 import { DilutionPass } from './passes/DilutionPass';
 import { RawColorPass } from './passes/RawColorPass';
@@ -55,6 +59,8 @@ export function MultiPassPipeline({
   substrateColor = DEFAULT_SUBSTRATE_COLOR,
   substrateScale = DEFAULT_SUBSTRATE_SCALE,
   showSubstrateHeight = false,
+  sobelBlurRadius = DEFAULT_BLUR_RADIUS,
+  compositionBlurRadius = DEFAULT_BLUR_RADIUS,
 }) {
   const background = useMemo(() => toColor(backgroundColor), [backgroundColor]);
   const colorOverrideBase = useMemo(() => toColor(colorOverrideBaseColor), [colorOverrideBaseColor]);
@@ -63,6 +69,15 @@ export function MultiPassPipeline({
   const fbos = useMemo(
     () => Object.fromEntries(PIPELINE_FBO_KEYS.map((key) => [key, createRef()])),
     []
+  );
+  const debugSources = useMemo(
+    () =>
+      Object.fromEntries(
+        PIPELINE_STAGES.filter(({ fboKey, debugView }) => fboKey && debugView).map(
+          ({ debugView, fboKey }) => [debugView, fbos[fboKey]]
+        )
+      ),
+    [fbos]
   );
 
   return (
@@ -89,6 +104,11 @@ export function MultiPassPipeline({
           outputRef={fbos.dilution}
           strength={dilutionStrength}
         />
+        <DiffuseCompositionPass
+          colorOverrideRef={fbos.colorOverride}
+          dilutionRef={fbos.dilution}
+          outputRef={fbos.diffuseComposition}
+        />
         <SpecularPass
           outputRef={fbos.specular}
           lightPosition={lightPosition}
@@ -103,19 +123,15 @@ export function MultiPassPipeline({
           strength={sobelStrength}
           radius={sobelRadius}
         />
+        <BlurPass inputRef={fbos.sobel} outputRef={fbos.sobelBlur} radius={sobelBlurRadius} />
+        <BlurPass
+          inputRef={fbos.diffuseComposition}
+          outputRef={fbos.diffuseCompositionBlur}
+          radius={compositionBlurRadius}
+        />
         <OutputPass colorRef={fbos.color} backgroundColor={background} />
         <DebugPass
-          passes={{
-            color: fbos.color,
-            substrate: fbos.substrate,
-            'raw-depth': fbos.rawDepth,
-            'normalized-depth': fbos.normalizedDepth,
-            sobel: fbos.sobel,
-            diffuse: fbos.diffuse,
-            'color-override': fbos.colorOverride,
-            dilution: fbos.dilution,
-            specular: fbos.specular,
-          }}
+          passes={debugSources}
           view={debugView}
           channel={debugChannel}
           showBoundingBoxes={showBoundingBoxes}

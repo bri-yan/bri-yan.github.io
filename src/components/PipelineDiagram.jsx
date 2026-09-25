@@ -4,7 +4,7 @@ import './PipelineDiagram.css';
 
 const NODE_WIDTH = 72;
 const NODE_HEIGHT = 24;
-const COLUMN_GAP = 48;
+const COLUMN_GAP = 32;
 const ROW_GAP = 18;
 const PADDING = 12;
 

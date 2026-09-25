@@ -29,9 +29,9 @@ not runtime inputs. Do not edit/delete user-owned
 substrate
 
 scene ──> color ──> output
-   ├───> raw-depth ──> normalized-depth ──> sobel
-   ├───> diffuse ──> color-override
-   │                 └──> dilution
+   ├───> raw-depth ──> normalized-depth ──> sobel ──> sobel-blur
+   ├───> diffuse ──> color-override ──┐
+   │                 └──> dilution ───┴──> diffuse-composition ──> diffuse-composition-blur
    └───> specular
 ```
 
@@ -42,9 +42,11 @@ scene ──> color ──> output
 | `2` | `RawDepthPass` | Independent capture in `fbos.rawDepth`; R = linear view distance, A = coverage. |
 | `3` | `DiffusePass` | Scene capture of flat-to-Lambert response in RGB, with coverage alpha. |
 | `3.1` | `ColorOverridePass`, `DilutionPass` | Parallel fullscreen transforms of `fbos.diffuse`. |
+| `3.15` | `DiffuseCompositionPass` | Debug-only join in `fbos.diffuseComposition`; RGB = color-override pigment, A = dilution density. |
 | `3.2` | `SpecularPass` | Independent thresholded Blinn–Phong highlight mask. |
 | `4` | `NormalizedDepthPass` | Per-subject 0–1 visible depth in `fbos.normalizedDepth`. |
 | `4.1` | `SobelPass` | Debug-only continuous edge magnitude in `fbos.sobel`. |
+| `4.2` | `BlurPass` ×2 | Debug-only Gaussian blurs of `fbos.sobel` → `fbos.sobelBlur` and `fbos.diffuseComposition` → `fbos.diffuseCompositionBlur`. |
 | `5` | `OutputPass` | Composites `fbos.color` over the configured background to screen. |
 | `6` | `DebugPass` | Replaces output with the selected probe. |
 
@@ -67,7 +69,8 @@ priority order.
   lit softly from the upper left across the height's slope (plus a slight
   height tint), so the visible tooth is the stored height. Default color is the
   near-white `#f4f2ec`. Unlike coverage signals, its debug view
-  never checkerboards; its Debug/Substrate toggle displays alpha as grayscale.
+  never checkerboards; the Substrate `height map` toggle displays alpha as
+  grayscale.
   It is debug-only and does not yet affect output.
 - `raw-depth` is unnormalized linear camera-view distance in scene units. Its
   debug view maps camera near/far to grayscale, but downstream shaders must not
@@ -77,6 +80,11 @@ priority order.
   pigment color; when disabled it applies the base pigment color under the
   Lambert response. `dilution`
   is a diffuse-driven coverage signal written identically to RGB and alpha.
+  `diffuse-composition` joins them into one watercolor layer: RGB is the
+  color-override pigment and A is dilution density (already coverage-masked),
+  intended for later compositing as `mix(paper, rgb, a)`. It has no controls of
+  its own and does not affect output; its debug view blends pigment over the
+  checkerboard by density.
   `specular` is an independent binary Blinn–Phong RGBA mask.
 - FBOs are allocated at the canvas's active device-pixel ratio. Cross-target
   depth lookups use each fragment's projected screen UV rather than
@@ -90,22 +98,39 @@ priority order.
 - `sobel` combines private horizontal and vertical normalized-depth gradients
   into continuous grayscale edge magnitude. It keeps normalized-depth coverage
   in alpha, so absent pixels remain checkerboard in debug; it does not affect output.
+- `BlurPass` is a reusable separable Gaussian blur of any RGBA pass (`inputRef`,
+  `outputRef`, `radius`). `radius` is in CSS pixels (≈3σ, scaled by device
+  pixel ratio so zoom doesn't change it); 0 passes the input through. Taps stay
+  ≤1 texel apart up to 32 per side, then spread evenly. Color is blurred
+  premultiplied by alpha and un-premultiplied on the final write, so alpha
+  keeps its meaning (coverage/density) and empty pixels' RGB never bleeds in;
+  its private and output targets are HalfFloat for that reason. An `iterations`
+  prop (default 1, no control yet) repeats the H+V pair, staying premultiplied
+  between iterations, if a softer falloff is ever needed. `sobel-blur` and
+  `diffuse-composition-blur` are its two instances; each blurred stage keeps
+  its source's debug display.
 - Register a mesh/group for normalization with `useWatercolorSubject(ref, id)`.
   Each subject's mesh bounds are evaluated once per rendered frame.
 - Scene-capture passes save and restore the renderer's active target and clear
   color state, so they remain isolated as the pipeline gains new stages.
 
 `PIPELINE_STAGES` in `src/config/constants.js` is the source of truth for graph
-nodes, edges, and debug views. `scene` maps to the `color` probe, so both nodes
+nodes, edges, debug views, debug sources (`debugView → fbos[fboKey]`, derived in
+`MultiPassPipeline`), and debug displays (`debugMode` → `DEBUG_MODES`, the
+`uMode` values in `debugFragment.frag`; stages without one show plain color). `scene` maps to the `color` probe, so both nodes
 highlight together. The graph's upper lane is `scene → color → output`; its
 lower lane is `scene → raw-depth → normalized-depth → sobel`. Update metadata, mounts,
-debug sources, controls, and docs together when changing passes.
+controls, and docs together when changing passes.
 
 The Leva panel exposes only live controls: output background; a Lighting folder
 with Diffuse, Color Override, Specular, and Dilution subfolders; and Debug view.
 The Sobel section exposes edge strength and an integer source-pixel radius.
-The Substrate section exposes paper color and scale; Debug/Substrate exposes its
-height preview while probing substrate.
+The Blur section exposes a CSS-pixel radius per blur instance (`diffuse`,
+`sobel`; 0–16, 0 = off).
+The Substrate section exposes a `height map` toggle first, then paper color and
+scale. Turning `height map` on overrides the selected debug view with the
+substrate's grayscale height from any view; picking a view from the Debug
+dropdown or the pipeline graph turns it back off.
 `show bounding boxes` appears while probing normalized depth, and RGB/alpha
 channels only while inspecting color.
 `DebugPass` draws bounds after the FBO probe without changing it. Escape,
@@ -118,8 +143,10 @@ click-out, and re-click return the debug view to `output`.
 - `src/pipeline/passes/RawDepthPass.jsx`: independent floating-point depth capture.
 - `src/pipeline/passes/DiffusePass.jsx`, `SpecularPass.jsx`: geometry lighting captures.
 - `src/pipeline/passes/ColorOverridePass.jsx`, `DilutionPass.jsx`: diffuse-derived image passes.
+- `src/pipeline/passes/DiffuseCompositionPass.jsx`: pigment + density join of those two.
 - `src/pipeline/passes/NormalizedDepthPass.jsx`: transformed-bounds ranges and normalized image.
 - `src/pipeline/passes/SobelPass.jsx`: normalized-depth Sobel edge composite.
+- `src/pipeline/passes/BlurPass.jsx`: reusable premultiplied separable Gaussian blur.
 - `src/pipeline/WatercolorSubjects.jsx`: registration context and hook.
 - `src/shaders/`: capture, substrate, normalized-depth, output, and debug shaders.
 - `src/components/PipelineDiagram.jsx`: graph derived from `PIPELINE_STAGES`.
@@ -128,7 +155,10 @@ click-out, and re-click return the debug view to `output`.
 ## Adding the next pass
 
 1. Add the pass/shader and explicit frame priority.
-2. Update `PIPELINE_STAGES`, FBO wiring, debug source, and only live controls.
+2. Add a `PIPELINE_STAGES` entry (with `debugMode` if it needs a non-color
+   display), mount the pass with its FBO refs, and add only live controls.
+   Debug sources and modes are derived from the stage entry. Reusing
+   `BlurPass` on another signal is one stage entry plus one JSX line.
 3. Preserve the neutral empty-pixel/coverage convention and keep new signals
    debug-only until their output blend is explicitly designed.
 4. Update this file and `EXPLAINER.md`.

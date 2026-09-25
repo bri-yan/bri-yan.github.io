@@ -13,15 +13,20 @@ import fullscreenVertex from '../../shaders/fullscreenVertex.vert?raw';
  * @param fragmentShader - GLSL fragment source (vertex is always fullscreenVertex)
  * @param makeUniforms - Factory returning the initial uniforms object
  * @param offscreen - false for passes that draw to the screen (target is null)
+ * @param fboOptions - render-target settings for the offscreen FBO
  * @returns { target, uniforms, render } - render(to = target) draws the quad
  */
-export function useFullscreenPass(fragmentShader, makeUniforms, { offscreen = true } = {}) {
+export function useFullscreenPass(
+  fragmentShader,
+  makeUniforms,
+  { offscreen = true, fboOptions = FBO_OPTIONS } = {}
+) {
   const { gl } = useThree();
   // Hooks can't be conditional; to-screen passes get a dummy 1×1 FBO.
   const fbo = useFBO(
-    offscreen ? FBO_OPTIONS : 1,
+    offscreen ? fboOptions : 1,
     offscreen ? undefined : 1,
-    offscreen ? undefined : FBO_OPTIONS
+    offscreen ? undefined : fboOptions
   );
   const target = offscreen ? fbo : null;
 

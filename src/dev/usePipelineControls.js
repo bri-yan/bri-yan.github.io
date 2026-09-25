@@ -17,6 +17,8 @@ import {
   DEFAULT_SOBEL_STRENGTH,
   DEFAULT_SUBSTRATE_COLOR,
   DEFAULT_SUBSTRATE_SCALE,
+  DEFAULT_BLUR_RADIUS,
+  BLUR_MAX_RADIUS,
 } from '../config';
 
 const STORAGE_KEY = 'watercolor-pipeline-controls-v2';
@@ -38,7 +40,11 @@ const DEFAULTS = {
   substrateColor: `#${DEFAULT_SUBSTRATE_COLOR.getHexString()}`,
   substrateScale: DEFAULT_SUBSTRATE_SCALE,
   showSubstrateHeight: false,
+  compositionBlurRadius: DEFAULT_BLUR_RADIUS,
+  sobelBlurRadius: DEFAULT_BLUR_RADIUS,
 };
+
+const blurRadius = (value) => ({ value, min: 0, max: BLUR_MAX_RADIUS, step: 0.5 });
 
 function loadSaved() {
   try {
@@ -59,7 +65,15 @@ export function usePipelineControls() {
   const saved = useMemo(loadSaved, []);
 
   const [debug, setDebug] = useControls('Debug', () => ({
-    view: { value: 'output', options: DEBUG_VIEWS },
+    view: {
+      value: 'output',
+      options: DEBUG_VIEWS,
+      // Picking a view explicitly leaves the substrate height map.
+      onChange: (_, __, { initial }) => {
+        if (!initial) setSubstrate({ showHeightMap: false });
+      },
+      transient: false,
+    },
     channel: {
       value: 'rgb',
       options: DEBUG_CHANNELS,
@@ -69,13 +83,6 @@ export function usePipelineControls() {
       value: saved.showBoundingBoxes ?? DEFAULTS.showBoundingBoxes,
       render: (get) => get('Debug.view') === 'normalized-depth',
     },
-    Substrate: folder({
-      showSubstrateHeight: {
-        label: 'show height',
-        value: saved.showSubstrateHeight ?? DEFAULTS.showSubstrateHeight,
-        render: (get) => get('Debug.view') === 'substrate',
-      },
-    }),
   }));
 
   const [lighting, setLighting] = useControls('Lighting', () => ({
@@ -147,12 +154,28 @@ export function usePipelineControls() {
   }));
 
   const [substrate, setSubstrate] = useControls('Substrate', () => ({
+    showHeightMap: {
+      label: 'height map',
+      value: saved.showSubstrateHeight ?? DEFAULTS.showSubstrateHeight,
+    },
     color: saved.substrateColor ?? DEFAULTS.substrateColor,
     scale: {
       value: saved.substrateScale ?? DEFAULTS.substrateScale,
       min: 0.5,
       max: 12,
       step: 0.1,
+    },
+  }));
+
+  // Radii are in CSS pixels; 0 passes the input through unchanged.
+  const [blur, setBlur] = useControls('Blur', () => ({
+    compositionBlurRadius: {
+      label: 'diffuse',
+      ...blurRadius(saved.compositionBlurRadius ?? DEFAULTS.compositionBlurRadius),
+    },
+    sobelBlurRadius: {
+      label: 'sobel',
+      ...blurRadius(saved.sobelBlurRadius ?? DEFAULTS.sobelBlurRadius),
     },
   }));
 
@@ -172,7 +195,9 @@ export function usePipelineControls() {
     sobelRadius: sobel.radius,
     substrateColor: substrate.color,
     substrateScale: substrate.scale,
-    showSubstrateHeight: debug.showSubstrateHeight,
+    showSubstrateHeight: substrate.showHeightMap,
+    compositionBlurRadius: blur.compositionBlurRadius,
+    sobelBlurRadius: blur.sobelBlurRadius,
   };
   const valuesRef = useRef(values);
   valuesRef.current = values;
@@ -186,7 +211,6 @@ export function usePipelineControls() {
       setOutput({ backgroundColor: DEFAULTS.backgroundColor });
       setDebug({
         'show bounding boxes': DEFAULTS.showBoundingBoxes,
-        showSubstrateHeight: DEFAULTS.showSubstrateHeight,
       });
       setLighting({
         lightPosition: DEFAULTS.lightPosition,
@@ -206,6 +230,11 @@ export function usePipelineControls() {
       setSubstrate({
         color: DEFAULTS.substrateColor,
         scale: DEFAULTS.substrateScale,
+        showHeightMap: DEFAULTS.showSubstrateHeight,
+      });
+      setBlur({
+        compositionBlurRadius: DEFAULTS.compositionBlurRadius,
+        sobelBlurRadius: DEFAULTS.sobelBlurRadius,
       });
     }),
     'copy values': button(() => {
@@ -215,11 +244,12 @@ export function usePipelineControls() {
 
   return {
     ...values,
-    debugView: debug.view,
+    // The height toggle overrides the selected view with the substrate height map.
+    debugView: substrate.showHeightMap ? 'substrate' : debug.view,
     debugChannel: debug.channel,
     showBoundingBoxes: debug['show bounding boxes'],
     colorOverrideEnabled: lighting.enabled,
-    showSubstrateHeight: debug.showSubstrateHeight,
+    showSubstrateHeight: substrate.showHeightMap,
     setDebugView: (view) => setDebug({ view }),
   };
 }
