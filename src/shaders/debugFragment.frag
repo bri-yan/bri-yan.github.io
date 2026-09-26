@@ -1,6 +1,6 @@
 uniform sampler2D tInput;
 uniform int uChannel; // 0 = rgb, 1 = alpha as grayscale, 2 = rgb × alpha
-uniform int uMode; // DEBUG_MODES in constants.js: 0 color, 1 raw depth, 2 normalized depth, 3 coverage, 4 substrate, 5 composition
+uniform int uMode; // DEBUG_MODES in constants.js: 0 color, 1 raw depth, 2 normalized depth, 3 coverage, 4 substrate, 5 composition, 6 signed
 uniform float uNear;
 uniform float uFar;
 uniform int uShowSubstrateHeight;
@@ -17,6 +17,7 @@ const int NORMALIZED_DEPTH_MODE = 2;
 const int COVERAGE_MODE = 3;
 const int SUBSTRATE_MODE = 4;
 const int COMPOSITION_MODE = 5;
+const int SIGNED_MODE = 6;
 
 vec3 checkerboard() {
   float checker = mod(
@@ -49,6 +50,12 @@ void main() {
   }
 
   // Density thins pigment over the checkerboard instead of the binary coverage cutoff.
+  // Signed vectors (e.g. gradient) map [-1, 1] to [0, 1]; zero reads mid-gray.
+  if (uMode == SIGNED_MODE) {
+    gl_FragColor = vec4(clamp(0.5 + 0.5 * inputSample.rgb, 0.0, 1.0), 1.0);
+    return;
+  }
+
   if (uMode == COMPOSITION_MODE) {
     gl_FragColor = vec4(mix(checker, inputSample.rgb, clamp(inputSample.a, 0.0, 1.0)), 1.0);
     return;

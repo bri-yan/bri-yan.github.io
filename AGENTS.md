@@ -26,18 +26,19 @@ not runtime inputs. Do not edit/delete user-owned
 ## Current pipeline
 
 ```text
-substrate
-
-scene ──> color ──> output
-   ├───> raw-depth ──> normalized-depth ──> sobel ──> sobel-blur
-   ├───> diffuse ──> color-override ──┐
-   │                 └──> dilution ───┴──> diffuse-composition ──> diffuse-composition-blur
+substrate ──> gradient ───────────────────────────────────────────────────────────────────────┐
+                                                                                              │
+scene ──> color ──> output                                                                    │
+   ├───> raw-depth ──> normalized-depth ──> sobel ──> sobel-blur                              │
+   ├───> diffuse ──> color-override ──┐                                                       │
+   │                 └──> dilution ───┴──> diffuse-composition ──> diffuse-composition-blur ──┴──> substrate-fx
    └───> specular
 ```
 
 | Priority | Stage | Result |
 |---:|---|---|
-| `0` | `SubstratePass` | Procedural paper in `fbos.substrate`; RGB = paper color, A = height. |
+| `0` | `SubstratePass` | Procedural paper in HalfFloat `fbos.substrate`; RGB = paper color, A = height. |
+| `0.1` | `GradientPass` | Signed substrate slope in `fbos.gradient`; RG = ∇h per paper unit. |
 | `1` | `RawColorPass` | Original-material RGBA scene capture in `fbos.color`. |
 | `2` | `RawDepthPass` | Independent capture in `fbos.rawDepth`; R = linear view distance, A = coverage. |
 | `3` | `DiffusePass` | Scene capture of flat-to-Lambert response in RGB, with coverage alpha. |
@@ -47,6 +48,7 @@ scene ──> color ──> output
 | `4` | `NormalizedDepthPass` | Per-subject 0–1 visible depth in `fbos.normalizedDepth`. |
 | `4.1` | `SobelPass` | Debug-only continuous edge magnitude in `fbos.sobel`. |
 | `4.2` | `BlurPass` ×2 | Debug-only Gaussian blurs of `fbos.sobel` → `fbos.sobelBlur` and `fbos.diffuseComposition` → `fbos.diffuseCompositionBlur`. |
+| `4.3` | `SubstrateFxPass` | Debug-only paint on paper in `fbos.substrateFx`, with toggleable substrate distortion and lighting. |
 | `5` | `OutputPass` | Composites `fbos.color` over the configured background to screen. |
 | `6` | `DebugPass` | Replaces output with the selected probe. |
 
@@ -70,8 +72,24 @@ priority order.
   height tint), so the visible tooth is the stored height. Default color is the
   near-white `#f4f2ec`. Unlike coverage signals, its debug view
   never checkerboards; the Substrate `height map` toggle displays alpha as
-  grayscale.
+  grayscale. Its target is HalfFloat so 1-texel height differences are smooth.
   It is debug-only and does not yet affect output.
+- `gradient` is the substrate slope ∇h from central differences of substrate
+  alpha, stored signed in HalfFloat RG as height change per paper unit
+  (× DPR × scale, so it's O(1) and independent of zoom and `scale`). It
+  points uphill, x right and y screen-down; B = 0, A = 1. Its debug view maps
+  signed values as `0.5 + 0.5 · v`, so flat paper reads mid-gray.
+- `substrate-fx` follows Montesdeoca §5.3 in thesis order over
+  `diffuse-composition-blur`: **distortion** samples the paint at
+  `uv + amount · ∇h` (CSS px; sampling uphill slides pigment into valleys),
+  then the paint is laid over the flat substrate **color uniform** by density
+  (not the substrate RGB, whose baked relief would be lit twice), then
+  **lighting** multiplies by `Id = 1 − ds·(1 − max(L·N, 0))` with
+  `N = normalize(−r·∇h, 1)` rebuilt from the gradient (no separate normal
+  target) and `L` from a screen-space light angle. Each effect has its own
+  toggle; both off is plain blurred paint on flat paper. Output is opaque RGB.
+  It is debug-only; depth-aware distortion (§5.3.1's front-object test) is
+  deferred.
 - `raw-depth` is unnormalized linear camera-view distance in scene units. Its
   debug view maps camera near/far to grayscale, but downstream shaders must not
   treat that preview mapping as stored data.
@@ -118,8 +136,17 @@ priority order.
 nodes, edges, debug views, debug sources (`debugView → fbos[fboKey]`, derived in
 `MultiPassPipeline`), and debug displays (`debugMode` → `DEBUG_MODES`, the
 `uMode` values in `debugFragment.frag`; stages without one show plain color). `scene` maps to the `color` probe, so both nodes
-highlight together. The graph's upper lane is `scene → color → output`; its
-lower lane is `scene → raw-depth → normalized-depth → sobel`. Update metadata, mounts,
+highlight together. The on-screen graph lays stages out automatically: columns
+follow data depth, with every stage that feeds others placed as late as its
+consumers allow (so `substrate → gradient` enters just before `substrate-fx`),
+and each stage sits at the average row of its inputs so wires don't cross.
+It is styled as a printed figure plate: small-caps serif labels (Cormorant SC
+and EB Garamond, loaded in `index.html`) on a frosted vellum sheet (translucent
+paper tint plus backdrop blur, so the ink reads over every debug view while the
+render shows through); hairline ink wires measured to stop just short of each
+label; and a cyan brushstroke under the stage being viewed. Stage labels are
+display-only and kept short to fit a column (e.g. `norm. depth`).
+Update metadata, mounts,
 controls, and docs together when changing passes.
 
 The Leva panel exposes only live controls: output background; a Lighting folder
@@ -127,6 +154,10 @@ with Diffuse, Color Override, Specular, and Dilution subfolders; and Debug view.
 The Sobel section exposes edge strength and an integer source-pixel radius.
 The Blur section exposes a CSS-pixel radius per blur instance (`diffuse`,
 `sobel`; 0–16, 0 = off).
+The Substrate FX section has a `distortion` toggle with its `amount` (0–8 CSS
+px), and a `lighting` toggle with `light angle` (degrees, 0 = from the right,
+counter-clockwise; default 135 = upper left), `light strength` (`ds`), and
+`roughness` (`r`); each effect's settings show only while it is on.
 The Substrate section exposes a `height map` toggle first, then paper color and
 scale. Turning `height map` on overrides the selected debug view with the
 substrate's grayscale height from any view; picking a view from the Debug
@@ -147,6 +178,8 @@ click-out, and re-click return the debug view to `output`.
 - `src/pipeline/passes/NormalizedDepthPass.jsx`: transformed-bounds ranges and normalized image.
 - `src/pipeline/passes/SobelPass.jsx`: normalized-depth Sobel edge composite.
 - `src/pipeline/passes/BlurPass.jsx`: reusable premultiplied separable Gaussian blur.
+- `src/pipeline/passes/GradientPass.jsx`: signed substrate slope from height.
+- `src/pipeline/passes/SubstrateFxPass.jsx`: substrate distortion and lighting over diffuse blur.
 - `src/pipeline/WatercolorSubjects.jsx`: registration context and hook.
 - `src/shaders/`: capture, substrate, normalized-depth, output, and debug shaders.
 - `src/components/PipelineDiagram.jsx`: graph derived from `PIPELINE_STAGES`.

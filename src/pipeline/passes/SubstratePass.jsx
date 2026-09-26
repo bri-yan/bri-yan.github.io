@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { useFrame } from '@react-three/fiber';
-import { SUBSTRATE_PASS_FRAME_ORDER } from '../../config';
+import { SIGNED_FBO_OPTIONS, SUBSTRATE_PASS_FRAME_ORDER } from '../../config';
 import { useFullscreenPass } from '../utils/passHooks';
 import substrateFragment from '../../shaders/substrateFragment.frag?raw';
 
@@ -13,7 +13,8 @@ export function SubstratePass({ outputRef, color, scale }) {
       uPixelRatio: { value: 1 },
       uSubstrateColor: { value: color },
       uSubstrateScale: { value: scale },
-    })
+    }),
+    { fboOptions: SIGNED_FBO_OPTIONS }
   );
 
   if (outputRef) outputRef.current = target;

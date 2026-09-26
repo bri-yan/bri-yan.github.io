@@ -15,10 +15,16 @@ import {
   DEFAULT_SOBEL_RADIUS,
   DEFAULT_SOBEL_STRENGTH,
   DEFAULT_BLUR_RADIUS,
+  DEFAULT_SUBSTRATE_DISTORTION,
+  DEFAULT_SUBSTRATE_LIGHT_ANGLE,
+  DEFAULT_SUBSTRATE_LIGHT_STRENGTH,
+  DEFAULT_SUBSTRATE_ROUGHNESS,
   PIPELINE_FBO_KEYS,
   PIPELINE_STAGES,
 } from '../config';
 import { BlurPass } from './passes/BlurPass';
+import { GradientPass } from './passes/GradientPass';
+import { SubstrateFxPass } from './passes/SubstrateFxPass';
 import { ColorOverridePass } from './passes/ColorOverridePass';
 import { DiffuseCompositionPass } from './passes/DiffuseCompositionPass';
 import { DiffusePass } from './passes/DiffusePass';
@@ -61,6 +67,12 @@ export function MultiPassPipeline({
   showSubstrateHeight = false,
   sobelBlurRadius = DEFAULT_BLUR_RADIUS,
   compositionBlurRadius = DEFAULT_BLUR_RADIUS,
+  substrateDistortionEnabled = true,
+  substrateDistortion = DEFAULT_SUBSTRATE_DISTORTION,
+  substrateLightingEnabled = true,
+  substrateLightAngle = DEFAULT_SUBSTRATE_LIGHT_ANGLE,
+  substrateLightStrength = DEFAULT_SUBSTRATE_LIGHT_STRENGTH,
+  substrateRoughness = DEFAULT_SUBSTRATE_ROUGHNESS,
 }) {
   const background = useMemo(() => toColor(backgroundColor), [backgroundColor]);
   const colorOverrideBase = useMemo(() => toColor(colorOverrideBaseColor), [colorOverrideBaseColor]);
@@ -85,6 +97,7 @@ export function MultiPassPipeline({
       <WatercolorSubjectsProvider>
         {children}
         <SubstratePass outputRef={fbos.substrate} color={substrate} scale={substrateScale} />
+        <GradientPass substrateRef={fbos.substrate} outputRef={fbos.gradient} scale={substrateScale} />
         <RawColorPass outputRef={fbos.color} />
         <RawDepthPass outputRef={fbos.rawDepth} />
         <DiffusePass
@@ -128,6 +141,18 @@ export function MultiPassPipeline({
           inputRef={fbos.diffuseComposition}
           outputRef={fbos.diffuseCompositionBlur}
           radius={compositionBlurRadius}
+        />
+        <SubstrateFxPass
+          paintRef={fbos.diffuseCompositionBlur}
+          gradientRef={fbos.gradient}
+          outputRef={fbos.substrateFx}
+          paperColor={substrate}
+          distortionEnabled={substrateDistortionEnabled}
+          distortion={substrateDistortion}
+          lightingEnabled={substrateLightingEnabled}
+          lightAngle={substrateLightAngle}
+          lightStrength={substrateLightStrength}
+          roughness={substrateRoughness}
         />
         <OutputPass colorRef={fbos.color} backgroundColor={background} />
         <DebugPass

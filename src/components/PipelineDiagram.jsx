@@ -1,54 +1,122 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { PIPELINE_STAGES } from '../config';
 import './PipelineDiagram.css';
 
-const NODE_WIDTH = 72;
-const NODE_HEIGHT = 24;
-const COLUMN_GAP = 32;
-const ROW_GAP = 18;
-const PADDING = 12;
+// Each stage is a label centered in a NODE_WIDTH cell; wires run between the
+// measured label ends, so there are no boxes.
+const NODE_WIDTH = 84;
+const NODE_HEIGHT = 20;
+const COLUMN_GAP = 28;
+const ROW_GAP = 12;
+const PADDING = 8;
+const WIRE_GAP = 5; // space between a label and its wire
+const JOIN_OFFSET = 8; // wires turn this far before the target column
 
+const ROW_STEP = NODE_HEIGHT + ROW_GAP;
+const mean = (values) => values.reduce((sum, value) => sum + value, 0) / values.length;
+
+/**
+ * Layered left-to-right layout. Columns follow data depth, with each stage
+ * as late as its consumers allow, so side inputs like the substrate enter
+ * where they are used. Within a column, stages sit at the
+ * average row of their inputs, so wires run straight or fan without crossing;
+ * sources then center on the stages they feed.
+ */
 function layoutStages(stages) {
   const byKey = new Map(stages.map((stage) => [stage.key, stage]));
-  const depths = new Map();
+  const children = new Map(stages.map((stage) => [stage.key, []]));
+  stages.forEach((stage) => stage.inputs.forEach((input) => children.get(input).push(stage.key)));
 
-  const getDepth = (stage) => {
+  // Earliest column each stage can occupy...
+  const depths = new Map();
+  const asap = (stage) => {
     if (depths.has(stage.key)) return depths.get(stage.key);
-    const depth = stage.inputs.length
-      ? 1 + Math.max(...stage.inputs.map((key) => getDepth(byKey.get(key))))
-      : 0;
+    const depth = stage.inputs.length ? 1 + Math.max(...stage.inputs.map((key) => asap(byKey.get(key)))) : 0;
     depths.set(stage.key, depth);
     return depth;
   };
+  stages.forEach(asap);
 
-  stages.forEach(getDepth);
+  // Then place every stage that feeds others as late as its consumers allow,
+  // so side chains (substrate → gradient) enter right where they are used.
+  [...stages]
+    .sort((a, b) => depths.get(b.key) - depths.get(a.key))
+    .forEach((stage) => {
+      const consumers = children.get(stage.key);
+      if (consumers.length) depths.set(stage.key, Math.min(...consumers.map((key) => depths.get(key))) - 1);
+    });
+  const sources = stages.filter((stage) => !stage.inputs.length);
+
   const columns = new Map();
   stages.forEach((stage) => {
     const depth = depths.get(stage.key);
     columns.set(depth, [...(columns.get(depth) ?? []), stage]);
   });
 
-  const maxRows = Math.max(...[...columns.values()].map((column) => column.length));
-  const contentHeight = maxRows * NODE_HEIGHT + (maxRows - 1) * ROW_GAP;
-  const nodes = new Map();
-
-  columns.forEach((column, depth) => {
-    const columnHeight = column.length * NODE_HEIGHT + (column.length - 1) * ROW_GAP;
-    column.forEach((stage, row) => {
-      nodes.set(stage.key, {
-        ...stage,
-        x: PADDING + depth * (NODE_WIDTH + COLUMN_GAP),
-        y: PADDING + (contentHeight - columnHeight) / 2 + row * (NODE_HEIGHT + ROW_GAP),
+  // Rows: each stage wants the average row of its inputs; sources go last.
+  const rows = new Map();
+  [...columns.keys()]
+    .sort((a, b) => a - b)
+    .forEach((depth) => {
+      const wanted = columns
+        .get(depth)
+        .map((stage, order) => ({
+          stage,
+          order,
+          row: stage.inputs.length ? mean(stage.inputs.map((key) => rows.get(key))) : Infinity,
+        }))
+        .sort((a, b) => a.row - b.row || a.order - b.order);
+      let next = 0;
+      wanted.forEach(({ stage, row }) => {
+        const placed = Number.isFinite(row) ? Math.max(row, next) : next;
+        rows.set(stage.key, placed);
+        next = placed + 1;
       });
+    });
+
+  // Center a source on its consumers when its column has room.
+  sources.forEach((stage) => {
+    const column = columns.get(depths.get(stage.key));
+    if (column.length === 1) rows.set(stage.key, mean(children.get(stage.key).map((key) => rows.get(key))));
+  });
+
+  const nodes = new Map();
+  stages.forEach((stage) => {
+    nodes.set(stage.key, {
+      ...stage,
+      x: PADDING + depths.get(stage.key) * (NODE_WIDTH + COLUMN_GAP),
+      y: PADDING + rows.get(stage.key) * ROW_STEP,
     });
   });
 
   const maxDepth = Math.max(...depths.values());
+  const maxRow = Math.max(...rows.values());
   return {
     nodes,
     width: PADDING * 2 + (maxDepth + 1) * NODE_WIDTH + maxDepth * COLUMN_GAP,
-    height: PADDING * 2 + contentHeight,
+    height: PADDING * 2 + maxRow * ROW_STEP + NODE_HEIGHT,
   };
+}
+
+/** Measures each rendered label (after webfonts load) so wires can stop just short of it. */
+function useLabelWidths(rootRef) {
+  const [widths, setWidths] = useState({});
+  useLayoutEffect(() => {
+    const measure = () => {
+      const next = {};
+      rootRef.current?.querySelectorAll('text[data-stage]').forEach((text) => {
+        next[text.dataset.stage] = text.getComputedTextLength();
+      });
+      setWidths(next);
+    };
+    measure();
+    let cancelled = false;
+    document.fonts?.ready.then(() => !cancelled && measure());
+    return () => {
+      cancelled = true;
+    };
+  }, [rootRef]);
+  return widths;
 }
 
 /** Interactive graph generated from the same stage definition as Debug.view. */
@@ -59,6 +127,9 @@ export function PipelineDiagram({ activeView = 'output', onSelectView }) {
   const edges = PIPELINE_STAGES.flatMap((stage) =>
     stage.inputs.map((input) => ({ from: layout.nodes.get(input), to: layout.nodes.get(stage.key) }))
   );
+  const labelWidths = useLabelWidths(rootRef);
+  const labelEdge = (node, side) =>
+    node.x + NODE_WIDTH / 2 + side * ((labelWidths[node.key] ?? NODE_WIDTH * 0.6) / 2 + WIRE_GAP);
 
   const select = (stage) => {
     if (!stage.debugView) return;
@@ -92,13 +163,15 @@ export function PipelineDiagram({ activeView = 'output', onSelectView }) {
   }, [probing, onSelectView]);
 
   return (
-    <div className="pipeline-diagram" ref={rootRef} aria-label="Render pipeline diagram">
-      <div className="pd-header">
-        <span className="pd-header__title">Watercolor Pipeline</span>
-        <span className={`pd-header__probe${probing ? ' pd-header__probe--on' : ''}`}>
-          ▸ {activeView}
+    <figure className="pipeline-diagram" ref={rootRef} aria-label="Render pipeline diagram">
+      <figcaption className="pd-caption">
+        <span className="pd-caption__title">
+          Fig. 1 <em>— the watercolor pipeline</em>
         </span>
-      </div>
+        <span className="pd-caption__probe">
+          now showing <em>{probing ? activeView : 'the painting'}</em>
+        </span>
+      </figcaption>
 
       <svg
         className="pd-svg"
@@ -107,38 +180,34 @@ export function PipelineDiagram({ activeView = 'output', onSelectView }) {
         height={layout.height}
       >
         <defs>
-          <marker
-            id="pd-arrow"
-            viewBox="0 0 6 6"
-            refX="5"
-            refY="3"
-            markerWidth="6"
-            markerHeight="6"
-            orient="auto"
-          >
-            <path d="M 0 0 L 6 3 L 0 6 z" className="pd-arrowhead" />
-          </marker>
+          {/* Ragged, slightly wavering edge for the brushstroke underline. */}
+          <filter id="pd-brush" x="-20%" y="-150%" width="140%" height="400%">
+            <feTurbulence type="fractalNoise" baseFrequency="0.06 0.5" numOctaves="2" seed="7" />
+            <feDisplacementMap in="SourceGraphic" scale="4" />
+          </filter>
         </defs>
 
-        {edges.map(({ from, to }) => (
-          <path
-            key={`${from.key}-${to.key}`}
-            d={`M ${from.x + NODE_WIDTH} ${from.y + NODE_HEIGHT / 2} H ${(from.x + NODE_WIDTH + to.x - 4) / 2} V ${to.y + NODE_HEIGHT / 2} H ${to.x - 4}`}
-            className="pd-edge"
-            markerEnd="url(#pd-arrow)"
-          />
-        ))}
+        {edges.map(({ from, to }) => {
+          const x1 = labelEdge(from, 1);
+          const x2 = labelEdge(to, -1);
+          const y1 = from.y + NODE_HEIGHT / 2;
+          const y2 = to.y + NODE_HEIGHT / 2;
+          const turn = Math.max(x1, Math.min(to.x - JOIN_OFFSET, x2));
+          return (
+            <g key={`${from.key}-${to.key}`} className="pd-wire">
+              <path d={`M ${x1} ${y1} H ${turn} V ${y2} H ${x2}`} />
+              <circle cx={x2} cy={y2} r="1.3" />
+            </g>
+          );
+        })}
 
         {[...layout.nodes.values()].map((stage) => {
           const clickable = Boolean(stage.debugView);
-          const active = probing ? stage.debugView === activeView : stage.debugView === 'output';
-          const classes = [
-            'pd-node',
-            active && 'pd-node--active',
-            !clickable && 'pd-node--source',
-          ]
-            .filter(Boolean)
-            .join(' ');
+          const active = probing && stage.debugView === activeView;
+          const cx = stage.x + NODE_WIDTH / 2;
+          const halfWidth = (labelWidths[stage.key] ?? NODE_WIDTH * 0.6) / 2;
+          const baseline = stage.y + NODE_HEIGHT / 2 + 4;
+          const classes = ['pd-node', active && 'pd-node--active'].filter(Boolean).join(' ');
 
           return (
             <g
@@ -160,14 +229,13 @@ export function PipelineDiagram({ activeView = 'output', onSelectView }) {
               }
             >
               <title>{stage.hint}</title>
-              <rect
-                x={stage.x}
-                y={stage.y}
-                width={NODE_WIDTH}
-                height={NODE_HEIGHT}
-                rx="5"
+              <rect className="pd-node__hit" x={stage.x} y={stage.y} width={NODE_WIDTH} height={NODE_HEIGHT} />
+              <path
+                className="pd-node__stroke"
+                d={`M ${cx - halfWidth} ${baseline + 3} Q ${cx} ${baseline + 7} ${cx + halfWidth + 1} ${baseline + 2}`}
+                filter="url(#pd-brush)"
               />
-              <text x={stage.x + NODE_WIDTH / 2} y={stage.y + NODE_HEIGHT / 2 + 3.5}>
+              <text data-stage={stage.key} x={cx} y={baseline}>
                 {stage.label}
               </text>
             </g>
@@ -175,7 +243,7 @@ export function PipelineDiagram({ activeView = 'output', onSelectView }) {
         })}
       </svg>
 
-      <div className="pd-footer">click a pass to probe it · esc or click out to exit</div>
-    </div>
+      <p className="pd-note">select a stage to view it; escape returns to the painting</p>
+    </figure>
   );
 }

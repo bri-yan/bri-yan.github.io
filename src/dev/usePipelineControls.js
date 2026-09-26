@@ -19,6 +19,10 @@ import {
   DEFAULT_SUBSTRATE_SCALE,
   DEFAULT_BLUR_RADIUS,
   BLUR_MAX_RADIUS,
+  DEFAULT_SUBSTRATE_DISTORTION,
+  DEFAULT_SUBSTRATE_LIGHT_ANGLE,
+  DEFAULT_SUBSTRATE_LIGHT_STRENGTH,
+  DEFAULT_SUBSTRATE_ROUGHNESS,
 } from '../config';
 
 const STORAGE_KEY = 'watercolor-pipeline-controls-v2';
@@ -42,6 +46,12 @@ const DEFAULTS = {
   showSubstrateHeight: false,
   compositionBlurRadius: DEFAULT_BLUR_RADIUS,
   sobelBlurRadius: DEFAULT_BLUR_RADIUS,
+  substrateDistortionEnabled: true,
+  substrateDistortion: DEFAULT_SUBSTRATE_DISTORTION,
+  substrateLightingEnabled: true,
+  substrateLightAngle: DEFAULT_SUBSTRATE_LIGHT_ANGLE,
+  substrateLightStrength: DEFAULT_SUBSTRATE_LIGHT_STRENGTH,
+  substrateRoughness: DEFAULT_SUBSTRATE_ROUGHNESS,
 };
 
 const blurRadius = (value) => ({ value, min: 0, max: BLUR_MAX_RADIUS, step: 0.5 });
@@ -179,6 +189,50 @@ export function usePipelineControls() {
     },
   }));
 
+  // Each effect toggles independently; its settings show only while it is on.
+  const [substrateFx, setSubstrateFx] = useControls('Substrate FX', () => ({
+    substrateDistortionEnabled: {
+      label: 'distortion',
+      value: saved.substrateDistortionEnabled ?? DEFAULTS.substrateDistortionEnabled,
+    },
+    substrateDistortion: {
+      label: 'amount',
+      value: saved.substrateDistortion ?? DEFAULTS.substrateDistortion,
+      min: 0,
+      max: 8,
+      step: 0.1,
+      render: (get) => get('Substrate FX.substrateDistortionEnabled'),
+    },
+    substrateLightingEnabled: {
+      label: 'lighting',
+      value: saved.substrateLightingEnabled ?? DEFAULTS.substrateLightingEnabled,
+    },
+    substrateLightAngle: {
+      label: 'light angle',
+      value: saved.substrateLightAngle ?? DEFAULTS.substrateLightAngle,
+      min: 0,
+      max: 360,
+      step: 1,
+      render: (get) => get('Substrate FX.substrateLightingEnabled'),
+    },
+    substrateLightStrength: {
+      label: 'light strength',
+      value: saved.substrateLightStrength ?? DEFAULTS.substrateLightStrength,
+      min: 0,
+      max: 1,
+      step: 0.01,
+      render: (get) => get('Substrate FX.substrateLightingEnabled'),
+    },
+    substrateRoughness: {
+      label: 'roughness',
+      value: saved.substrateRoughness ?? DEFAULTS.substrateRoughness,
+      min: 0,
+      max: 4,
+      step: 0.05,
+      render: (get) => get('Substrate FX.substrateLightingEnabled'),
+    },
+  }));
+
   const values = {
     backgroundColor: output.backgroundColor,
     showBoundingBoxes: debug['show bounding boxes'],
@@ -198,6 +252,7 @@ export function usePipelineControls() {
     showSubstrateHeight: substrate.showHeightMap,
     compositionBlurRadius: blur.compositionBlurRadius,
     sobelBlurRadius: blur.sobelBlurRadius,
+    ...substrateFx,
   };
   const valuesRef = useRef(values);
   valuesRef.current = values;
@@ -235,6 +290,14 @@ export function usePipelineControls() {
       setBlur({
         compositionBlurRadius: DEFAULTS.compositionBlurRadius,
         sobelBlurRadius: DEFAULTS.sobelBlurRadius,
+      });
+      setSubstrateFx({
+        substrateDistortionEnabled: DEFAULTS.substrateDistortionEnabled,
+        substrateDistortion: DEFAULTS.substrateDistortion,
+        substrateLightingEnabled: DEFAULTS.substrateLightingEnabled,
+        substrateLightAngle: DEFAULTS.substrateLightAngle,
+        substrateLightStrength: DEFAULTS.substrateLightStrength,
+        substrateRoughness: DEFAULTS.substrateRoughness,
       });
     }),
     'copy values': button(() => {

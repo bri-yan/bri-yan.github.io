@@ -5,12 +5,12 @@ This branch establishes render data, not a watercolor look.
 ## One frame
 
 ```text
-substrate
-
-scene ──> color ──> output
-   ├───> raw-depth ──> normalized-depth ──> sobel ──> sobel-blur
-   ├───> diffuse ──> color override ──┐
-   │                 └──> dilution ───┴──> diffuse-composition ──> diffuse-composition-blur
+substrate ──> gradient ───────────────────────────────────────────────────────────────────────┐
+                                                                                              │
+scene ──> color ──> output                                                                    │
+   ├───> raw-depth ──> normalized-depth ──> sobel ──> sobel-blur                              │
+   ├───> diffuse ──> color override ──┐                                                       │
+   │                 └──> dilution ───┴──> diffuse-composition ──> diffuse-composition-blur ──┴──> substrate-fx
    └───> specular
 ```
 
@@ -50,6 +50,17 @@ into edges and alpha still means coverage or density afterwards. It can repeat
 its passes (`iterations`) if a softer result is needed later. Both blurs are
 debug-only.
 
+The substrate shapes the paint through two effects from Montesdeoca's thesis
+(§5.3). `GradientPass` measures the paper's slope from its height: which way is
+uphill, and how steep. `SubstrateFxPass` then applies it to the blurred diffuse
+paint. **Distortion** samples the paint slightly uphill, so pigment slides into
+the paper's valleys and edges wobble with the tooth. The paint is then laid over
+the flat paper color. **Lighting** shades the result as if the paper were lit
+from one side, using a surface normal rebuilt from the slope (it points up,
+leaning toward the valley). Each effect has its own toggle, and with both off
+the node shows clean paint on flat paper. It is a debug preview; output is
+unchanged.
+
 The lighting branch is debug-only. `DiffusePass` captures a flat-to-Lambert
 response from the scene; `ColorOverridePass` maps it from navy shadow to cyan
 base pigment. Its Color Override enable toggle instead leaves the base pigment
@@ -63,7 +74,9 @@ world-space light position but do not affect output yet.
 
 The Leva Lighting folder groups the controls into Diffuse, Color Override,
 Specular, and Dilution subfolders. The Sobel section controls edge strength and
-integer source-pixel radius. The Blur section sets each blur's radius.
+integer source-pixel radius. The Blur section sets each blur's radius. The
+Substrate FX section toggles distortion and lighting, and shows each one's
+settings while it is on.
 
 ## Empty pixels and inspection
 

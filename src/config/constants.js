@@ -69,7 +69,7 @@ export const PIPELINE_STAGES = [
   },
   {
     key: 'normalized-depth',
-    label: 'normalized depth',
+    label: 'norm. depth',
     kind: 'pass',
     fboKey: 'normalizedDepth',
     debugView: 'normalized-depth',
@@ -134,6 +134,25 @@ export const PIPELINE_STAGES = [
     hint: 'diffuse composition softened by a premultiplied Gaussian blur',
     inputs: ['diffuse-composition'],
   },
+  {
+    key: 'gradient',
+    label: 'gradient',
+    kind: 'pass',
+    fboKey: 'gradient',
+    debugView: 'gradient',
+    debugMode: 'signed',
+    hint: 'signed substrate slope ∇h per paper unit (uphill, y screen-down)',
+    inputs: ['substrate'],
+  },
+  {
+    key: 'substrate-fx',
+    label: 'substrate fx',
+    kind: 'pass',
+    fboKey: 'substrateFx',
+    debugView: 'substrate-fx',
+    hint: 'diffuse blur on paper with toggleable substrate distortion and lighting',
+    inputs: ['diffuse-composition-blur', 'gradient'],
+  },
 ];
 
 // Matches uMode in debugFragment.frag.
@@ -144,6 +163,7 @@ export const DEBUG_MODES = {
   coverage: 3,
   substrate: 4,
   composition: 5,
+  signed: 6,
 };
 
 export const PIPELINE_FBO_KEYS = PIPELINE_STAGES.filter(({ fboKey }) => fboKey).map(
@@ -175,6 +195,8 @@ export const RAW_DEPTH_FBO_OPTIONS = {
 
 // Premultiplied blur intermediates need more than 8 bits at low alpha.
 export const BLUR_FBO_OPTIONS = { ...FBO_OPTIONS, type: THREE.HalfFloatType };
+// Substrate height and its signed gradient need float precision for 1-texel differences.
+export const SIGNED_FBO_OPTIONS = { ...FBO_OPTIONS, type: THREE.HalfFloatType };
 export const BLUR_MAX_TAPS = 32; // keep in sync with MAX_TAPS in gaussianBlurFragment.frag
 
 export const DEFAULT_BACKGROUND_COLOR = new THREE.Color(0xffffff);
@@ -192,6 +214,10 @@ export const DEFAULT_SUBSTRATE_COLOR = new THREE.Color(0xf4f2ec);
 export const DEFAULT_SUBSTRATE_SCALE = 5;
 export const DEFAULT_BLUR_RADIUS = 4; // CSS pixels, ≈3σ
 export const BLUR_MAX_RADIUS = 16;
+export const DEFAULT_SUBSTRATE_DISTORTION = 2; // CSS pixels per unit slope
+export const DEFAULT_SUBSTRATE_LIGHT_ANGLE = 135; // degrees; upper left
+export const DEFAULT_SUBSTRATE_LIGHT_STRENGTH = 0.3;
+export const DEFAULT_SUBSTRATE_ROUGHNESS = 1;
 export const CANVAS_CAMERA = { position: [0, 0, 5], fov: 75 };
 
 export const FULLSCREEN_QUAD_NDC = [-1, 1, 1, -1, 0, 1];
@@ -201,6 +227,7 @@ export const FULLSCREEN_QUAD_SIZE = 2;
 // therefore owns the complete frame: captures first, then reductions, output, debug.
 export const UNIFORM_SYNC_FRAME_ORDER = -1;
 export const SUBSTRATE_PASS_FRAME_ORDER = 0;
+export const GRADIENT_PASS_FRAME_ORDER = 0.1;
 export const RAW_COLOR_PASS_FRAME_ORDER = 1;
 export const RAW_DEPTH_PASS_FRAME_ORDER = 2;
 export const DIFFUSE_PASS_FRAME_ORDER = 3;
@@ -211,5 +238,6 @@ export const SPECULAR_PASS_FRAME_ORDER = 3.2;
 export const NORMALIZED_DEPTH_FRAME_ORDER = 4;
 export const SOBEL_PASS_FRAME_ORDER = 4.1;
 export const BLUR_PASS_FRAME_ORDER = 4.2;
+export const SUBSTRATE_FX_PASS_FRAME_ORDER = 4.3;
 export const OUTPUT_FRAME_ORDER = 5;
 export const DEBUG_VIEW_FRAME_ORDER = 6;
