@@ -1,10 +1,8 @@
 import { useMemo, useRef } from 'react';
 import { button, folder, useControls } from 'leva';
-import * as THREE from 'three';
 import {
   DEBUG_CHANNELS,
   DEBUG_VIEWS,
-  DEFAULT_BACKGROUND_COLOR,
   DEFAULT_COLOR_OVERRIDE_BASE_COLOR,
   DEFAULT_COLOR_OVERRIDE_SHADOW_COLOR,
   DEFAULT_DIFFUSE_AMOUNT,
@@ -17,7 +15,9 @@ import {
   DEFAULT_SOBEL_STRENGTH,
   DEFAULT_SUBSTRATE_COLOR,
   DEFAULT_SUBSTRATE_SCALE,
-  DEFAULT_BLUR_RADIUS,
+  DEFAULT_COMPOSITION_BLUR_RADIUS,
+  DEFAULT_SOBEL_BLUR_RADIUS,
+  DEFAULT_EDGE_DARKENING,
   BLUR_MAX_RADIUS,
   DEFAULT_SUBSTRATE_DISTORTION,
   DEFAULT_SUBSTRATE_LIGHT_ANGLE,
@@ -28,7 +28,6 @@ import {
 const STORAGE_KEY = 'watercolor-pipeline-controls-v2';
 const LEGACY_STORAGE_KEY = 'watercolor-pipeline-controls';
 const DEFAULTS = {
-  backgroundColor: `#${new THREE.Color(DEFAULT_BACKGROUND_COLOR).getHexString()}`,
   showBoundingBoxes: false,
   lightPosition: DEFAULT_LIGHT_POSITION,
   diffuseAmount: DEFAULT_DIFFUSE_AMOUNT,
@@ -44,8 +43,9 @@ const DEFAULTS = {
   substrateColor: `#${DEFAULT_SUBSTRATE_COLOR.getHexString()}`,
   substrateScale: DEFAULT_SUBSTRATE_SCALE,
   showSubstrateHeight: false,
-  compositionBlurRadius: DEFAULT_BLUR_RADIUS,
-  sobelBlurRadius: DEFAULT_BLUR_RADIUS,
+  compositionBlurRadius: DEFAULT_COMPOSITION_BLUR_RADIUS,
+  sobelBlurRadius: DEFAULT_SOBEL_BLUR_RADIUS,
+  edgeDarkening: DEFAULT_EDGE_DARKENING,
   substrateDistortionEnabled: true,
   substrateDistortion: DEFAULT_SUBSTRATE_DISTORTION,
   substrateLightingEnabled: true,
@@ -87,7 +87,7 @@ export function usePipelineControls() {
     channel: {
       value: 'rgb',
       options: DEBUG_CHANNELS,
-      render: (get) => get('Debug.view') === 'color',
+      render: (get) => get('Debug.view') === 'scene',
     },
     'show bounding boxes': {
       value: saved.showBoundingBoxes ?? DEFAULTS.showBoundingBoxes,
@@ -144,10 +144,6 @@ export function usePipelineControls() {
     }),
   }));
 
-  const [output, setOutput] = useControls('Output', () => ({
-    backgroundColor: saved.backgroundColor ?? DEFAULTS.backgroundColor,
-  }));
-
   const [sobel, setSobel] = useControls('Sobel', () => ({
     strength: {
       value: saved.sobelStrength ?? DEFAULTS.sobelStrength,
@@ -186,6 +182,16 @@ export function usePipelineControls() {
     sobelBlurRadius: {
       label: 'sobel',
       ...blurRadius(saved.sobelBlurRadius ?? DEFAULTS.sobelBlurRadius),
+    },
+  }));
+
+  // Edge width is Blur › sobel (the thesis's W); strength 0 leaves the paint unchanged.
+  const [edgeDarkening, setEdgeDarkening] = useControls('Edge Darkening', () => ({
+    strength: {
+      value: saved.edgeDarkening ?? DEFAULTS.edgeDarkening,
+      min: 0,
+      max: 5,
+      step: 0.05,
     },
   }));
 
@@ -234,7 +240,6 @@ export function usePipelineControls() {
   }));
 
   const values = {
-    backgroundColor: output.backgroundColor,
     showBoundingBoxes: debug['show bounding boxes'],
     lightPosition: lighting.lightPosition,
     diffuseAmount: lighting.diffuseAmount,
@@ -252,6 +257,7 @@ export function usePipelineControls() {
     showSubstrateHeight: substrate.showHeightMap,
     compositionBlurRadius: blur.compositionBlurRadius,
     sobelBlurRadius: blur.sobelBlurRadius,
+    edgeDarkening: edgeDarkening.strength,
     ...substrateFx,
   };
   const valuesRef = useRef(values);
@@ -263,7 +269,6 @@ export function usePipelineControls() {
     }),
     'reset to defaults': button(() => {
       localStorage.removeItem(STORAGE_KEY);
-      setOutput({ backgroundColor: DEFAULTS.backgroundColor });
       setDebug({
         'show bounding boxes': DEFAULTS.showBoundingBoxes,
       });
@@ -291,6 +296,7 @@ export function usePipelineControls() {
         compositionBlurRadius: DEFAULTS.compositionBlurRadius,
         sobelBlurRadius: DEFAULTS.sobelBlurRadius,
       });
+      setEdgeDarkening({ strength: DEFAULTS.edgeDarkening });
       setSubstrateFx({
         substrateDistortionEnabled: DEFAULTS.substrateDistortionEnabled,
         substrateDistortion: DEFAULTS.substrateDistortion,

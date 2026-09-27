@@ -1,10 +1,7 @@
-uniform sampler2D tColor;
-uniform vec3 uBackgroundColor;
+uniform sampler2D tSource;
 
 varying vec2 vUv;
 
 void main() {
-  vec4 color = texture2D(tColor, vUv);
-  vec3 composited = color.rgb + uBackgroundColor * (1.0 - color.a);
-  gl_FragColor = vec4(composited, 1.0);
+  gl_FragColor = vec4(texture2D(tSource, vUv).rgb, 1.0);
 }

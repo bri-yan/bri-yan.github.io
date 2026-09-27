@@ -1,8 +1,9 @@
-// Substrate effects over the diffuse paint layer, in thesis order
-// (Montesdeoca §5.3): distortion → paint over paper → lighting.
+// The final painting: substrate effects over the paint layer, in thesis order
+// (Montesdeoca §5.3): distortion → highlight lift → paint over paper → lighting.
 
 uniform sampler2D tPaint; // straight RGB pigment, A = density
 uniform sampler2D tGradient; // RG = ∇h per paper unit, y screen-down
+uniform sampler2D tSpecular; // A = highlight mask
 uniform vec2 uCssPixelToUv;
 uniform vec3 uPaperColor;
 uniform bool uDistortionEnabled;
@@ -23,6 +24,9 @@ void main() {
     uv += uDistortion * vec2(slope.x, -slope.y) * uCssPixelToUv;
   }
   vec4 paint = texture2D(tPaint, uv);
+
+  // Highlights are left unpainted: lift the pigment so bare paper shows.
+  paint.a *= 1.0 - texture2D(tSpecular, uv).a;
 
   // Paint over the flat paper color (substrate RGB already bakes its own relief).
   vec3 color = mix(uPaperColor, paint.rgb, paint.a);

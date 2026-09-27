@@ -7,13 +7,15 @@ import substrateFxFragment from '../../shaders/substrateFxFragment.frag?raw';
 const DEG_TO_RAD = Math.PI / 180;
 
 /**
- * Paint on paper with toggleable substrate effects: distortion shifts the
- * paint along the paper slope, lighting shades everything by paper normals
- * rebuilt from the gradient. Debug-only; output is unaffected.
+ * The final painting: paint on paper with specular highlights lifted to bare
+ * paper, and toggleable substrate effects. Distortion shifts the paint along
+ * the paper slope; lighting shades everything by paper normals rebuilt from
+ * the gradient.
  */
 export function SubstrateFxPass({
   paintRef,
   gradientRef,
+  specularRef,
   outputRef,
   paperColor,
   distortionEnabled,
@@ -26,6 +28,7 @@ export function SubstrateFxPass({
   const { target, uniforms, render } = useFullscreenPass(substrateFxFragment, () => ({
     tPaint: { value: null },
     tGradient: { value: null },
+    tSpecular: { value: null },
     uCssPixelToUv: { value: new THREE.Vector2() },
     uPaperColor: { value: paperColor },
     uDistortionEnabled: { value: true },
@@ -41,12 +44,14 @@ export function SubstrateFxPass({
   useFrame(({ gl }) => {
     const paint = paintRef.current;
     const gradient = gradientRef.current;
-    if (!paint || !gradient) return;
+    const specular = specularRef.current;
+    if (!paint || !gradient || !specular) return;
 
     const pixelRatio = gl.getPixelRatio();
     const angle = lightAngle * DEG_TO_RAD;
     uniforms.tPaint.value = paint.texture;
     uniforms.tGradient.value = gradient.texture;
+    uniforms.tSpecular.value = specular.texture;
     uniforms.uCssPixelToUv.value.set(pixelRatio / paint.width, pixelRatio / paint.height);
     uniforms.uPaperColor.value = paperColor;
     uniforms.uDistortionEnabled.value = distortionEnabled;

@@ -1,24 +1,21 @@
 import { useFrame } from '@react-three/fiber';
 import { OUTPUT_FRAME_ORDER } from '../../config';
-import { useFullscreenPass, useUniformSync } from '../utils/passHooks';
+import { useFullscreenPass } from '../utils/passHooks';
 import outputFragment from '../../shaders/outputFragment.frag?raw';
 
-/** Draws the raw color image over a solid background. */
-export function OutputPass({ colorRef, backgroundColor }) {
+/** Draws the finished, opaque painting to the screen. */
+export function OutputPass({ sourceRef }) {
   const { uniforms, render } = useFullscreenPass(
     outputFragment,
     () => ({
-      tColor: { value: null },
-      uBackgroundColor: { value: backgroundColor },
+      tSource: { value: null },
     }),
     { offscreen: false }
   );
 
-  useUniformSync(uniforms, () => ({ uBackgroundColor: backgroundColor }));
-
   useFrame(() => {
-    if (!colorRef?.current) return;
-    uniforms.tColor.value = colorRef.current.texture;
+    if (!sourceRef?.current) return;
+    uniforms.tSource.value = sourceRef.current.texture;
     render();
   }, OUTPUT_FRAME_ORDER);
 

@@ -18,18 +18,10 @@ export const PIPELINE_STAGES = [
     key: 'scene',
     label: 'scene',
     kind: 'source',
-    debugView: 'color',
-    hint: 'the live Three.js scene',
+    fboKey: 'scene',
+    debugView: 'scene',
+    hint: 'the live scene captured with its original materials',
     inputs: [],
-  },
-  {
-    key: 'color',
-    label: 'color',
-    kind: 'pass',
-    fboKey: 'color',
-    debugView: 'color',
-    hint: 'unstyled scene captured with its original materials',
-    inputs: ['scene'],
   },
   {
     key: 'raw-depth',
@@ -58,14 +50,6 @@ export const PIPELINE_STAGES = [
     debugView: 'specular',
     hint: 'thresholded Blinn–Phong highlight mask',
     inputs: ['scene'],
-  },
-  {
-    key: 'output',
-    label: 'output',
-    kind: 'output',
-    debugView: 'output',
-    hint: 'color composited over the background and drawn to screen',
-    inputs: ['color'],
   },
   {
     key: 'normalized-depth',
@@ -135,6 +119,16 @@ export const PIPELINE_STAGES = [
     inputs: ['diffuse-composition'],
   },
   {
+    key: 'edge-darkening',
+    label: 'edge darkening',
+    kind: 'pass',
+    fboKey: 'edgeDarkening',
+    debugView: 'edge-darkening',
+    debugMode: 'composition',
+    hint: 'diffuse blur concentrated along blurred sobel edges: C^(1 + k·Eb)',
+    inputs: ['diffuse-composition-blur', 'sobel-blur'],
+  },
+  {
     key: 'gradient',
     label: 'gradient',
     kind: 'pass',
@@ -150,8 +144,16 @@ export const PIPELINE_STAGES = [
     kind: 'pass',
     fboKey: 'substrateFx',
     debugView: 'substrate-fx',
-    hint: 'diffuse blur on paper with toggleable substrate distortion and lighting',
-    inputs: ['diffuse-composition-blur', 'gradient'],
+    hint: 'edge-darkened paint on paper, specular highlights lifted to bare paper, with toggleable substrate distortion and lighting',
+    inputs: ['edge-darkening', 'gradient', 'specular'],
+  },
+  {
+    key: 'output',
+    label: 'output',
+    kind: 'output',
+    debugView: 'output',
+    hint: 'the finished painting drawn to screen',
+    inputs: ['substrate-fx'],
   },
 ];
 
@@ -199,25 +201,26 @@ export const BLUR_FBO_OPTIONS = { ...FBO_OPTIONS, type: THREE.HalfFloatType };
 export const SIGNED_FBO_OPTIONS = { ...FBO_OPTIONS, type: THREE.HalfFloatType };
 export const BLUR_MAX_TAPS = 32; // keep in sync with MAX_TAPS in gaussianBlurFragment.frag
 
-export const DEFAULT_BACKGROUND_COLOR = new THREE.Color(0xffffff);
 export const DEFAULT_LIGHT_POSITION = [5, 5, 5];
 export const DEFAULT_DIFFUSE_AMOUNT = 1;
 export const DEFAULT_COLOR_OVERRIDE_BASE_COLOR = new THREE.Color(0x00ffff);
-export const DEFAULT_COLOR_OVERRIDE_SHADOW_COLOR = new THREE.Color(0x172554);
-export const DEFAULT_DILUTION_STRENGTH = 0.35;
-export const DEFAULT_SPECULAR_SHININESS = 32;
-export const DEFAULT_SPECULAR_STRENGTH = 0.7;
-export const DEFAULT_SPECULAR_THRESHOLD = 0.3;
-export const DEFAULT_SOBEL_STRENGTH = 1;
+export const DEFAULT_COLOR_OVERRIDE_SHADOW_COLOR = new THREE.Color(0xc65cff);
+export const DEFAULT_DILUTION_STRENGTH = 0.67;
+export const DEFAULT_SPECULAR_SHININESS = 56;
+export const DEFAULT_SPECULAR_STRENGTH = 0.68;
+export const DEFAULT_SPECULAR_THRESHOLD = 0.1;
+export const DEFAULT_SOBEL_STRENGTH = 2.06;
 export const DEFAULT_SOBEL_RADIUS = 1;
-export const DEFAULT_SUBSTRATE_COLOR = new THREE.Color(0xf4f2ec);
-export const DEFAULT_SUBSTRATE_SCALE = 5;
-export const DEFAULT_BLUR_RADIUS = 4; // CSS pixels, ≈3σ
+export const DEFAULT_SUBSTRATE_COLOR = new THREE.Color(0xf7f1ec);
+export const DEFAULT_SUBSTRATE_SCALE = 2.5;
+export const DEFAULT_COMPOSITION_BLUR_RADIUS = 12; // CSS pixels, ≈3σ
+export const DEFAULT_SOBEL_BLUR_RADIUS = 10;
 export const BLUR_MAX_RADIUS = 16;
-export const DEFAULT_SUBSTRATE_DISTORTION = 2; // CSS pixels per unit slope
-export const DEFAULT_SUBSTRATE_LIGHT_ANGLE = 135; // degrees; upper left
-export const DEFAULT_SUBSTRATE_LIGHT_STRENGTH = 0.3;
-export const DEFAULT_SUBSTRATE_ROUGHNESS = 1;
+export const DEFAULT_EDGE_DARKENING = 3; // k in Ed = k·Eb
+export const DEFAULT_SUBSTRATE_DISTORTION = 4; // CSS pixels per unit slope
+export const DEFAULT_SUBSTRATE_LIGHT_ANGLE = 66; // degrees, counter-clockwise from the right
+export const DEFAULT_SUBSTRATE_LIGHT_STRENGTH = 0.16;
+export const DEFAULT_SUBSTRATE_ROUGHNESS = 0.65;
 export const CANVAS_CAMERA = { position: [0, 0, 5], fov: 75 };
 
 export const FULLSCREEN_QUAD_NDC = [-1, 1, 1, -1, 0, 1];
@@ -228,7 +231,7 @@ export const FULLSCREEN_QUAD_SIZE = 2;
 export const UNIFORM_SYNC_FRAME_ORDER = -1;
 export const SUBSTRATE_PASS_FRAME_ORDER = 0;
 export const GRADIENT_PASS_FRAME_ORDER = 0.1;
-export const RAW_COLOR_PASS_FRAME_ORDER = 1;
+export const SCENE_PASS_FRAME_ORDER = 1;
 export const RAW_DEPTH_PASS_FRAME_ORDER = 2;
 export const DIFFUSE_PASS_FRAME_ORDER = 3;
 export const COLOR_OVERRIDE_PASS_FRAME_ORDER = 3.1;
@@ -238,6 +241,7 @@ export const SPECULAR_PASS_FRAME_ORDER = 3.2;
 export const NORMALIZED_DEPTH_FRAME_ORDER = 4;
 export const SOBEL_PASS_FRAME_ORDER = 4.1;
 export const BLUR_PASS_FRAME_ORDER = 4.2;
+export const EDGE_DARKENING_PASS_FRAME_ORDER = 4.25;
 export const SUBSTRATE_FX_PASS_FRAME_ORDER = 4.3;
 export const OUTPUT_FRAME_ORDER = 5;
 export const DEBUG_VIEW_FRAME_ORDER = 6;

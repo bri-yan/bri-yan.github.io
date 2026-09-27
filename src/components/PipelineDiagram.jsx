@@ -2,15 +2,16 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { PIPELINE_STAGES } from '../config';
 import './PipelineDiagram.css';
 
-// Each stage is a label centered in a NODE_WIDTH cell; wires run between the
-// measured label ends, so there are no boxes.
-const NODE_WIDTH = 84;
+// Each stage is a label centered in its column, which is as wide as its widest
+// label; wires run between the measured label ends, so there are no boxes.
+const MIN_COLUMN_WIDTH = 36;
+const FALLBACK_LABEL_WIDTH = 50; // until webfonts load and labels are measured
 const NODE_HEIGHT = 20;
-const COLUMN_GAP = 28;
+const COLUMN_GAP = 32;
 const ROW_GAP = 12;
 const PADDING = 8;
 const WIRE_GAP = 5; // space between a label and its wire
-const JOIN_OFFSET = 8; // wires turn this far before the target column
+const JOIN_OFFSET = 10; // wires turn this far before the next column
 
 const ROW_STEP = NODE_HEIGHT + ROW_GAP;
 const mean = (values) => values.reduce((sum, value) => sum + value, 0) / values.length;
@@ -18,11 +19,12 @@ const mean = (values) => values.reduce((sum, value) => sum + value, 0) / values.
 /**
  * Layered left-to-right layout. Columns follow data depth, with each stage
  * as late as its consumers allow, so side inputs like the substrate enter
- * where they are used. Within a column, stages sit at the
- * average row of their inputs, so wires run straight or fan without crossing;
+ * where they are used. Within a column, stages sit at the average row of
+ * their inputs, so wires run straight or fan without crossing. A stage fed
+ * across skipped columns (scene → specular) takes a free lane below them;
  * sources then center on the stages they feed.
  */
-function layoutStages(stages) {
+function layoutStages(stages, labelWidths) {
   const byKey = new Map(stages.map((stage) => [stage.key, stage]));
   const children = new Map(stages.map((stage) => [stage.key, []]));
   stages.forEach((stage) => stage.inputs.forEach((input) => children.get(input).push(stage.key)));
@@ -53,18 +55,29 @@ function layoutStages(stages) {
     columns.set(depth, [...(columns.get(depth) ?? []), stage]);
   });
 
-  // Rows: each stage wants the average row of its inputs; sources go last.
+  // Lowest occupied row strictly between two columns (-1 if none).
   const rows = new Map();
+  const lowestRowBetween = (from, to) => {
+    let lowest = -1;
+    for (let depth = from + 1; depth < to; depth += 1) {
+      columns.get(depth)?.forEach((stage) => (lowest = Math.max(lowest, rows.get(stage.key))));
+    }
+    return lowest;
+  };
+
+  // Rows: each stage wants the average row of its inputs; sources go last.
   [...columns.keys()]
     .sort((a, b) => a - b)
     .forEach((depth) => {
       const wanted = columns
         .get(depth)
-        .map((stage, order) => ({
-          stage,
-          order,
-          row: stage.inputs.length ? mean(stage.inputs.map((key) => rows.get(key))) : Infinity,
-        }))
+        .map((stage, order) => {
+          if (!stage.inputs.length) return { stage, order, row: Infinity };
+          let row = mean(stage.inputs.map((key) => rows.get(key)));
+          const earliestInput = Math.min(...stage.inputs.map((key) => depths.get(key)));
+          if (earliestInput < depth - 1) row = Math.max(row, lowestRowBetween(earliestInput, depth) + 1);
+          return { stage, order, row };
+        })
         .sort((a, b) => a.row - b.row || a.order - b.order);
       let next = 0;
       wanted.forEach(({ stage, row }) => {
@@ -80,20 +93,36 @@ function layoutStages(stages) {
     if (column.length === 1) rows.set(stage.key, mean(children.get(stage.key).map((key) => rows.get(key))));
   });
 
+  // Column widths follow their widest label.
+  const maxDepth = Math.max(...depths.values());
+  const columnX = [];
+  const columnWidth = [];
+  let x = PADDING;
+  for (let depth = 0; depth <= maxDepth; depth += 1) {
+    const labels = (columns.get(depth) ?? []).map((stage) => labelWidths[stage.key] ?? FALLBACK_LABEL_WIDTH);
+    columnX.push(x);
+    columnWidth.push(Math.max(MIN_COLUMN_WIDTH, ...labels));
+    x += columnWidth[depth] + COLUMN_GAP;
+  }
+
   const nodes = new Map();
   stages.forEach((stage) => {
+    const depth = depths.get(stage.key);
     nodes.set(stage.key, {
       ...stage,
-      x: PADDING + depths.get(stage.key) * (NODE_WIDTH + COLUMN_GAP),
+      depth,
+      x: columnX[depth],
+      width: columnWidth[depth],
+      cx: columnX[depth] + columnWidth[depth] / 2,
       y: PADDING + rows.get(stage.key) * ROW_STEP,
     });
   });
 
-  const maxDepth = Math.max(...depths.values());
   const maxRow = Math.max(...rows.values());
   return {
     nodes,
-    width: PADDING * 2 + (maxDepth + 1) * NODE_WIDTH + maxDepth * COLUMN_GAP,
+    columnX,
+    width: x - COLUMN_GAP + PADDING,
     height: PADDING * 2 + maxRow * ROW_STEP + NODE_HEIGHT,
   };
 }
@@ -123,13 +152,13 @@ function useLabelWidths(rootRef) {
 export function PipelineDiagram({ activeView = 'output', onSelectView }) {
   const rootRef = useRef(null);
   const probing = activeView !== 'output';
-  const layout = useMemo(() => layoutStages(PIPELINE_STAGES), []);
+  const labelWidths = useLabelWidths(rootRef);
+  const layout = useMemo(() => layoutStages(PIPELINE_STAGES, labelWidths), [labelWidths]);
   const edges = PIPELINE_STAGES.flatMap((stage) =>
     stage.inputs.map((input) => ({ from: layout.nodes.get(input), to: layout.nodes.get(stage.key) }))
   );
-  const labelWidths = useLabelWidths(rootRef);
   const labelEdge = (node, side) =>
-    node.x + NODE_WIDTH / 2 + side * ((labelWidths[node.key] ?? NODE_WIDTH * 0.6) / 2 + WIRE_GAP);
+    node.cx + side * ((labelWidths[node.key] ?? FALLBACK_LABEL_WIDTH) / 2 + WIRE_GAP);
 
   const select = (stage) => {
     if (!stage.debugView) return;
@@ -192,7 +221,9 @@ export function PipelineDiagram({ activeView = 'output', onSelectView }) {
           const x2 = labelEdge(to, -1);
           const y1 = from.y + NODE_HEIGHT / 2;
           const y2 = to.y + NODE_HEIGHT / 2;
-          const turn = Math.max(x1, Math.min(to.x - JOIN_OFFSET, x2));
+          // Wires turn just before the next column: at the target for neighbors,
+          // right after the source for skips, which then run along their free lane.
+          const turn = Math.max(x1, Math.min(layout.columnX[from.depth + 1] - JOIN_OFFSET, x2));
           return (
             <g key={`${from.key}-${to.key}`} className="pd-wire">
               <path d={`M ${x1} ${y1} H ${turn} V ${y2} H ${x2}`} />
@@ -204,8 +235,8 @@ export function PipelineDiagram({ activeView = 'output', onSelectView }) {
         {[...layout.nodes.values()].map((stage) => {
           const clickable = Boolean(stage.debugView);
           const active = probing && stage.debugView === activeView;
-          const cx = stage.x + NODE_WIDTH / 2;
-          const halfWidth = (labelWidths[stage.key] ?? NODE_WIDTH * 0.6) / 2;
+          const { cx } = stage;
+          const halfWidth = (labelWidths[stage.key] ?? FALLBACK_LABEL_WIDTH) / 2;
           const baseline = stage.y + NODE_HEIGHT / 2 + 4;
           const classes = ['pd-node', active && 'pd-node--active'].filter(Boolean).join(' ');
 
@@ -229,7 +260,7 @@ export function PipelineDiagram({ activeView = 'output', onSelectView }) {
               }
             >
               <title>{stage.hint}</title>
-              <rect className="pd-node__hit" x={stage.x} y={stage.y} width={NODE_WIDTH} height={NODE_HEIGHT} />
+              <rect className="pd-node__hit" x={stage.x} y={stage.y} width={stage.width} height={NODE_HEIGHT} />
               <path
                 className="pd-node__stroke"
                 d={`M ${cx - halfWidth} ${baseline + 3} Q ${cx} ${baseline + 7} ${cx + halfWidth + 1} ${baseline + 2}`}

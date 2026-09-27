@@ -1,7 +1,6 @@
 import { createRef, useMemo } from 'react';
 import * as THREE from 'three';
 import {
-  DEFAULT_BACKGROUND_COLOR,
   DEFAULT_COLOR_OVERRIDE_BASE_COLOR,
   DEFAULT_COLOR_OVERRIDE_SHADOW_COLOR,
   DEFAULT_DIFFUSE_AMOUNT,
@@ -14,7 +13,9 @@ import {
   DEFAULT_SUBSTRATE_SCALE,
   DEFAULT_SOBEL_RADIUS,
   DEFAULT_SOBEL_STRENGTH,
-  DEFAULT_BLUR_RADIUS,
+  DEFAULT_COMPOSITION_BLUR_RADIUS,
+  DEFAULT_SOBEL_BLUR_RADIUS,
+  DEFAULT_EDGE_DARKENING,
   DEFAULT_SUBSTRATE_DISTORTION,
   DEFAULT_SUBSTRATE_LIGHT_ANGLE,
   DEFAULT_SUBSTRATE_LIGHT_STRENGTH,
@@ -23,13 +24,14 @@ import {
   PIPELINE_STAGES,
 } from '../config';
 import { BlurPass } from './passes/BlurPass';
+import { EdgeDarkeningPass } from './passes/EdgeDarkeningPass';
 import { GradientPass } from './passes/GradientPass';
 import { SubstrateFxPass } from './passes/SubstrateFxPass';
 import { ColorOverridePass } from './passes/ColorOverridePass';
 import { DiffuseCompositionPass } from './passes/DiffuseCompositionPass';
 import { DiffusePass } from './passes/DiffusePass';
 import { DilutionPass } from './passes/DilutionPass';
-import { RawColorPass } from './passes/RawColorPass';
+import { ScenePass } from './passes/ScenePass';
 import { RawDepthPass } from './passes/RawDepthPass';
 import { SpecularPass } from './passes/SpecularPass';
 import { SobelPass } from './passes/SobelPass';
@@ -42,12 +44,12 @@ import { WatercolorSubjectsProvider } from './WatercolorSubjects';
 const toColor = (value) => (value?.isColor ? value : new THREE.Color(value));
 
 /**
- * Minimal render-pipeline foundation. The live scene is captured unchanged by
- * raw-color and raw-depth sibling captures, then the normal color output.
+ * The watercolor pipeline. Sibling passes capture the scene (color, depth,
+ * lighting), build a paint layer, and finish it on paper in substrate fx,
+ * which the output pass draws to screen.
  */
 export function MultiPassPipeline({
   children,
-  backgroundColor = DEFAULT_BACKGROUND_COLOR,
   debugView = 'output',
   debugChannel = 'rgb',
   showBoundingBoxes = false,
@@ -65,8 +67,9 @@ export function MultiPassPipeline({
   substrateColor = DEFAULT_SUBSTRATE_COLOR,
   substrateScale = DEFAULT_SUBSTRATE_SCALE,
   showSubstrateHeight = false,
-  sobelBlurRadius = DEFAULT_BLUR_RADIUS,
-  compositionBlurRadius = DEFAULT_BLUR_RADIUS,
+  sobelBlurRadius = DEFAULT_SOBEL_BLUR_RADIUS,
+  compositionBlurRadius = DEFAULT_COMPOSITION_BLUR_RADIUS,
+  edgeDarkening = DEFAULT_EDGE_DARKENING,
   substrateDistortionEnabled = true,
   substrateDistortion = DEFAULT_SUBSTRATE_DISTORTION,
   substrateLightingEnabled = true,
@@ -74,7 +77,6 @@ export function MultiPassPipeline({
   substrateLightStrength = DEFAULT_SUBSTRATE_LIGHT_STRENGTH,
   substrateRoughness = DEFAULT_SUBSTRATE_ROUGHNESS,
 }) {
-  const background = useMemo(() => toColor(backgroundColor), [backgroundColor]);
   const colorOverrideBase = useMemo(() => toColor(colorOverrideBaseColor), [colorOverrideBaseColor]);
   const colorOverrideShadow = useMemo(() => toColor(colorOverrideShadowColor), [colorOverrideShadowColor]);
   const substrate = useMemo(() => toColor(substrateColor), [substrateColor]);
@@ -98,7 +100,7 @@ export function MultiPassPipeline({
         {children}
         <SubstratePass outputRef={fbos.substrate} color={substrate} scale={substrateScale} />
         <GradientPass substrateRef={fbos.substrate} outputRef={fbos.gradient} scale={substrateScale} />
-        <RawColorPass outputRef={fbos.color} />
+        <ScenePass outputRef={fbos.scene} />
         <RawDepthPass outputRef={fbos.rawDepth} />
         <DiffusePass
           outputRef={fbos.diffuse}
@@ -142,9 +144,16 @@ export function MultiPassPipeline({
           outputRef={fbos.diffuseCompositionBlur}
           radius={compositionBlurRadius}
         />
-        <SubstrateFxPass
+        <EdgeDarkeningPass
           paintRef={fbos.diffuseCompositionBlur}
+          edgesRef={fbos.sobelBlur}
+          outputRef={fbos.edgeDarkening}
+          strength={edgeDarkening}
+        />
+        <SubstrateFxPass
+          paintRef={fbos.edgeDarkening}
           gradientRef={fbos.gradient}
+          specularRef={fbos.specular}
           outputRef={fbos.substrateFx}
           paperColor={substrate}
           distortionEnabled={substrateDistortionEnabled}
@@ -154,7 +163,7 @@ export function MultiPassPipeline({
           lightStrength={substrateLightStrength}
           roughness={substrateRoughness}
         />
-        <OutputPass colorRef={fbos.color} backgroundColor={background} />
+        <OutputPass sourceRef={fbos.substrateFx} />
         <DebugPass
           passes={debugSources}
           view={debugView}

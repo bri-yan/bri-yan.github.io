@@ -14,6 +14,8 @@
   position: absolute;
   top: 12px;
   left: 12px;
+  box-sizing: border-box;
+  max-width: calc(100vw - 24px);
   margin: 0;
   padding: 12px 18px;
   border-radius: 2px;
@@ -78,6 +80,9 @@
 .pd-svg {
   display: block;
   overflow: visible;
+  /* Shrinks the figure to fit narrow windows instead of scrolling the page. */
+  max-width: 100%;
+  height: auto;
 }
 
 .pd-node text {

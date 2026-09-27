@@ -2,10 +2,10 @@ import { useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { useFBO } from '@react-three/drei';
 import * as THREE from 'three';
-import { FBO_OPTIONS, RAW_COLOR_PASS_FRAME_ORDER } from '../../config';
+import { FBO_OPTIONS, SCENE_PASS_FRAME_ORDER } from '../../config';
 
-/** Captures the unstyled scene with its original materials. */
-export function RawColorPass({ outputRef }) {
+/** Captures the unstyled scene with its original materials (the scene probe). */
+export function ScenePass({ outputRef }) {
   const { gl, scene, camera } = useThree();
   const target = useFBO(FBO_OPTIONS);
   const savedClearColor = useRef(new THREE.Color()).current;
@@ -24,7 +24,7 @@ export function RawColorPass({ outputRef }) {
 
     gl.setRenderTarget(previousTarget);
     gl.setClearColor(savedClearColor, previousClearAlpha);
-  }, RAW_COLOR_PASS_FRAME_ORDER);
+  }, SCENE_PASS_FRAME_ORDER);
 
   return null;
 }
