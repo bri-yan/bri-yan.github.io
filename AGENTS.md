@@ -219,7 +219,7 @@ being viewed marked by a single watercolor droplet of the base pigment color
 just before its label (where its incoming wires land; a turbulence-displaced
 circle with a small glint) and its label inked in that pigment deepened toward
 the ink (the Color Override base color; `App` passes it in as `washColor`).
-The drop pops in with a slight overshoot; focus shows a faint drop. `output` carries the drop whenever the painting is shown, including by default. Hovered and focused labels take the same deepened base pigment (`--pd-wash-ink`). Stage labels are display-only and
+The drop pops in with a slight overshoot; focus shows a faint drop. `output` carries the drop whenever the painting is shown, including by default. Every pigment accent (hovered and focused labels, the caption's "now showing" name, the fold chevron's hover) takes the same deepened base pigment (`--pd-wash-ink`); there is no fixed accent color. Stage labels are display-only and
 kept short (e.g. `diffuse comp`); the caption's "now showing" spells the
 viewed stage's key with spaces (e.g. `diffuse composition blur`).
 The caption title is also the fold toggle: clicking "Fig. 1 — the watercolor

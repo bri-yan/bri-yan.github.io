@@ -9,9 +9,9 @@
   --pd-ink: #3b3129;
   --pd-ink-soft: #6b5f54;
   --pd-ink-faint: #8a7d70;
-  --pd-pigment: #1f7f8c;
   --pd-wash: #00ffff; /* overridden inline with the base pigment color */
-  /* The base pigment deepened toward the ink, for selected and hovered labels. */
+  /* The base pigment deepened toward the ink: every pigment accent (selected
+     and hovered labels, the caption's viewed stage, the fold chevron's hover). */
   --pd-wash-ink: color-mix(in oklab, var(--pd-wash) 55%, var(--pd-ink));
 
   position: absolute;
@@ -82,7 +82,7 @@
 
 .pd-caption__title:hover .pd-fold path,
 .pd-caption__title:focus-visible .pd-fold path {
-  stroke: var(--pd-pigment);
+  stroke: var(--pd-wash-ink);
 }
 
 .pipeline-diagram--folded .pd-fold {
@@ -130,7 +130,7 @@
 }
 
 .pd-caption__probe em {
-  color: var(--pd-pigment);
+  color: var(--pd-wash-ink);
 }
 
 /* ── wires ──────────────────────────────────────────────── */
