@@ -162,8 +162,7 @@ priority order.
   debug view. **Dry brush** leaves the peaks bare, reaching further in bright
   light: `reach = amount · diffuse`, threshold
   `t = 1 + s − reach · (1 + 2s)`, `d = smoothstep(t − s, t + s, h) · coverage`
-  (`s` = softness; amount 0 skips nothing), coverage debug view (white = bare
-  paper).
+  (`s` = softness; amount 0 skips nothing), `mask` debug view (dark where the brush laid paint, white where it left the paper bare, checkerboard off the object; the `coverage` view only showed A, which is solid on the object).
 - `turbulence` is a scene capture of **3D Perlin gradient-noise fBm evaluated
   at each surface's object-local position**, so the pattern rides with the
   mesh under any camera or object motion (no shower-door) and has no
@@ -228,11 +227,20 @@ to run along it.
 Within a column, ties keep `PIPELINE_STAGES` order, so stage order is how to
 resolve a crossing (e.g. `turbulence` is listed before `depth` so its wire
 into `diffuse comp` runs above the `depth → sobel` chain). A side input (a
-source sharing its column with other stages, like `substrate`) sits just above
-its consumer's other inputs (so `substrate` is directly above
-`edge darkening`), keeping the figure rectangular; and a stage alone in its
-column centers on the stages it feeds (`scene`, and `diffuse` midway between
-color override and dilution).
+source sharing its column with other stages) sits just above its consumer's
+other inputs when they are placed, else after the column's other stages. Then,
+right to left, **every stage that branches into two or more stages sits
+midway between its outermost children** (`diffuse` between color override and
+dilution, `substrate` between its wire into `output` and `dry brush`, `scene`
+across its fan), moving only where that row is free in its column; a stage
+alone in its column centers on its children the same way. A side source
+that also feeds past the next column (`substrate → output`) keeps its own row
+free there as a straight lane, and the stages it feeds in that column straddle
+the lane, half above and half below (`granulation` above, `dry brush` below;
+they win row ties). So substrate's wire runs straight into `output`, which
+sits on the same row with its five inputs fanning in symmetrically. The result
+is two bands: the paint chain on top, and the paper band under `edge
+darkening`, with `specular` on the bottom lane.
 Each column is as wide as its widest measured label, and the figure shrinks to
 fit narrow windows rather than scrolling the page. Every label keeps the same
 clearance (`WIRE_GAP`): wires stop that far from it, and every bend lives in
@@ -292,7 +300,7 @@ painting, then the Session:
   grayscale height; picking a view from Inspect or the graph turns it off),
   `color`, `scale`; **Distortion** › `enabled`, `amount` (0–8 CSS px);
   **Lighting** › `enabled`, `angle` (degrees, 0 = from the right,
-  counter-clockwise; default 66), `strength` (`ds`), `roughness` (`r`). Each
+  counter-clockwise; default 120), `strength` (`ds`), `roughness` (`r`). Each
   effect's settings show only while it is enabled.
 - **Session**: save, reset to defaults, copy values.
 

@@ -96,20 +96,46 @@ function layoutStages(stages, labelWidths) {
   [...columns.keys()]
     .sort((a, b) => a - b)
     .forEach((depth) => {
+      // A side source in the previous column that also feeds past this one
+      // (substrate → output) keeps its own row free here as a straight lane,
+      // and the stages it feeds here straddle that lane, half above and half
+      // below (granulation above, dry brush below).
+      const lanes = new Set();
+      const straddle = new Map();
+      const previous = columns.get(depth - 1) ?? [];
+      previous.forEach((source) => {
+        const sideSource = !source.inputs.length && previous.length > 1;
+        if (!sideSource || !rows.has(source.key)) return;
+        if (!children.get(source.key).some((key) => depths.get(key) > depth)) return;
+        const fed = columns.get(depth).filter((stage) => stage.inputs.includes(source.key));
+        if (!fed.length) return;
+        const lane = rows.get(source.key);
+        const half = Math.ceil(fed.length / 2);
+        lanes.add(lane);
+        fed.forEach((stage, index) => straddle.set(stage.key, index < half ? lane - (half - index) : lane + (index - half + 1)));
+      });
       const wanted = columns
         .get(depth)
         .map((stage, order) => {
           if (!stage.inputs.length) return { stage, order, row: Infinity };
+          if (straddle.has(stage.key)) return { stage, order, row: straddle.get(stage.key) };
           let row = mean(stage.inputs.map((key) => rows.get(key)));
           const earliestInput = Math.min(...stage.inputs.map((key) => depths.get(key)));
           if (earliestInput < depth - 1) row = nearestLane(earliestInput, depth, row);
           return { stage, order, row };
         })
-        .sort((a, b) => a.row - b.row || a.order - b.order);
+        // Ties go to the stages straddling a lane, so they stay hugging it.
+        .sort(
+          (a, b) =>
+            a.row - b.row ||
+            straddle.has(b.stage.key) - straddle.has(a.stage.key) ||
+            a.order - b.order
+        );
       let next = 0;
       wanted.forEach(({ stage, row }) => {
         if (!Number.isFinite(row)) return;
-        const placed = Math.max(row, next);
+        let placed = Math.max(row, next);
+        while (lanes.has(placed)) placed += 1;
         rows.set(stage.key, placed);
         next = placed + 1;
       });
@@ -127,12 +153,26 @@ function layoutStages(stages, labelWidths) {
       });
     });
 
-  // A stage alone in its column centers on the stages it feeds (scene,
-  // diffuse), right to left so each centers on already-settled children.
+  // A stage that branches sits midway between its outermost children (diffuse
+  // between color override and dilution, substrate between its wire into
+  // output and dry brush), as does a stage alone in its column. Right to left
+  // so each centers on already-settled children; a stage sharing its column
+  // only moves where that row is free.
   [...stages]
-    .filter((stage) => columns.get(depths.get(stage.key)).length === 1 && children.get(stage.key).length)
+    .filter((stage) => {
+      const fed = children.get(stage.key).length;
+      return fed > 1 || (fed && columns.get(depths.get(stage.key)).length === 1);
+    })
     .sort((a, b) => depths.get(b.key) - depths.get(a.key))
-    .forEach((stage) => rows.set(stage.key, mean(children.get(stage.key).map((key) => rows.get(key)))));
+    .forEach((stage) => {
+      const fed = children.get(stage.key).map((key) => rows.get(key));
+      const row = (Math.min(...fed) + Math.max(...fed)) / 2;
+      const depth = depths.get(stage.key);
+      const clear = columns
+        .get(depth)
+        .every((other) => other === stage || Math.abs(rows.get(other.key) - row) >= 1);
+      if (clear) rows.set(stage.key, row);
+    });
 
   // Column widths follow their widest label.
   const maxDepth = Math.max(...depths.values());

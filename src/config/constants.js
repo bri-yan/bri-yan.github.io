@@ -79,7 +79,7 @@ export const PIPELINE_STAGES = [
     kind: 'pass',
     fboKey: 'dryBrush',
     debugView: 'dry-brush',
-    debugMode: 'coverage',
+    debugMode: 'mask',
     hint: 'paper peaks the brush skips, left bare (white), reaching further where the diffuse light is bright',
     inputs: ['substrate'],
     reads: ['diffuse'],
@@ -170,6 +170,7 @@ export const DEBUG_MODES = {
   substrate: 3,
   composition: 4,
   signed: 5,
+  mask: 6,
 };
 
 export const PIPELINE_FBO_KEYS = PIPELINE_STAGES.filter(({ fboKey }) => fboKey).map(
@@ -214,28 +215,28 @@ export const DEFAULT_DILUTION_STRENGTH = 0.67;
 export const DEFAULT_SPECULAR_SHININESS = 56;
 export const DEFAULT_SPECULAR_STRENGTH = 0.68;
 export const DEFAULT_SPECULAR_THRESHOLD = 0.1;
-export const DEFAULT_SOBEL_STRENGTH = 2.06;
+export const DEFAULT_SOBEL_STRENGTH = 4;
 export const DEFAULT_SOBEL_RADIUS = 1;
 export const DEFAULT_SUBSTRATE_COLOR = new THREE.Color(0xf7f1ec);
-export const DEFAULT_SUBSTRATE_SCALE = 2.5;
+export const DEFAULT_SUBSTRATE_SCALE = 6;
 // Floor on the zoomed substrate scale: finer tooth would alias on the pixel grid.
 export const MIN_PAPER_SCALE = 0.5;
 export const DEFAULT_COMPOSITION_BLUR_RADIUS = 12; // CSS pixels, ≈3σ
-export const DEFAULT_SOBEL_BLUR_RADIUS = 10;
+export const DEFAULT_SOBEL_BLUR_RADIUS = 1;
 export const BLUR_MAX_RADIUS = 16;
 export const DEFAULT_TURBULENCE_INTENSITY = 0.5;
 export const DEFAULT_TURBULENCE_SCALE = 1.5; // noise cycles per object unit
 export const DEFAULT_TURBULENCE_OCTAVES = 3;
 export const TURBULENCE_MAX_OCTAVES = 6; // keep in sync with MAX_OCTAVES in turbulenceFragment.frag
 export const DEFAULT_TURBULENCE_WARP = 0;
-export const DEFAULT_GRANULATION_INTENSITY = 0.5;
-export const DEFAULT_DRY_BRUSH_AMOUNT = 0.3;
-export const DEFAULT_DRY_BRUSH_SOFTNESS = 0.08;
-export const DEFAULT_EDGE_DARKENING = 3; // k in Ed = k·Eb
-export const DEFAULT_SUBSTRATE_DISTORTION = 4; // CSS pixels per unit slope
-export const DEFAULT_SUBSTRATE_LIGHT_ANGLE = 66; // degrees, counter-clockwise from the right
-export const DEFAULT_SUBSTRATE_LIGHT_STRENGTH = 0.16;
-export const DEFAULT_SUBSTRATE_ROUGHNESS = 0.65;
+export const DEFAULT_GRANULATION_INTENSITY = 0.27;
+export const DEFAULT_DRY_BRUSH_AMOUNT = 0.44;
+export const DEFAULT_DRY_BRUSH_SOFTNESS = 0.11;
+export const DEFAULT_EDGE_DARKENING = 1.25; // k in Ed = k·Eb
+export const DEFAULT_SUBSTRATE_DISTORTION = 6.5; // CSS pixels per unit slope
+export const DEFAULT_SUBSTRATE_LIGHT_ANGLE = 120; // degrees, counter-clockwise from the right
+export const DEFAULT_SUBSTRATE_LIGHT_STRENGTH = 0.1;
+export const DEFAULT_SUBSTRATE_ROUGHNESS = 1;
 export const CANVAS_CAMERA = { position: [0, 0, 5], fov: 75 };
 
 export const FULLSCREEN_QUAD_NDC = [-1, 1, 1, -1, 0, 1];

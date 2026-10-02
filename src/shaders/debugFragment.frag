@@ -1,6 +1,6 @@
 uniform sampler2D tInput;
 uniform int uChannel; // 0 = rgb, 1 = alpha as grayscale, 2 = rgb × alpha
-uniform int uMode; // DEBUG_MODES in constants.js: 0 color, 1 depth, 2 coverage, 3 substrate, 4 composition, 5 signed
+uniform int uMode; // DEBUG_MODES in constants.js: 0 color, 1 depth, 2 coverage, 3 substrate, 4 composition, 5 signed, 6 mask
 uniform int uShowSubstrateHeight;
 
 varying vec2 vUv;
@@ -15,6 +15,7 @@ const int COVERAGE_MODE = 2;
 const int SUBSTRATE_MODE = 3;
 const int COMPOSITION_MODE = 4;
 const int SIGNED_MODE = 5;
+const int MASK_MODE = 6;
 
 vec3 checkerboard() {
   float checker = mod(
@@ -51,6 +52,15 @@ void main() {
       return;
     }
     gl_FragColor = vec4(clamp(0.5 + 0.5 * inputSample.rgb, 0.0, 1.0), 1.0);
+    return;
+  }
+
+  // A 0–1 mask carried in R over coverage in A (dry brush): dark where the
+  // brush laid paint, white where it left the paper bare.
+  if (uMode == MASK_MODE) {
+    gl_FragColor = inputSample.a <= 0.0
+      ? vec4(checker, 1.0)
+      : vec4(vec3(mix(0.18, 1.0, clamp(inputSample.r, 0.0, 1.0))), 1.0);
     return;
   }
 
