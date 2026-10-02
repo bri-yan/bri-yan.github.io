@@ -301,7 +301,7 @@ export function PipelineDiagram({ activeView = 'output', onSelectView, washColor
 
             {[...layout.nodes.values()].map((stage) => {
               const clickable = Boolean(stage.debugView);
-              const active = probing && stage.debugView === activeView;
+              const active = stage.debugView === activeView;
               const { cx } = stage;
               const halfWidth = (labelWidths[stage.key] ?? FALLBACK_LABEL_WIDTH) / 2;
               const baseline = stage.y + NODE_HEIGHT / 2 + 4;

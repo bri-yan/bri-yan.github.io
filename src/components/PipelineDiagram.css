@@ -11,6 +11,8 @@
   --pd-ink-faint: #8a7d70;
   --pd-pigment: #1f7f8c;
   --pd-wash: #00ffff; /* overridden inline with the base pigment color */
+  /* The base pigment deepened toward the ink, for selected and hovered labels. */
+  --pd-wash-ink: color-mix(in oklab, var(--pd-wash) 55%, var(--pd-ink));
 
   position: absolute;
   top: 12px;
@@ -192,7 +194,7 @@
 
 .pd-node[role='button']:hover text,
 .pd-node[role='button']:focus-visible text {
-  fill: var(--pd-pigment);
+  fill: var(--pd-wash-ink);
 }
 
 .pd-node[role='button']:focus-visible .pd-node__drop {
@@ -201,7 +203,7 @@
 }
 
 .pd-node.pd-node--active text {
-  fill: color-mix(in oklab, var(--pd-wash) 55%, var(--pd-ink));
+  fill: var(--pd-wash-ink);
 }
 
 .pd-node--active .pd-node__drop {
