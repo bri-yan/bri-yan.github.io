@@ -23,7 +23,8 @@ const mean = (values) => values.reduce((sum, value) => sum + value, 0) / values.
  * as late as its consumers allow, so side inputs like the substrate enter
  * where they are used. Within a column, stages sit at the average row of
  * their inputs, so wires run straight or fan without crossing. A stage fed
- * across skipped columns (scene → specular) takes a free lane below them. A
+ * across skipped columns (scene → specular) takes the clear row nearest its
+ * inputs in every skipped column, else a free lane below them. A
  * side input (a source sharing its column, like the substrate) sits just above
  * its consumer's other inputs, and a stage alone in its column centers on the
  * stages it feeds.
@@ -68,6 +69,26 @@ function layoutStages(stages, labelWidths) {
     return lowest;
   };
 
+  // A wire that skips columns runs along its consumer's row, so that row must
+  // be clear in every skipped column: the clear row nearest the wanted one,
+  // falling back to the lane below everything.
+  const clearAcross = (from, to, row) => {
+    for (let depth = from + 1; depth < to; depth += 1) {
+      if (columns.get(depth)?.some((stage) => rows.has(stage.key) && Math.abs(rows.get(stage.key) - row) < 1)) {
+        return false;
+      }
+    }
+    return true;
+  };
+  const nearestLane = (from, to, wanted) => {
+    const below = lowestRowBetween(from, to) + 1;
+    let lane = below;
+    for (let row = 0; row < below; row += 1) {
+      if (clearAcross(from, to, row) && Math.abs(row - wanted) < Math.abs(lane - wanted)) lane = row;
+    }
+    return lane;
+  };
+
   const isFree = (depth, row) =>
     row >= 0 && columns.get(depth).every((stage) => !rows.has(stage.key) || Math.abs(rows.get(stage.key) - row) >= 1);
 
@@ -81,7 +102,7 @@ function layoutStages(stages, labelWidths) {
           if (!stage.inputs.length) return { stage, order, row: Infinity };
           let row = mean(stage.inputs.map((key) => rows.get(key)));
           const earliestInput = Math.min(...stage.inputs.map((key) => depths.get(key)));
-          if (earliestInput < depth - 1) row = Math.max(row, lowestRowBetween(earliestInput, depth) + 1);
+          if (earliestInput < depth - 1) row = nearestLane(earliestInput, depth, row);
           return { stage, order, row };
         })
         .sort((a, b) => a.row - b.row || a.order - b.order);

@@ -22,6 +22,9 @@ import {
   DEFAULT_TURBULENCE_OCTAVES,
   DEFAULT_TURBULENCE_SCALE,
   DEFAULT_TURBULENCE_WARP,
+  DEFAULT_GRANULATION_INTENSITY,
+  DEFAULT_DRY_BRUSH_AMOUNT,
+  DEFAULT_DRY_BRUSH_SOFTNESS,
   TURBULENCE_MAX_OCTAVES,
   BLUR_MAX_RADIUS,
   DEFAULT_SUBSTRATE_DISTORTION,
@@ -54,6 +57,9 @@ const DEFAULTS = {
   turbulenceScale: DEFAULT_TURBULENCE_SCALE,
   turbulenceOctaves: DEFAULT_TURBULENCE_OCTAVES,
   turbulenceWarp: DEFAULT_TURBULENCE_WARP,
+  granulationIntensity: DEFAULT_GRANULATION_INTENSITY,
+  dryBrushAmount: DEFAULT_DRY_BRUSH_AMOUNT,
+  dryBrushSoftness: DEFAULT_DRY_BRUSH_SOFTNESS,
   edgeDarkening: DEFAULT_EDGE_DARKENING,
   substrateDistortionEnabled: true,
   substrateDistortion: DEFAULT_SUBSTRATE_DISTORTION,
@@ -135,6 +141,15 @@ export function usePipelineControls() {
       turbulenceScale: slider(saved, 'turbulenceScale', 0.25, 6, 0.05, 'scale'),
       turbulenceOctaves: slider(saved, 'turbulenceOctaves', 1, TURBULENCE_MAX_OCTAVES, 1, 'octaves'),
       turbulenceWarp: slider(saved, 'turbulenceWarp', 0, 3, 0.05, 'warp'),
+    }),
+    // Paper-height effects weighted by the light: granulation settles pigment
+    // into the tooth in shadow; dry brush skips the peaks in bright light.
+    Granulation: folder({
+      granulationIntensity: slider(saved, 'granulationIntensity', 0, 1, 0.01, 'intensity'),
+    }),
+    'Dry brush': folder({
+      dryBrushAmount: slider(saved, 'dryBrushAmount', 0, 1, 0.01, 'amount'),
+      dryBrushSoftness: slider(saved, 'dryBrushSoftness', 0.01, 0.3, 0.01, 'softness'),
     }),
     // CSS pixels; 0 passes the paint through unblurred.
     Wetness: folder({

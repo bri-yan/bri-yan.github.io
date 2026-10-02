@@ -6,19 +6,21 @@ and finished on procedural paper.
 ## One frame
 
 ```text
-                                              scene
-                 ┌──────────────────────┬───────┴─────────┬─────────────┐
-              diffuse              turbulence           depth       specular
-         ┌───────┴─────────┐            │                 │             │
-  color override       dilution         │               sobel           │
-         └───────┬─────────┴────────────┘                 │             │
-        diffuse-composition                          sobel-blur         │         substrate
-                 │                                        │             │             │
-     diffuse-composition-blur                             │             │             │
-                 └───────────────────┬────────────────────┘             │             │
-                              edge-darkening                            │             │
-                                     └──────────────────────┬───────────┴─────────────┘
-                                                         output
+                                             scene
+                ┌───────────────────────────┬──┴──────────────┬───────────────┐
+             diffuse                   turbulence           depth         specular
+       ┌────────┴─────────┐                 │                 │               │
+color override        dilution              │               sobel             │             substrate
+       └──────────────────┼─────────────────┘                 │               │                 ├───────────────┬───────┐
+                 diffuse-composition                     sobel-blur           │           granulation*     dry-brush*   │
+                          │                                   │               │                 │               │       │
+              diffuse-composition-blur                        │               │                 │               │       │
+                          └─────────────────┬─────────────────┘               │                 │               │       │
+                                     edge-darkening                           │                 │               │       │
+                                            └─────────────────────────────────┴───┬─────────────┴───────────────┴───────┘
+                                                                               output
+
+* granulation and dry-brush also read diffuse to weight the paper (`reads`, not drawn)
 ```
 
 `ScenePass` captures original-material RGBA color; clicking `scene` shows it.
@@ -93,6 +95,17 @@ piles up (the same hue, darker and richer, and denser); where it is negative,
 the wash thins toward the paper. Intensity, scale, octaves (how much fine
 detail) and an optional warp (which swirls the blotches into flows) are
 adjustable; intensity 0 turns it off.
+
+Two more effects come from the paper itself (Montesdeoca §5.1.2), each read
+from the diffuse light and the substrate height. **Granulation** lets pigment
+settle into the paper's valleys and drain off its peaks, mostly in the shadows,
+so dark washes look grainy. **Dry brush** leaves the paper's peaks bare where a
+thinly loaded brush would skip them, mostly in the brightest light, so lit
+passages break up into speckled paper. Granulation has an intensity; dry brush
+has an amount and a softness. Both are applied in the output, after the paper
+distortion has slid the paint into the valleys but at the undistorted pixel,
+so the grain and the bare peaks sit exactly on the paper you see, stay crisp,
+and dry-brush gaps never pick up an edge-darkened rim.
 `SpecularPass` is a thresholded Blinn–Phong mask that marks the highlights.
 These passes share one world-space light position.
 
@@ -101,7 +114,7 @@ the controls, in ink on vellum with pigment-colored sliders that follow the base
 color) and opens with **Inspect**, which picks the debug view. The rest is
 grouped the way a painter thinks about the image: **Light**
 (position, with Diffuse intensity and Specular highlights), **Pigment** (colors,
-dilution, Turbulence, and Wetness for the paint blur), **Edges** (darkening and
+dilution, Turbulence, Granulation, Dry brush, and Wetness for the paint blur), **Edges** (darkening and
 its width, with Detection holding the sobel settings and bounding boxes), and
 **Substrate** (height map, color, scale, and the Distortion and Lighting
 effects, each with its own toggle). **Session** at the bottom saves or resets. There is no background control: the paper is the

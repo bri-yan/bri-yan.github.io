@@ -1,7 +1,9 @@
 import * as THREE from 'three';
 
 // Shared source of truth for the debug selector, debug sources, and the on-screen graph.
-// `inputs` names the stages whose output a stage consumes. `debugMode` picks the
+// `inputs` names the stages whose output a stage consumes (drawn as graph wires);
+// `reads` names stages it also samples without a wire (granulation and dry brush
+// weight the paper by the diffuse light, left undrawn to keep the graph tidy). `debugMode` picks the
 // debugFragment.frag display (see DEBUG_MODES); stages without one show plain color.
 export const PIPELINE_STAGES = [
   {
@@ -59,6 +61,28 @@ export const PIPELINE_STAGES = [
     debugMode: 'coverage',
     hint: 'diffuse-driven light thinning coverage',
     inputs: ['diffuse'],
+  },
+  {
+    key: 'granulation',
+    label: 'granulation',
+    kind: 'pass',
+    fboKey: 'granulation',
+    debugView: 'granulation',
+    debugMode: 'signed',
+    hint: 'pigment settling into the paper’s valleys (+) and off its peaks (−), strongest where the diffuse light is low',
+    inputs: ['substrate'],
+    reads: ['diffuse'],
+  },
+  {
+    key: 'dry-brush',
+    label: 'dry brush',
+    kind: 'pass',
+    fboKey: 'dryBrush',
+    debugView: 'dry-brush',
+    debugMode: 'coverage',
+    hint: 'paper peaks the brush skips, left bare (white), reaching further where the diffuse light is bright',
+    inputs: ['substrate'],
+    reads: ['diffuse'],
   },
   {
     key: 'turbulence',
@@ -133,8 +157,8 @@ export const PIPELINE_STAGES = [
     label: 'output',
     kind: 'output',
     debugView: 'output',
-    hint: 'the finished painting: edge-darkened paint, highlights lifted, on distorted and lit paper',
-    inputs: ['edge-darkening', 'specular', 'substrate'],
+    hint: 'the finished painting: edge-darkened paint, granulated and dry-brushed on the tooth, highlights lifted, on distorted and lit paper',
+    inputs: ['edge-darkening', 'specular', 'substrate', 'granulation', 'dry-brush'],
   },
 ];
 
@@ -204,6 +228,9 @@ export const DEFAULT_TURBULENCE_SCALE = 1.5; // noise cycles per object unit
 export const DEFAULT_TURBULENCE_OCTAVES = 3;
 export const TURBULENCE_MAX_OCTAVES = 6; // keep in sync with MAX_OCTAVES in turbulenceFragment.frag
 export const DEFAULT_TURBULENCE_WARP = 0;
+export const DEFAULT_GRANULATION_INTENSITY = 0.5;
+export const DEFAULT_DRY_BRUSH_AMOUNT = 0.3;
+export const DEFAULT_DRY_BRUSH_SOFTNESS = 0.08;
 export const DEFAULT_EDGE_DARKENING = 3; // k in Ed = k·Eb
 export const DEFAULT_SUBSTRATE_DISTORTION = 4; // CSS pixels per unit slope
 export const DEFAULT_SUBSTRATE_LIGHT_ANGLE = 66; // degrees, counter-clockwise from the right
@@ -224,6 +251,8 @@ export const DIFFUSE_PASS_FRAME_ORDER = 3;
 export const TURBULENCE_PASS_FRAME_ORDER = 3.05;
 export const COLOR_OVERRIDE_PASS_FRAME_ORDER = 3.1;
 export const DILUTION_PASS_FRAME_ORDER = 3.1;
+export const GRANULATION_PASS_FRAME_ORDER = 4.3; // paper effects, read by output
+export const DRY_BRUSH_PASS_FRAME_ORDER = 4.3;
 export const DIFFUSE_COMPOSITION_PASS_FRAME_ORDER = 3.15;
 export const SPECULAR_PASS_FRAME_ORDER = 3.2;
 export const SOBEL_PASS_FRAME_ORDER = 4.1;

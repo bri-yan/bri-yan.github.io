@@ -26,19 +26,21 @@ not runtime inputs. Do not edit/delete user-owned
 ## Current pipeline
 
 ```text
-                                              scene
-                 ┌──────────────────────┬───────┴─────────┬─────────────┐
-              diffuse              turbulence           depth       specular
-         ┌───────┴─────────┐            │                 │             │
-  color-override       dilution         │               sobel           │
-         └───────┬─────────┴────────────┘                 │             │
-        diffuse-composition                          sobel-blur         │         substrate
-                 │                                        │             │             │
-     diffuse-composition-blur                             │             │             │
-                 └───────────────────┬────────────────────┘             │             │
-                              edge-darkening                            │             │
-                                     └──────────────────────┬───────────┴─────────────┘
-                                                         output
+                                             scene
+                ┌───────────────────────────┬──┴──────────────┬───────────────┐
+             diffuse                   turbulence           depth         specular
+       ┌────────┴─────────┐                 │                 │               │
+color-override        dilution              │               sobel             │             substrate
+       └──────────────────┼─────────────────┘                 │               │                 ├───────────────┬───────┐
+                 diffuse-composition                     sobel-blur           │           granulation*     dry-brush*   │
+                          │                                   │               │                 │               │       │
+              diffuse-composition-blur                        │               │                 │               │       │
+                          └─────────────────┬─────────────────┘               │                 │               │       │
+                                     edge-darkening                           │                 │               │       │
+                                            └─────────────────────────────────┴───┬─────────────┴───────────────┴───────┘
+                                                                               output
+
+* granulation and dry-brush also read diffuse to weight the paper (`reads`, not drawn)
 ```
 
 | Priority | Stage | Result |
@@ -54,6 +56,7 @@ not runtime inputs. Do not edit/delete user-owned
 | `4.1` | `SobelPass` | Continuous edge magnitude in `fbos.sobel`. |
 | `4.2` | `BlurPass` ×2 | Gaussian blurs of `fbos.sobel` → `fbos.sobelBlur` and `fbos.diffuseComposition` → `fbos.diffuseCompositionBlur`. |
 | `4.25` | `EdgeDarkeningPass` | Paint layer in `fbos.edgeDarkening`: diffuse blur concentrated along `fbos.sobelBlur` edges. |
+| `4.3` | `GranulationPass`, `DryBrushPass` | Substrate height × `fbos.diffuse`: signed settling in HalfFloat `fbos.granulation`; bare-paper mask in `fbos.dryBrush`. Read by output. |
 | `5` | `OutputPass` | The finished painting, drawn to screen: edge-darkened paint, highlights lifted, on paper with toggleable substrate distortion and lighting (paper slope computed inline). |
 | `6` | `DebugPass` | Replaces output with the selected probe. |
 
@@ -137,6 +140,30 @@ priority order.
   paper (`a *= 1 + df`; the thesis's fade to `Cs`, since paper is composited
   later). Intensity 0 is an exact passthrough. Its debug view blends pigment
   over the checkerboard by density.
+- `granulation` and `dry-brush` (Montesdeoca §5.1.2) are paper effects:
+  fullscreen transforms of the substrate height `h`, weighted per pixel by
+  `diffuse` (same-size screen-space targets; the paper's zoom scaling carries
+  through). The graph draws `substrate → granulation, dry-brush → output`; the
+  diffuse read is listed in `reads`, not `inputs`, and left undrawn for
+  simplicity. They are **applied in `output`, not diffuse composition**:
+  after the distortion lookup, but sampled at the undistorted pixel, so the
+  paint slides into the valleys while the grain and the bare peaks stay on
+  the tooth you see (and after the paint blur, so they stay crisp). There
+  granulation is an Eq. 5.1 offset on the edge-darkened paint (`g > 0`:
+  `concentratePigment` and `a' = 1 − (1 − a)^(1+g)`; `g < 0`: `a *= 1 + g`;
+  `OutputPass` prepends the OKLab chunk), then dry brush lifts pigment
+  (`a *= 1 − d`), then the specular lift. Edge darkening is already in the
+  paint and its edges come from depth, so dry-brush gaps are clean bare paper
+  with no dark rim. Granulation intensity 0 and dry brush amount 0 are an
+  exact passthrough.
+  **Granulation** settles pigment into the valleys, weighted toward shadow:
+  `g = intensity · (1 − diffuse)^1.5 · (1 − 2h) · coverage`, signed like
+  turbulence (+ collects in valleys, − drains off peaks), HalfFloat, signed
+  debug view. **Dry brush** leaves the peaks bare, reaching further in bright
+  light: `reach = amount · diffuse`, threshold
+  `t = 1 + s − reach · (1 + 2s)`, `d = smoothstep(t − s, t + s, h) · coverage`
+  (`s` = softness; amount 0 skips nothing), coverage debug view (white = bare
+  paper).
 - `turbulence` is a scene capture of **3D Perlin gradient-noise fBm evaluated
   at each surface's object-local position**, so the pattern rides with the
   mesh under any camera or object motion (no shower-door) and has no
@@ -192,10 +219,12 @@ nodes, edges, debug views, debug sources (`debugView → fbos[fboKey]`, derived 
 `uMode` values in `debugFragment.frag`; stages without one show plain color). `scene` is both the
 graph's source and the raw scene probe. The on-screen graph lays stages out automatically: columns
 follow data depth, with every stage that feeds others placed as late as its
-consumers allow (so `substrate` enters just before `output`),
+consumers allow (so `substrate` enters just before `granulation`, `dry-brush` and `output`),
 and each stage sits at the average row of its inputs so wires don't cross. A
-stage fed across skipped columns (`scene → specular`) takes a free lane below
-those columns, and its wire turns right after the source to run along it.
+stage fed across skipped columns (`scene → specular`, `substrate → output`) takes
+the clear row nearest its inputs' average in every skipped column (falling back
+to a free lane below those columns), and its wire turns right after the source
+to run along it.
 Within a column, ties keep `PIPELINE_STAGES` order, so stage order is how to
 resolve a crossing (e.g. `turbulence` is listed before `depth` so its wire
 into `diffuse comp` runs above the `depth → sobel` chain). A side input (a
@@ -251,6 +280,8 @@ painting, then the Session:
 - **Pigment**: `override` (Color Override on/off), `base color`, `shadow
   color`, `dilution`; **Turbulence** › `intensity` (0–1, 0 = off), `scale`
   (noise cycles per object unit), `octaves` (1–6), `warp` (0 = plain fBm);
+  **Granulation** › `intensity` (0–1, 0 = off); **Dry brush** › `amount`
+  (0–1, 0 = off), `softness` (0.01–0.3, how feathered the bare peaks are);
   **Wetness** › `paint blur` (diffuse composition blur, CSS px, 0–16, 0 = off).
 - **Edges**: `darkening` (`k`, 0–5, 0 = off), `width` (sobel blur radius, the
   thesis's `W`, CSS px, 0–16); **Detection** › `sobel strength`, `sobel radius`
@@ -311,6 +342,7 @@ click-out, and re-click return the debug view to `output`.
 - `src/pipeline/passes/SobelPass.jsx`: depth Sobel edge composite.
 - `src/pipeline/passes/BlurPass.jsx`: reusable premultiplied separable Gaussian blur.
 - `src/pipeline/passes/TurbulencePass.jsx`: object-space Perlin fBm capture for pigment turbulence.
+- `src/pipeline/passes/GranulationPass.jsx`, `DryBrushPass.jsx`: paper-height settling and bare-paper masks weighted by diffuse, applied in output.
 - `src/pipeline/passes/EdgeDarkeningPass.jsx`: diffuse blur concentrated along blurred sobel edges.
 - `src/pipeline/passes/OutputPass.jsx`: the finished painting to screen: highlights, substrate distortion, and lighting over edge darkening.
 - `src/pipeline/WatercolorSubjects.jsx`: registration context and hook.

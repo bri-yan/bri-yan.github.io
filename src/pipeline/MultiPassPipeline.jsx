@@ -20,6 +20,9 @@ import {
   DEFAULT_TURBULENCE_OCTAVES,
   DEFAULT_TURBULENCE_SCALE,
   DEFAULT_TURBULENCE_WARP,
+  DEFAULT_GRANULATION_INTENSITY,
+  DEFAULT_DRY_BRUSH_AMOUNT,
+  DEFAULT_DRY_BRUSH_SOFTNESS,
   DEFAULT_SUBSTRATE_DISTORTION,
   DEFAULT_SUBSTRATE_LIGHT_ANGLE,
   DEFAULT_SUBSTRATE_LIGHT_STRENGTH,
@@ -33,6 +36,8 @@ import { ColorOverridePass } from './passes/ColorOverridePass';
 import { DiffuseCompositionPass } from './passes/DiffuseCompositionPass';
 import { DiffusePass } from './passes/DiffusePass';
 import { DilutionPass } from './passes/DilutionPass';
+import { DryBrushPass } from './passes/DryBrushPass';
+import { GranulationPass } from './passes/GranulationPass';
 import { ScenePass } from './passes/ScenePass';
 import { SpecularPass } from './passes/SpecularPass';
 import { SobelPass } from './passes/SobelPass';
@@ -47,8 +52,8 @@ const toColor = (value) => (value?.isColor ? value : new THREE.Color(value));
 
 /**
  * The watercolor pipeline. Sibling passes capture the scene (color, depth,
- * lighting), build a paint layer, and finish it on paper in substrate fx,
- * which the output pass draws to screen.
+ * lighting), build a paint layer, and finish it on paper in the output pass,
+ * which draws to screen.
  */
 export function MultiPassPipeline({
   children,
@@ -75,6 +80,9 @@ export function MultiPassPipeline({
   turbulenceScale = DEFAULT_TURBULENCE_SCALE,
   turbulenceOctaves = DEFAULT_TURBULENCE_OCTAVES,
   turbulenceWarp = DEFAULT_TURBULENCE_WARP,
+  granulationIntensity = DEFAULT_GRANULATION_INTENSITY,
+  dryBrushAmount = DEFAULT_DRY_BRUSH_AMOUNT,
+  dryBrushSoftness = DEFAULT_DRY_BRUSH_SOFTNESS,
   edgeDarkening = DEFAULT_EDGE_DARKENING,
   substrateDistortionEnabled = true,
   substrateDistortion = DEFAULT_SUBSTRATE_DISTORTION,
@@ -124,6 +132,19 @@ export function MultiPassPipeline({
           outputRef={fbos.dilution}
           strength={dilutionStrength}
         />
+        <GranulationPass
+          diffuseRef={fbos.diffuse}
+          substrateRef={fbos.substrate}
+          outputRef={fbos.granulation}
+          intensity={granulationIntensity}
+        />
+        <DryBrushPass
+          diffuseRef={fbos.diffuse}
+          substrateRef={fbos.substrate}
+          outputRef={fbos.dryBrush}
+          amount={dryBrushAmount}
+          softness={dryBrushSoftness}
+        />
         <TurbulencePass
           outputRef={fbos.turbulence}
           scale={turbulenceScale}
@@ -166,6 +187,8 @@ export function MultiPassPipeline({
           paintRef={fbos.edgeDarkening}
           specularRef={fbos.specular}
           substrateRef={fbos.substrate}
+          granulationRef={fbos.granulation}
+          dryBrushRef={fbos.dryBrush}
           paperColor={substrate}
           substrateScale={substrateScale}
           distortionEnabled={substrateDistortionEnabled}

@@ -3,20 +3,26 @@ import * as THREE from 'three';
 import { MIN_PAPER_SCALE, OUTPUT_FRAME_ORDER } from '../../config';
 import { useFullscreenPass } from '../utils/passHooks';
 import { zoomedPaperScale } from '../utils/paperZoom';
+import oklabChunk from '../../shaders/chunks/oklab.glsl?raw';
 import outputFragment from '../../shaders/outputFragment.frag?raw';
+
+const fragmentShader = `${oklabChunk}\n${outputFragment}`;
 
 const DEG_TO_RAD = Math.PI / 180;
 
 /**
  * Draws the finished painting to screen: edge-darkened paint on paper with
  * specular highlights lifted to bare paper, and toggleable substrate effects.
- * Distortion shifts the paint along the paper slope; lighting shades
- * everything by paper normals rebuilt from that slope.
+ * Distortion shifts the paint along the paper slope; granulation and dry brush
+ * are then applied at the undistorted pixel so they stay on the paper tooth;
+ * lighting shades everything by paper normals rebuilt from that slope.
  */
 export function OutputPass({
   paintRef,
   specularRef,
   substrateRef,
+  granulationRef,
+  dryBrushRef,
   paperColor,
   substrateScale,
   distortionEnabled,
@@ -27,11 +33,13 @@ export function OutputPass({
   roughness,
 }) {
   const { uniforms, render } = useFullscreenPass(
-    outputFragment,
+    fragmentShader,
     () => ({
       tPaint: { value: null },
       tSpecular: { value: null },
       tSubstrate: { value: null },
+      tGranulation: { value: null },
+      tDryBrush: { value: null },
       uCssPixelToUv: { value: new THREE.Vector2() },
       uSubstrateTexelSize: { value: new THREE.Vector2() },
       uPixelsPerPaperUnit: { value: 1 },
@@ -51,7 +59,9 @@ export function OutputPass({
     const paint = paintRef.current;
     const specular = specularRef.current;
     const substrate = substrateRef.current;
-    if (!paint || !specular || !substrate) return;
+    const granulation = granulationRef.current;
+    const dryBrush = dryBrushRef.current;
+    if (!paint || !specular || !substrate || !granulation || !dryBrush) return;
 
     const pixelRatio = gl.getPixelRatio();
     const paperScale = zoomedPaperScale(state, substrateScale);
@@ -61,6 +71,8 @@ export function OutputPass({
     uniforms.tPaint.value = paint.texture;
     uniforms.tSpecular.value = specular.texture;
     uniforms.tSubstrate.value = substrate.texture;
+    uniforms.tGranulation.value = granulation.texture;
+    uniforms.tDryBrush.value = dryBrush.texture;
     uniforms.uCssPixelToUv.value.set(pixelRatio / paint.width, pixelRatio / paint.height);
     uniforms.uSubstrateTexelSize.value.set(1 / substrate.width, 1 / substrate.height);
     uniforms.uPixelsPerPaperUnit.value = pixelRatio * paperScale;

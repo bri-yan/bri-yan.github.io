@@ -1,11 +1,14 @@
 // The finished painting, drawn to screen: substrate effects over the paint
-// layer in thesis order (Montesdeoca §5.3): distortion → highlight lift →
-// paint over paper → lighting. The paper slope comes straight from the
-// substrate height by central differences.
+// layer in thesis order (Montesdeoca §5.3): distortion → granulation and dry
+// brush (§5.1.2) → highlight lift → paint over paper → lighting. The paper
+// slope comes straight from the substrate height by central differences.
+// concentratePigment comes from chunks/oklab.glsl, prepended by the pass.
 
 uniform sampler2D tPaint; // straight RGB pigment, A = density
 uniform sampler2D tSubstrate; // A = paper height
 uniform sampler2D tSpecular; // A = highlight mask
+uniform sampler2D tGranulation; // R = signed settling (+ valleys, − peaks)
+uniform sampler2D tDryBrush; // R = 1 where the brush left the paper bare
 uniform vec2 uCssPixelToUv;
 uniform vec2 uSubstrateTexelSize;
 uniform float uPixelsPerPaperUnit; // device pixels per paper unit (DPR × scale)
@@ -40,6 +43,19 @@ void main() {
     uv += uDistortion * vec2(slope.x, -slope.y) * uCssPixelToUv;
   }
   vec4 paint = texture2D(tPaint, uv);
+
+  // Granulation and dry brush belong to the paper, so they are read at the
+  // undistorted pixel: the paint slides, but the grain and the bare peaks stay
+  // on the tooth. Granulation is an Eq. 5.1 density offset like turbulence;
+  // dry brush then lifts pigment off the skipped peaks.
+  float settling = texture2D(tGranulation, vUv).r;
+  if (settling > 0.0) {
+    paint.rgb = concentratePigment(paint.rgb, settling);
+    paint.a = 1.0 - pow(1.0 - paint.a, 1.0 + settling);
+  } else {
+    paint.a *= 1.0 + settling;
+  }
+  paint.a *= 1.0 - texture2D(tDryBrush, vUv).r;
 
   // Highlights are left unpainted: lift the pigment so bare paper shows.
   paint.a *= 1.0 - texture2D(tSpecular, uv).a;
