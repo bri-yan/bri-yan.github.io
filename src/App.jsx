@@ -22,6 +22,7 @@ export default function App() {
       <PipelineDiagram
         activeView={controls.debugView}
         onSelectView={setDebugView}
+        washColor={controls.colorOverrideBaseColor}
       />
     </div>
   );

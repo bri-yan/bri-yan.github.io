@@ -2,11 +2,11 @@ import { useMemo, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { useFBO } from '@react-three/drei';
 import * as THREE from 'three';
-import { NORMALIZED_DEPTH_FRAME_ORDER, RAW_DEPTH_FBO_OPTIONS } from '../../config';
+import { DEPTH_FBO_OPTIONS, DEPTH_PASS_FRAME_ORDER } from '../../config';
 import { renderObjectWithMaterial } from '../utils/renderObjectWithMaterial';
 import { useWatercolorSubjects } from '../WatercolorSubjects';
-import rawDepthVertex from '../../shaders/rawDepthVertex.vert?raw';
-import normalizedDepthFragment from '../../shaders/normalizedDepthFragment.frag?raw';
+import depthVertex from '../../shaders/depthVertex.vert?raw';
+import depthFragment from '../../shaders/depthFragment.frag?raw';
 
 const RANGE_EPSILON = 0.0001;
 
@@ -39,43 +39,64 @@ function updateObjectDepthRange(object, camera, corner, range) {
   return true;
 }
 
-/** Produces visible per-subject 0–1 depth using stable transformed mesh bounds. */
-export function NormalizedDepthPass({ rawDepthRef, outputRef }) {
-  const { gl, camera } = useThree();
-  const target = useFBO(RAW_DEPTH_FBO_OPTIONS);
+/**
+ * Per-subject 0–1 visible depth from stable transformed mesh bounds. A
+ * depth-only pre-pass of the whole scene fills the depth buffer, then each
+ * subject renders with LessEqual testing, so anything in front of it (another
+ * subject or any other mesh) hides it without a separate raw-depth target.
+ */
+export function DepthPass({ outputRef }) {
+  const { gl, scene, camera } = useThree();
+  const target = useFBO(DEPTH_FBO_OPTIONS);
   const subjects = useWatercolorSubjects();
   const savedClearColor = useRef(new THREE.Color()).current;
   const corner = useMemo(() => new THREE.Vector3(), []);
   const objectDepthRange = useMemo(() => new THREE.Vector2(), []);
+  const prepassMaterial = useMemo(
+    () =>
+      new THREE.ShaderMaterial({
+        vertexShader: depthVertex,
+        fragmentShader: 'void main() { gl_FragColor = vec4(0.0); }',
+        colorWrite: false,
+      }),
+    []
+  );
   const material = useMemo(
     () =>
       new THREE.ShaderMaterial({
-        vertexShader: rawDepthVertex,
-        fragmentShader: normalizedDepthFragment,
+        vertexShader: depthVertex,
+        fragmentShader: depthFragment,
         uniforms: {
-          tRawDepth: { value: null },
           uObjectDepthRange: { value: new THREE.Vector2() },
         },
-        depthTest: true,
-        depthWrite: true,
+        depthFunc: THREE.LessEqualDepth,
+        depthWrite: false,
       }),
     []
   );
 
+  if (!gl.capabilities.isWebGL2 || !gl.extensions.has('EXT_color_buffer_float')) {
+    throw new Error('DepthPass requires WebGL2 with EXT_color_buffer_float support.');
+  }
+
   if (outputRef) outputRef.current = target;
 
   useFrame(() => {
-    const rawDepth = rawDepthRef.current;
-    if (!rawDepth) return;
     camera.updateMatrixWorld();
     const previousTarget = gl.getRenderTarget();
+    const previousOverride = scene.overrideMaterial;
+    const previousAutoClear = gl.autoClear;
     const previousClearAlpha = gl.getClearAlpha();
     gl.getClearColor(savedClearColor);
 
     gl.setRenderTarget(target);
     gl.setClearColor(0x000000, 0);
     gl.clear(true, true, true);
-    material.uniforms.tRawDepth.value = rawDepth.texture;
+    gl.autoClear = false; // keep the pre-pass depth for the subject renders
+
+    scene.overrideMaterial = prepassMaterial;
+    gl.render(scene, camera);
+    scene.overrideMaterial = previousOverride;
 
     subjects.forEach((subject) => {
       const object = subject.ref.current;
@@ -84,9 +105,10 @@ export function NormalizedDepthPass({ rawDepthRef, outputRef }) {
       renderObjectWithMaterial(gl, object, camera, material);
     });
 
+    gl.autoClear = previousAutoClear;
     gl.setRenderTarget(previousTarget);
     gl.setClearColor(savedClearColor, previousClearAlpha);
-  }, NORMALIZED_DEPTH_FRAME_ORDER);
+  }, DEPTH_PASS_FRAME_ORDER);
 
   return null;
 }

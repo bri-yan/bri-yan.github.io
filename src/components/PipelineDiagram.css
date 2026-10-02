@@ -1,15 +1,16 @@
 /* The pipeline set as a figure plate in a printed sketchbook: small-caps
-   serif labels straight on the page, hairline ink wires with dot joints, and
-   a cyan brushstroke under the stage being viewed. It sits on a frosted
-   sheet of vellum: the render blurs softly behind the type, so the ink reads
-   over any debug view while the painting still shows through. */
+   serif labels straight on the page, hairline ink wires that bend in smooth
+   S-curves, and the stage being viewed resting in a soft pastel wash of the
+   base pigment color. It sits on a frosted sheet of vellum: the render blurs
+   softly behind the type, so the ink reads over any debug view while the
+   painting still shows through. */
 
 .pipeline-diagram {
   --pd-ink: #3b3129;
   --pd-ink-soft: #6b5f54;
   --pd-ink-faint: #8a7d70;
   --pd-pigment: #1f7f8c;
-  --pd-pigment-wash: #2bb3c4;
+  --pd-wash: #00ffff; /* overridden inline with the base pigment color */
 
   position: absolute;
   top: 12px;
@@ -63,16 +64,12 @@
 
 /* ── wires ──────────────────────────────────────────────── */
 
-.pd-wire path {
+.pd-wire {
   fill: none;
   stroke: var(--pd-ink);
-  stroke-opacity: 0.4;
-  stroke-width: 0.8;
-}
-
-.pd-wire circle {
-  fill: var(--pd-ink);
-  fill-opacity: 0.5;
+  stroke-opacity: 0.42;
+  stroke-width: 0.85;
+  stroke-linecap: round;
 }
 
 /* ── stages ─────────────────────────────────────────────── */
@@ -99,13 +96,11 @@
   fill: transparent;
 }
 
-.pd-node__stroke {
-  fill: none;
-  stroke: var(--pd-pigment-wash);
-  stroke-width: 4;
-  stroke-linecap: round;
-  stroke-opacity: 0;
-  transition: stroke-opacity 200ms ease;
+.pd-node__wash {
+  /* Pastel: the base pigment let down with paper white, then thinned. */
+  fill: color-mix(in srgb, var(--pd-wash) 70%, #fbf9f4);
+  fill-opacity: 0;
+  transition: fill-opacity 200ms ease;
 }
 
 .pd-node[role='button'] {
@@ -118,16 +113,17 @@
   fill: var(--pd-pigment);
 }
 
-.pd-node[role='button']:focus-visible .pd-node__stroke {
-  stroke-opacity: 0.3;
+.pd-node[role='button']:focus-visible .pd-node__wash {
+  fill-opacity: 0.3;
 }
 
-.pd-node--active text {
-  fill: var(--pd-pigment);
+/* The selected stage sits in a soft pastel wash of the base pigment. */
+.pd-node.pd-node--active text {
+  fill: var(--pd-ink);
 }
 
-.pd-node--active .pd-node__stroke {
-  stroke-opacity: 0.75;
+.pd-node--active .pd-node__wash {
+  fill-opacity: 0.65;
 }
 
 /* ── note ───────────────────────────────────────────────── */

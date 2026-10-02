@@ -7,8 +7,10 @@ import { useWatercolorSubjects } from '../WatercolorSubjects';
 import debugFragment from '../../shaders/debugFragment.frag?raw';
 
 const BOUNDS_COLOR = 0xffa000;
+// Bounding boxes belong to edge detection, so they overlay its views.
+const BOUNDS_VIEWS = new Set(['depth', 'sobel']);
 
-function useNormalizedDepthBoundsOverlay() {
+function useDepthBoundsOverlay() {
   const subjects = useWatercolorSubjects();
   const overlay = useMemo(() => {
     const geometry = new THREE.EdgesGeometry(new THREE.BoxGeometry(1, 1, 1));
@@ -98,15 +100,13 @@ export function DebugPass({
   showBoundingBoxes = false,
   showSubstrateHeight = false,
 }) {
-  const renderBounds = useNormalizedDepthBoundsOverlay();
+  const renderBounds = useDepthBoundsOverlay();
   const { uniforms, render } = useFullscreenPass(
     debugFragment,
     () => ({
       tInput: { value: null },
       uChannel: { value: 0 },
       uMode: { value: 0 },
-      uNear: { value: 0.1 },
-      uFar: { value: 1000 },
       uShowSubstrateHeight: { value: 0 },
     }),
     { offscreen: false }
@@ -118,11 +118,9 @@ export function DebugPass({
     uniforms.tInput.value = source.current.texture;
     uniforms.uChannel.value = Math.max(0, DEBUG_CHANNELS.indexOf(channel));
     uniforms.uMode.value = VIEW_MODES[view] ?? DEBUG_MODES.color;
-    uniforms.uNear.value = camera.near;
-    uniforms.uFar.value = camera.far;
     uniforms.uShowSubstrateHeight.value = showSubstrateHeight ? 1 : 0;
     render();
-    if (showBoundingBoxes && view === 'normalized-depth') renderBounds(gl, camera);
+    if (showBoundingBoxes && BOUNDS_VIEWS.has(view)) renderBounds(gl, camera);
   }, DEBUG_VIEW_FRAME_ORDER);
 
   return null;

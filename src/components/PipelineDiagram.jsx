@@ -7,11 +7,10 @@ import './PipelineDiagram.css';
 const MIN_COLUMN_WIDTH = 36;
 const FALLBACK_LABEL_WIDTH = 50; // until webfonts load and labels are measured
 const NODE_HEIGHT = 20;
-const COLUMN_GAP = 32;
+const COLUMN_GAP = 40;
 const ROW_GAP = 12;
 const PADDING = 8;
-const WIRE_GAP = 5; // space between a label and its wire
-const JOIN_OFFSET = 10; // wires turn this far before the next column
+const WIRE_GAP = 6; // clearance kept around every label, by wires and bends alike
 
 const ROW_STEP = NODE_HEIGHT + ROW_GAP;
 const mean = (values) => values.reduce((sum, value) => sum + value, 0) / values.length;
@@ -21,8 +20,10 @@ const mean = (values) => values.reduce((sum, value) => sum + value, 0) / values.
  * as late as its consumers allow, so side inputs like the substrate enter
  * where they are used. Within a column, stages sit at the average row of
  * their inputs, so wires run straight or fan without crossing. A stage fed
- * across skipped columns (scene → specular) takes a free lane below them;
- * sources then center on the stages they feed.
+ * across skipped columns (scene → specular) takes a free lane below them. A
+ * side input (a source sharing its column, like the substrate) sits just above
+ * its consumer's other inputs, and a stage alone in its column centers on the
+ * stages it feeds.
  */
 function layoutStages(stages, labelWidths) {
   const byKey = new Map(stages.map((stage) => [stage.key, stage]));
@@ -47,7 +48,6 @@ function layoutStages(stages, labelWidths) {
       const consumers = children.get(stage.key);
       if (consumers.length) depths.set(stage.key, Math.min(...consumers.map((key) => depths.get(key))) - 1);
     });
-  const sources = stages.filter((stage) => !stage.inputs.length);
 
   const columns = new Map();
   stages.forEach((stage) => {
@@ -65,7 +65,10 @@ function layoutStages(stages, labelWidths) {
     return lowest;
   };
 
-  // Rows: each stage wants the average row of its inputs; sources go last.
+  const isFree = (depth, row) =>
+    row >= 0 && columns.get(depth).every((stage) => !rows.has(stage.key) || Math.abs(rows.get(stage.key) - row) >= 1);
+
+  // Rows: each stage wants the average row of its inputs; sources come after.
   [...columns.keys()]
     .sort((a, b) => a - b)
     .forEach((depth) => {
@@ -81,17 +84,31 @@ function layoutStages(stages, labelWidths) {
         .sort((a, b) => a.row - b.row || a.order - b.order);
       let next = 0;
       wanted.forEach(({ stage, row }) => {
-        const placed = Number.isFinite(row) ? Math.max(row, next) : next;
+        if (!Number.isFinite(row)) return;
+        const placed = Math.max(row, next);
         rows.set(stage.key, placed);
         next = placed + 1;
       });
+      // Side inputs join just above the consumer's other inputs, else go last.
+      wanted.forEach(({ stage, row }) => {
+        if (Number.isFinite(row)) return;
+        const siblings = children
+          .get(stage.key)
+          .flatMap((key) => byKey.get(key).inputs)
+          .filter((key) => key !== stage.key && rows.has(key));
+        const above = siblings.length ? Math.min(...siblings.map((key) => rows.get(key))) - 1 : -1;
+        const placed = isFree(depth, above) ? above : next;
+        rows.set(stage.key, placed);
+        next = Math.max(next, placed + 1);
+      });
     });
 
-  // Center a source on its consumers when its column has room.
-  sources.forEach((stage) => {
-    const column = columns.get(depths.get(stage.key));
-    if (column.length === 1) rows.set(stage.key, mean(children.get(stage.key).map((key) => rows.get(key))));
-  });
+  // A stage alone in its column centers on the stages it feeds (scene,
+  // diffuse), right to left so each centers on already-settled children.
+  [...stages]
+    .filter((stage) => columns.get(depths.get(stage.key)).length === 1 && children.get(stage.key).length)
+    .sort((a, b) => depths.get(b.key) - depths.get(a.key))
+    .forEach((stage) => rows.set(stage.key, mean(children.get(stage.key).map((key) => rows.get(key)))));
 
   // Column widths follow their widest label.
   const maxDepth = Math.max(...depths.values());
@@ -122,6 +139,7 @@ function layoutStages(stages, labelWidths) {
   return {
     nodes,
     columnX,
+    columnWidth,
     width: x - COLUMN_GAP + PADDING,
     height: PADDING * 2 + maxRow * ROW_STEP + NODE_HEIGHT,
   };
@@ -149,7 +167,8 @@ function useLabelWidths(rootRef) {
 }
 
 /** Interactive graph generated from the same stage definition as Debug.view. */
-export function PipelineDiagram({ activeView = 'output', onSelectView }) {
+/** washColor tints the selected stage's wash; it follows the base pigment color. */
+export function PipelineDiagram({ activeView = 'output', onSelectView, washColor }) {
   const rootRef = useRef(null);
   const probing = activeView !== 'output';
   const labelWidths = useLabelWidths(rootRef);
@@ -192,13 +211,18 @@ export function PipelineDiagram({ activeView = 'output', onSelectView }) {
   }, [probing, onSelectView]);
 
   return (
-    <figure className="pipeline-diagram" ref={rootRef} aria-label="Render pipeline diagram">
+    <figure
+      className="pipeline-diagram"
+      ref={rootRef}
+      aria-label="Render pipeline diagram"
+      style={washColor ? { '--pd-wash': washColor } : undefined}
+    >
       <figcaption className="pd-caption">
         <span className="pd-caption__title">
           Fig. 1 <em>— the watercolor pipeline</em>
         </span>
         <span className="pd-caption__probe">
-          now showing <em>{probing ? activeView : 'the painting'}</em>
+          now showing <em>{probing ? activeView.replaceAll('-', ' ') : 'the painting'}</em>
         </span>
       </figcaption>
 
@@ -209,10 +233,12 @@ export function PipelineDiagram({ activeView = 'output', onSelectView }) {
         height={layout.height}
       >
         <defs>
-          {/* Ragged, slightly wavering edge for the brushstroke underline. */}
-          <filter id="pd-brush" x="-20%" y="-150%" width="140%" height="400%">
-            <feTurbulence type="fractalNoise" baseFrequency="0.06 0.5" numOctaves="2" seed="7" />
-            <feDisplacementMap in="SourceGraphic" scale="4" />
+          {/* Soft watercolor wash for the selected stage: wavering edges that
+              fade out rather than stop. */}
+          <filter id="pd-wash" x="-20%" y="-60%" width="140%" height="220%">
+            <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="3" seed="4" result="noise" />
+            <feDisplacementMap in="SourceGraphic" in2="noise" scale="6" result="ragged" />
+            <feGaussianBlur in="ragged" stdDeviation="2" />
           </filter>
         </defs>
 
@@ -221,15 +247,17 @@ export function PipelineDiagram({ activeView = 'output', onSelectView }) {
           const x2 = labelEdge(to, -1);
           const y1 = from.y + NODE_HEIGHT / 2;
           const y2 = to.y + NODE_HEIGHT / 2;
-          // Wires turn just before the next column: at the target for neighbors,
-          // right after the source for skips, which then run along their free lane.
-          const turn = Math.max(x1, Math.min(layout.columnX[from.depth + 1] - JOIN_OFFSET, x2));
-          return (
-            <g key={`${from.key}-${to.key}`} className="pd-wire">
-              <path d={`M ${x1} ${y1} H ${turn} V ${y2} H ${x2}`} />
-              <circle cx={x2} cy={y2} r="1.3" />
-            </g>
-          );
+          // Every bend lives in the gap after the source's column, clear of the
+          // widest label on either side, so wires sharing a gap bend together
+          // and never touch a label. Skips then run along their free lane.
+          const bendStart = layout.columnX[from.depth] + layout.columnWidth[from.depth] + WIRE_GAP;
+          const bendEnd = layout.columnX[from.depth + 1] - WIRE_GAP;
+          const handle = (bendEnd - bendStart) / 2;
+          const d =
+            Math.abs(y2 - y1) < 0.5
+              ? `M ${x1} ${y1} H ${x2}`
+              : `M ${x1} ${y1} H ${bendStart} C ${bendStart + handle} ${y1}, ${bendEnd - handle} ${y2}, ${bendEnd} ${y2} H ${x2}`;
+          return <path key={`${from.key}-${to.key}`} className="pd-wire" d={d} />;
         })}
 
         {[...layout.nodes.values()].map((stage) => {
@@ -261,10 +289,14 @@ export function PipelineDiagram({ activeView = 'output', onSelectView }) {
             >
               <title>{stage.hint}</title>
               <rect className="pd-node__hit" x={stage.x} y={stage.y} width={stage.width} height={NODE_HEIGHT} />
-              <path
-                className="pd-node__stroke"
-                d={`M ${cx - halfWidth} ${baseline + 3} Q ${cx} ${baseline + 7} ${cx + halfWidth + 1} ${baseline + 2}`}
-                filter="url(#pd-brush)"
+              <rect
+                className="pd-node__wash"
+                x={cx - halfWidth - WIRE_GAP}
+                y={stage.y + 1}
+                width={halfWidth * 2 + WIRE_GAP * 2}
+                height={NODE_HEIGHT - 2}
+                rx="3"
+                filter="url(#pd-wash)"
               />
               <text data-stage={stage.key} x={cx} y={baseline}>
                 {stage.label}

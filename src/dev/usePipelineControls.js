@@ -18,6 +18,11 @@ import {
   DEFAULT_COMPOSITION_BLUR_RADIUS,
   DEFAULT_SOBEL_BLUR_RADIUS,
   DEFAULT_EDGE_DARKENING,
+  DEFAULT_TURBULENCE_INTENSITY,
+  DEFAULT_TURBULENCE_OCTAVES,
+  DEFAULT_TURBULENCE_SCALE,
+  DEFAULT_TURBULENCE_WARP,
+  TURBULENCE_MAX_OCTAVES,
   BLUR_MAX_RADIUS,
   DEFAULT_SUBSTRATE_DISTORTION,
   DEFAULT_SUBSTRATE_LIGHT_ANGLE,
@@ -45,6 +50,10 @@ const DEFAULTS = {
   showSubstrateHeight: false,
   compositionBlurRadius: DEFAULT_COMPOSITION_BLUR_RADIUS,
   sobelBlurRadius: DEFAULT_SOBEL_BLUR_RADIUS,
+  turbulenceIntensity: DEFAULT_TURBULENCE_INTENSITY,
+  turbulenceScale: DEFAULT_TURBULENCE_SCALE,
+  turbulenceOctaves: DEFAULT_TURBULENCE_OCTAVES,
+  turbulenceWarp: DEFAULT_TURBULENCE_WARP,
   edgeDarkening: DEFAULT_EDGE_DARKENING,
   substrateDistortionEnabled: true,
   substrateDistortion: DEFAULT_SUBSTRATE_DISTORTION,
@@ -53,8 +62,6 @@ const DEFAULTS = {
   substrateLightStrength: DEFAULT_SUBSTRATE_LIGHT_STRENGTH,
   substrateRoughness: DEFAULT_SUBSTRATE_ROUGHNESS,
 };
-
-const blurRadius = (value) => ({ value, min: 0, max: BLUR_MAX_RADIUS, step: 0.5 });
 
 function loadSaved() {
   try {
@@ -67,199 +74,116 @@ function loadSaved() {
   }
 }
 
+const pick = (source, keys) => Object.fromEntries(keys.map((key) => [key, source[key]]));
+const slider = (saved, key, min, max, step, label) => ({
+  ...(label && { label }),
+  value: saved[key] ?? DEFAULTS[key],
+  min,
+  max,
+  step,
+});
+
 /**
- * Leva controls for the active pipeline only. Debug views are derived from the
- * shared pipeline definition; session actions persist only live tunables.
+ * Leva controls for the active pipeline only: the Inspect tools first, then
+ * folders grouped the way a painter thinks about the image (Light, Pigment,
+ * Edges, Substrate), then the Session. Control keys match the pipeline prop
+ * names, so each folder's values spread straight into the pipeline. Debug
+ * views are derived from the shared pipeline definition; session actions
+ * persist only live tunables.
  */
 export function usePipelineControls() {
   const saved = useMemo(loadSaved, []);
+  const initial = (key) => saved[key] ?? DEFAULTS[key];
 
-  const [debug, setDebug] = useControls('Debug', () => ({
+  const [inspect, setInspect] = useControls('Inspect', () => ({
     view: {
       value: 'output',
       options: DEBUG_VIEWS,
       // Picking a view explicitly leaves the substrate height map.
-      onChange: (_, __, { initial }) => {
-        if (!initial) setSubstrate({ showHeightMap: false });
+      onChange: (_, __, { initial: isInitial }) => {
+        if (!isInitial) setSubstrate({ showSubstrateHeight: false });
       },
       transient: false,
     },
     channel: {
       value: 'rgb',
       options: DEBUG_CHANNELS,
-      render: (get) => get('Debug.view') === 'scene',
-    },
-    'show bounding boxes': {
-      value: saved.showBoundingBoxes ?? DEFAULTS.showBoundingBoxes,
-      render: (get) => get('Debug.view') === 'normalized-depth',
+      render: (get) => get('Inspect.view') === 'scene',
     },
   }));
 
-  const [lighting, setLighting] = useControls('Lighting', () => ({
+  const [light, setLight] = useControls('Light', () => ({
+    lightPosition: { label: 'position', value: initial('lightPosition') },
     Diffuse: folder({
-      lightPosition: saved.lightPosition ?? DEFAULTS.lightPosition,
-      diffuseAmount: {
-        value: saved.diffuseAmount ?? DEFAULTS.diffuseAmount,
-        min: 0,
-        max: 1,
-        step: 0.01,
-      },
-    }),
-    'Color Override': folder({
-      enabled: saved.colorOverrideEnabled ?? DEFAULTS.colorOverrideEnabled,
-      baseColor: saved.colorOverrideBaseColor ?? DEFAULTS.colorOverrideBaseColor,
-      shadowColor: saved.colorOverrideShadowColor ?? DEFAULTS.colorOverrideShadowColor,
+      diffuseAmount: slider(saved, 'diffuseAmount', 0, 1, 0.01, 'diffuse intensity'),
     }),
     Specular: folder({
-      specularShininess: {
-        label: 'shininess',
-        value: saved.specularShininess ?? DEFAULTS.specularShininess,
-        min: 1,
-        max: 128,
-        step: 1,
-      },
-      specularStrength: {
-        label: 'strength',
-        value: saved.specularStrength ?? DEFAULTS.specularStrength,
-        min: 0,
-        max: 1,
-        step: 0.01,
-      },
-      specularThreshold: {
-        label: 'threshold',
-        value: saved.specularThreshold ?? DEFAULTS.specularThreshold,
-        min: 0,
-        max: 1,
-        step: 0.01,
-      },
-    }),
-    Dilution: folder({
-      dilutionStrength: {
-        label: 'strength',
-        value: saved.dilutionStrength ?? DEFAULTS.dilutionStrength,
-        min: 0,
-        max: 1,
-        step: 0.01,
-      },
+      specularShininess: slider(saved, 'specularShininess', 1, 128, 1, 'shininess'),
+      specularStrength: slider(saved, 'specularStrength', 0, 1, 0.01, 'strength'),
+      specularThreshold: slider(saved, 'specularThreshold', 0, 1, 0.01, 'threshold'),
     }),
   }));
 
-  const [sobel, setSobel] = useControls('Sobel', () => ({
-    strength: {
-      value: saved.sobelStrength ?? DEFAULTS.sobelStrength,
-      min: 0,
-      max: 4,
-      step: 0.01,
-    },
-    radius: {
-      value: saved.sobelRadius ?? DEFAULTS.sobelRadius,
-      min: 1,
-      max: 6,
-      step: 1,
-    },
+  const [pigment, setPigment] = useControls('Pigment', () => ({
+    colorOverrideEnabled: { label: 'override', value: initial('colorOverrideEnabled') },
+    colorOverrideBaseColor: { label: 'base color', value: initial('colorOverrideBaseColor') },
+    colorOverrideShadowColor: { label: 'shadow color', value: initial('colorOverrideShadowColor') },
+    dilutionStrength: slider(saved, 'dilutionStrength', 0, 1, 0.01, 'dilution'),
+    // Object-space Perlin fBm applied in diffuse composition; intensity 0 = off.
+    Turbulence: folder({
+      turbulenceIntensity: slider(saved, 'turbulenceIntensity', 0, 1, 0.01, 'intensity'),
+      turbulenceScale: slider(saved, 'turbulenceScale', 0.25, 6, 0.05, 'scale'),
+      turbulenceOctaves: slider(saved, 'turbulenceOctaves', 1, TURBULENCE_MAX_OCTAVES, 1, 'octaves'),
+      turbulenceWarp: slider(saved, 'turbulenceWarp', 0, 3, 0.05, 'warp'),
+    }),
+    // CSS pixels; 0 passes the paint through unblurred.
+    Wetness: folder({
+      compositionBlurRadius: slider(saved, 'compositionBlurRadius', 0, BLUR_MAX_RADIUS, 0.5, 'paint blur'),
+    }),
   }));
 
-  const [substrate, setSubstrate] = useControls('Substrate', () => ({
-    showHeightMap: {
-      label: 'height map',
-      value: saved.showSubstrateHeight ?? DEFAULTS.showSubstrateHeight,
-    },
-    color: saved.substrateColor ?? DEFAULTS.substrateColor,
-    scale: {
-      value: saved.substrateScale ?? DEFAULTS.substrateScale,
-      min: 0.5,
-      max: 12,
-      step: 0.1,
-    },
-  }));
-
-  // Radii are in CSS pixels; 0 passes the input through unchanged.
-  const [blur, setBlur] = useControls('Blur', () => ({
-    compositionBlurRadius: {
-      label: 'diffuse',
-      ...blurRadius(saved.compositionBlurRadius ?? DEFAULTS.compositionBlurRadius),
-    },
-    sobelBlurRadius: {
-      label: 'sobel',
-      ...blurRadius(saved.sobelBlurRadius ?? DEFAULTS.sobelBlurRadius),
-    },
-  }));
-
-  // Edge width is Blur › sobel (the thesis's W); strength 0 leaves the paint unchanged.
-  const [edgeDarkening, setEdgeDarkening] = useControls('Edge Darkening', () => ({
-    strength: {
-      value: saved.edgeDarkening ?? DEFAULTS.edgeDarkening,
-      min: 0,
-      max: 5,
-      step: 0.05,
-    },
+  // Width is the sobel blur radius (the thesis's W, CSS px); darkening 0 = off.
+  const [edges, setEdges] = useControls('Edges', () => ({
+    edgeDarkening: slider(saved, 'edgeDarkening', 0, 5, 0.05, 'darkening'),
+    sobelBlurRadius: slider(saved, 'sobelBlurRadius', 0, BLUR_MAX_RADIUS, 0.5, 'width'),
+    Detection: folder({
+      sobelStrength: slider(saved, 'sobelStrength', 0, 4, 0.01, 'sobel strength'),
+      sobelRadius: slider(saved, 'sobelRadius', 1, 6, 1, 'sobel radius'),
+      // Drawn over the depth and sobel views.
+      showBoundingBoxes: { label: 'bounding boxes', value: initial('showBoundingBoxes') },
+    }),
   }));
 
   // Each effect toggles independently; its settings show only while it is on.
-  const [substrateFx, setSubstrateFx] = useControls('Substrate FX', () => ({
-    substrateDistortionEnabled: {
-      label: 'distortion',
-      value: saved.substrateDistortionEnabled ?? DEFAULTS.substrateDistortionEnabled,
-    },
-    substrateDistortion: {
-      label: 'amount',
-      value: saved.substrateDistortion ?? DEFAULTS.substrateDistortion,
-      min: 0,
-      max: 8,
-      step: 0.1,
-      render: (get) => get('Substrate FX.substrateDistortionEnabled'),
-    },
-    substrateLightingEnabled: {
-      label: 'lighting',
-      value: saved.substrateLightingEnabled ?? DEFAULTS.substrateLightingEnabled,
-    },
-    substrateLightAngle: {
-      label: 'light angle',
-      value: saved.substrateLightAngle ?? DEFAULTS.substrateLightAngle,
-      min: 0,
-      max: 360,
-      step: 1,
-      render: (get) => get('Substrate FX.substrateLightingEnabled'),
-    },
-    substrateLightStrength: {
-      label: 'light strength',
-      value: saved.substrateLightStrength ?? DEFAULTS.substrateLightStrength,
-      min: 0,
-      max: 1,
-      step: 0.01,
-      render: (get) => get('Substrate FX.substrateLightingEnabled'),
-    },
-    substrateRoughness: {
-      label: 'roughness',
-      value: saved.substrateRoughness ?? DEFAULTS.substrateRoughness,
-      min: 0,
-      max: 4,
-      step: 0.05,
-      render: (get) => get('Substrate FX.substrateLightingEnabled'),
-    },
+  const [substrate, setSubstrate] = useControls('Substrate', () => ({
+    showSubstrateHeight: { label: 'height map', value: initial('showSubstrateHeight') },
+    substrateColor: { label: 'color', value: initial('substrateColor') },
+    substrateScale: slider(saved, 'substrateScale', 0.5, 12, 0.1, 'scale'),
+    Distortion: folder({
+      substrateDistortionEnabled: { label: 'enabled', value: initial('substrateDistortionEnabled') },
+      substrateDistortion: {
+        ...slider(saved, 'substrateDistortion', 0, 8, 0.1, 'amount'),
+        render: (get) => get('Substrate.Distortion.substrateDistortionEnabled'),
+      },
+    }),
+    Lighting: folder({
+      substrateLightingEnabled: { label: 'enabled', value: initial('substrateLightingEnabled') },
+      substrateLightAngle: {
+        ...slider(saved, 'substrateLightAngle', 0, 360, 1, 'angle'),
+        render: (get) => get('Substrate.Lighting.substrateLightingEnabled'),
+      },
+      substrateLightStrength: {
+        ...slider(saved, 'substrateLightStrength', 0, 1, 0.01, 'strength'),
+        render: (get) => get('Substrate.Lighting.substrateLightingEnabled'),
+      },
+      substrateRoughness: {
+        ...slider(saved, 'substrateRoughness', 0, 4, 0.05, 'roughness'),
+        render: (get) => get('Substrate.Lighting.substrateLightingEnabled'),
+      },
+    }),
   }));
 
-  const values = {
-    showBoundingBoxes: debug['show bounding boxes'],
-    lightPosition: lighting.lightPosition,
-    diffuseAmount: lighting.diffuseAmount,
-    colorOverrideBaseColor: lighting.baseColor,
-    colorOverrideShadowColor: lighting.shadowColor,
-    colorOverrideEnabled: lighting.enabled,
-    dilutionStrength: lighting.dilutionStrength,
-    specularShininess: lighting.specularShininess,
-    specularStrength: lighting.specularStrength,
-    specularThreshold: lighting.specularThreshold,
-    sobelStrength: sobel.strength,
-    sobelRadius: sobel.radius,
-    substrateColor: substrate.color,
-    substrateScale: substrate.scale,
-    showSubstrateHeight: substrate.showHeightMap,
-    compositionBlurRadius: blur.compositionBlurRadius,
-    sobelBlurRadius: blur.sobelBlurRadius,
-    edgeDarkening: edgeDarkening.strength,
-    ...substrateFx,
-  };
+  const values = { ...light, ...pigment, ...edges, ...substrate };
   const valuesRef = useRef(values);
   valuesRef.current = values;
 
@@ -269,42 +193,10 @@ export function usePipelineControls() {
     }),
     'reset to defaults': button(() => {
       localStorage.removeItem(STORAGE_KEY);
-      setDebug({
-        'show bounding boxes': DEFAULTS.showBoundingBoxes,
-      });
-      setLighting({
-        lightPosition: DEFAULTS.lightPosition,
-        diffuseAmount: DEFAULTS.diffuseAmount,
-        enabled: DEFAULTS.colorOverrideEnabled,
-        baseColor: DEFAULTS.colorOverrideBaseColor,
-        shadowColor: DEFAULTS.colorOverrideShadowColor,
-        dilutionStrength: DEFAULTS.dilutionStrength,
-        specularShininess: DEFAULTS.specularShininess,
-        specularStrength: DEFAULTS.specularStrength,
-        specularThreshold: DEFAULTS.specularThreshold,
-      });
-      setSobel({
-        strength: DEFAULTS.sobelStrength,
-        radius: DEFAULTS.sobelRadius,
-      });
-      setSubstrate({
-        color: DEFAULTS.substrateColor,
-        scale: DEFAULTS.substrateScale,
-        showHeightMap: DEFAULTS.showSubstrateHeight,
-      });
-      setBlur({
-        compositionBlurRadius: DEFAULTS.compositionBlurRadius,
-        sobelBlurRadius: DEFAULTS.sobelBlurRadius,
-      });
-      setEdgeDarkening({ strength: DEFAULTS.edgeDarkening });
-      setSubstrateFx({
-        substrateDistortionEnabled: DEFAULTS.substrateDistortionEnabled,
-        substrateDistortion: DEFAULTS.substrateDistortion,
-        substrateLightingEnabled: DEFAULTS.substrateLightingEnabled,
-        substrateLightAngle: DEFAULTS.substrateLightAngle,
-        substrateLightStrength: DEFAULTS.substrateLightStrength,
-        substrateRoughness: DEFAULTS.substrateRoughness,
-      });
+      setLight(pick(DEFAULTS, Object.keys(light)));
+      setPigment(pick(DEFAULTS, Object.keys(pigment)));
+      setEdges(pick(DEFAULTS, Object.keys(edges)));
+      setSubstrate(pick(DEFAULTS, Object.keys(substrate)));
     }),
     'copy values': button(() => {
       navigator.clipboard?.writeText(JSON.stringify(valuesRef.current, null, 2));
@@ -314,11 +206,8 @@ export function usePipelineControls() {
   return {
     ...values,
     // The height toggle overrides the selected view with the substrate height map.
-    debugView: substrate.showHeightMap ? 'substrate' : debug.view,
-    debugChannel: debug.channel,
-    showBoundingBoxes: debug['show bounding boxes'],
-    colorOverrideEnabled: lighting.enabled,
-    showSubstrateHeight: substrate.showHeightMap,
-    setDebugView: (view) => setDebug({ view }),
+    debugView: substrate.showSubstrateHeight ? 'substrate' : inspect.view,
+    debugChannel: inspect.channel,
+    setDebugView: (view) => setInspect({ view }),
   };
 }

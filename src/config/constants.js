@@ -24,16 +24,6 @@ export const PIPELINE_STAGES = [
     inputs: [],
   },
   {
-    key: 'raw-depth',
-    label: 'raw depth',
-    kind: 'pass',
-    fboKey: 'rawDepth',
-    debugView: 'raw-depth',
-    debugMode: 'raw-depth',
-    hint: 'unnormalized linear camera-view distance with coverage',
-    inputs: ['scene'],
-  },
-  {
     key: 'diffuse',
     label: 'diffuse',
     kind: 'pass',
@@ -50,16 +40,6 @@ export const PIPELINE_STAGES = [
     debugView: 'specular',
     hint: 'thresholded Blinn–Phong highlight mask',
     inputs: ['scene'],
-  },
-  {
-    key: 'normalized-depth',
-    label: 'norm. depth',
-    kind: 'pass',
-    fboKey: 'normalizedDepth',
-    debugView: 'normalized-depth',
-    debugMode: 'normalized-depth',
-    hint: 'per-subject visible depth normalized from nearest to farthest',
-    inputs: ['raw-depth'],
   },
   {
     key: 'color-override',
@@ -81,13 +61,33 @@ export const PIPELINE_STAGES = [
     inputs: ['diffuse'],
   },
   {
+    key: 'turbulence',
+    label: 'turbulence',
+    kind: 'pass',
+    fboKey: 'turbulence',
+    debugView: 'turbulence',
+    debugMode: 'signed',
+    hint: 'object-space Perlin fBm: signed pigment density offset (+ more pigment, − thinner)',
+    inputs: ['scene'],
+  },
+  {
+    key: 'depth',
+    label: 'depth',
+    kind: 'pass',
+    fboKey: 'depth',
+    debugView: 'depth',
+    debugMode: 'depth',
+    hint: 'per-subject visible depth normalized from nearest to farthest, with coverage',
+    inputs: ['scene'],
+  },
+  {
     key: 'sobel',
     label: 'sobel',
     kind: 'pass',
     fboKey: 'sobel',
     debugView: 'sobel',
-    hint: 'continuous edge strength from normalized depth',
-    inputs: ['normalized-depth'],
+    hint: 'continuous edge strength from depth',
+    inputs: ['depth'],
   },
   {
     key: 'diffuse-composition',
@@ -96,8 +96,8 @@ export const PIPELINE_STAGES = [
     fboKey: 'diffuseComposition',
     debugView: 'diffuse-composition',
     debugMode: 'composition',
-    hint: 'diffuse composition: color override pigment with dilution density in alpha',
-    inputs: ['color-override', 'dilution'],
+    hint: 'diffuse composition: color override pigment with dilution density in alpha, mottled by pigment turbulence',
+    inputs: ['color-override', 'dilution', 'turbulence'],
   },
   {
     key: 'sobel-blur',
@@ -129,43 +129,23 @@ export const PIPELINE_STAGES = [
     inputs: ['diffuse-composition-blur', 'sobel-blur'],
   },
   {
-    key: 'gradient',
-    label: 'gradient',
-    kind: 'pass',
-    fboKey: 'gradient',
-    debugView: 'gradient',
-    debugMode: 'signed',
-    hint: 'signed substrate slope ∇h per paper unit (uphill, y screen-down)',
-    inputs: ['substrate'],
-  },
-  {
-    key: 'substrate-fx',
-    label: 'substrate fx',
-    kind: 'pass',
-    fboKey: 'substrateFx',
-    debugView: 'substrate-fx',
-    hint: 'edge-darkened paint on paper, specular highlights lifted to bare paper, with toggleable substrate distortion and lighting',
-    inputs: ['edge-darkening', 'gradient', 'specular'],
-  },
-  {
     key: 'output',
     label: 'output',
     kind: 'output',
     debugView: 'output',
-    hint: 'the finished painting drawn to screen',
-    inputs: ['substrate-fx'],
+    hint: 'the finished painting: edge-darkened paint, highlights lifted, on distorted and lit paper',
+    inputs: ['edge-darkening', 'specular', 'substrate'],
   },
 ];
 
 // Matches uMode in debugFragment.frag.
 export const DEBUG_MODES = {
   color: 0,
-  'raw-depth': 1,
-  'normalized-depth': 2,
-  coverage: 3,
-  substrate: 4,
-  composition: 5,
-  signed: 6,
+  depth: 1,
+  coverage: 2,
+  substrate: 3,
+  composition: 4,
+  signed: 5,
 };
 
 export const PIPELINE_FBO_KEYS = PIPELINE_STAGES.filter(({ fboKey }) => fboKey).map(
@@ -188,7 +168,7 @@ export const FBO_OPTIONS = {
   format: THREE.RGBAFormat,
 };
 
-export const RAW_DEPTH_FBO_OPTIONS = {
+export const DEPTH_FBO_OPTIONS = {
   minFilter: THREE.NearestFilter,
   magFilter: THREE.NearestFilter,
   format: THREE.RGBAFormat,
@@ -197,7 +177,8 @@ export const RAW_DEPTH_FBO_OPTIONS = {
 
 // Premultiplied blur intermediates need more than 8 bits at low alpha.
 export const BLUR_FBO_OPTIONS = { ...FBO_OPTIONS, type: THREE.HalfFloatType };
-// Substrate height and its signed gradient need float precision for 1-texel differences.
+// Substrate height needs float precision for 1-texel slope differences; signed
+// maps (turbulence) need negative values.
 export const SIGNED_FBO_OPTIONS = { ...FBO_OPTIONS, type: THREE.HalfFloatType };
 export const BLUR_MAX_TAPS = 32; // keep in sync with MAX_TAPS in gaussianBlurFragment.frag
 
@@ -216,6 +197,11 @@ export const DEFAULT_SUBSTRATE_SCALE = 2.5;
 export const DEFAULT_COMPOSITION_BLUR_RADIUS = 12; // CSS pixels, ≈3σ
 export const DEFAULT_SOBEL_BLUR_RADIUS = 10;
 export const BLUR_MAX_RADIUS = 16;
+export const DEFAULT_TURBULENCE_INTENSITY = 0.5;
+export const DEFAULT_TURBULENCE_SCALE = 1.5; // noise cycles per object unit
+export const DEFAULT_TURBULENCE_OCTAVES = 3;
+export const TURBULENCE_MAX_OCTAVES = 6; // keep in sync with MAX_OCTAVES in turbulenceFragment.frag
+export const DEFAULT_TURBULENCE_WARP = 0;
 export const DEFAULT_EDGE_DARKENING = 3; // k in Ed = k·Eb
 export const DEFAULT_SUBSTRATE_DISTORTION = 4; // CSS pixels per unit slope
 export const DEFAULT_SUBSTRATE_LIGHT_ANGLE = 66; // degrees, counter-clockwise from the right
@@ -230,18 +216,16 @@ export const FULLSCREEN_QUAD_SIZE = 2;
 // therefore owns the complete frame: captures first, then reductions, output, debug.
 export const UNIFORM_SYNC_FRAME_ORDER = -1;
 export const SUBSTRATE_PASS_FRAME_ORDER = 0;
-export const GRADIENT_PASS_FRAME_ORDER = 0.1;
 export const SCENE_PASS_FRAME_ORDER = 1;
-export const RAW_DEPTH_PASS_FRAME_ORDER = 2;
+export const DEPTH_PASS_FRAME_ORDER = 2;
 export const DIFFUSE_PASS_FRAME_ORDER = 3;
+export const TURBULENCE_PASS_FRAME_ORDER = 3.05;
 export const COLOR_OVERRIDE_PASS_FRAME_ORDER = 3.1;
 export const DILUTION_PASS_FRAME_ORDER = 3.1;
 export const DIFFUSE_COMPOSITION_PASS_FRAME_ORDER = 3.15;
 export const SPECULAR_PASS_FRAME_ORDER = 3.2;
-export const NORMALIZED_DEPTH_FRAME_ORDER = 4;
 export const SOBEL_PASS_FRAME_ORDER = 4.1;
 export const BLUR_PASS_FRAME_ORDER = 4.2;
 export const EDGE_DARKENING_PASS_FRAME_ORDER = 4.25;
-export const SUBSTRATE_FX_PASS_FRAME_ORDER = 4.3;
 export const OUTPUT_FRAME_ORDER = 5;
 export const DEBUG_VIEW_FRAME_ORDER = 6;

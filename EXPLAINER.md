@@ -6,33 +6,30 @@ and finished on procedural paper.
 ## One frame
 
 ```text
-                                scene
-        ┌─────────────────────────┼───────────────────┐
-    raw-depth                  diffuse            specular
-        │                  ┌──────┴──────┐            │
-normalized-depth    color override   dilution         │
-        │                  └──────┬──────┘            │
-      sobel              diffuse-composition          │
-        │                         │                   │
-   sobel-blur         diffuse-composition-blur        │       substrate
-        └────────────┬────────────┘                   │           │
-              edge-darkening                          │       gradient
-                     └──────────────────────┬─────────┴───────────┘
-                                      substrate-fx
-                                            │
-                                         output
+                                              scene
+                 ┌──────────────────────┬───────┴─────────┬─────────────┐
+              diffuse              turbulence           depth       specular
+         ┌───────┴─────────┐            │                 │             │
+  color override       dilution         │               sobel           │
+         └───────┬─────────┴────────────┘                 │             │
+        diffuse-composition                          sobel-blur         │         substrate
+                 │                                        │             │             │
+     diffuse-composition-blur                             │             │             │
+                 └───────────────────┬────────────────────┘             │             │
+                              edge-darkening                            │             │
+                                     └──────────────────────┬───────────┴─────────────┘
+                                                         output
 ```
 
 `ScenePass` captures original-material RGBA color; clicking `scene` shows it.
-`RawDepthPass` separately
-captures the same scene: red is unnormalized linear view-space distance and
-alpha is coverage. `NormalizedDepthPass` calculates each registered subject's
-range on the CPU from the eight corners of every mesh's local bounding box after
-transforming them into camera view space. The range is stable and inexpensive,
-but approximate: actual mesh pixels may not reach exactly 0 or 1. Its final
-image still compares each subject to full-scene raw depth, so only visible pixels
-are written. `OutputPass` draws the finished painting (`substrate-fx`) to the
-screen.
+Nothing else uses it, so it only renders while you are looking at it.
+`DepthPass` produces each registered subject's depth normalized from 0 (its
+nearest point) to 1 (its farthest). The range comes from the eight corners of
+every mesh's bounding box, transformed into camera view space: stable and
+cheap, but approximate, so actual pixels may not reach exactly 0 or 1. To keep
+only visible pixels, it first renders the whole scene into the depth buffer
+alone, then draws each subject only where it is the frontmost surface.
+`OutputPass` draws the finished painting to the screen.
 
 `SubstratePass` generates stationary procedural paper independently of the
 scene, modeled on a photo of cold-press watercolor paper. Alpha stores a
@@ -41,13 +38,13 @@ noise bumps that form the paper's tooth, with fine grain and a faint broad
 drift. RGB is the near-white paper tint lit softly from the upper left across
 that height, so the visible bumps are the stored height. The pattern is anchored
 to CSS pixels, so it stays put under camera movement, resizing, and browser
-zoom. It shapes the painting through `gradient` and `substrate-fx`. The Substrate section's `height map` toggle displays its alpha
+zoom. `OutputPass` reads its height to shape the painting. The Substrate section's `height map` toggle displays its alpha
 as grayscale from any debug view, until another view is picked; normal
 substrate inspection displays the paper RGB without a checkerboard.
 
-`SobelPass` finds edges in normalized depth. A shared directional
+`SobelPass` finds edges in depth. A shared directional
 shader produces private horizontal and vertical gradients, then a combine pass
-writes their continuous grayscale magnitude. Its alpha follows normalized-depth
+writes their continuous grayscale magnitude. Its alpha follows depth
 coverage, so only absent pixels checkerboard. Strength scales edge brightness;
 integer radius selects the source-pixel sampling distance.
 
@@ -69,17 +66,16 @@ thickens too, so less paper shows through at the rim. The sobel blur radius sets
 leaves the paint untouched.
 
 The substrate shapes the paint through two effects from Montesdeoca's thesis
-(§5.3). `GradientPass` measures the paper's slope from its height: which way is
-uphill, and how steep. `SubstrateFxPass` then applies it to the edge-darkened
-paint. **Distortion** samples the paint slightly uphill, so pigment slides into
+(§5.3), applied by `OutputPass` as it draws the finished painting. It measures
+the paper's slope straight from the height (which way is uphill, and how
+steep) and applies it to the edge-darkened paint. **Distortion** samples the paint slightly uphill, so pigment slides into
 the paper's valleys and edges wobble with the tooth. **Specular highlights** are
 then left unpainted, like a watercolorist saving the white of the paper: the
 specular mask removes pigment, so bare paper shows. The paint is then laid over
 the flat paper color. **Lighting** shades the result as if the paper were lit
 from one side, using a surface normal rebuilt from the slope (it points up,
 leaning toward the valley). Each effect has its own toggle, and with both off
-the node shows clean paint on flat paper. This is the finished painting, and
-the output shows it; the paper is the background.
+the output shows clean paint on flat paper. The paper is the background.
 
 `DiffusePass` captures a flat-to-Lambert
 response from the scene; `ColorOverridePass` maps it from navy shadow to cyan
@@ -87,36 +83,42 @@ base pigment. Its Color Override enable toggle instead leaves the base pigment
 under the Lambert response when disabled. `DilutionPass`
 uses the same diffuse response to thin coverage in lit areas.
 `DiffuseCompositionPass` joins the two into one watercolor layer: color-override
-pigment in RGB, dilution density in alpha, laid over paper in substrate fx.
+pigment in RGB, dilution density in alpha, laid over paper in the output.
+
+It also adds pigment turbulence (Montesdeoca §5.1.1): the uneven, cloudy
+settling of pigment in a wet wash. `TurbulencePass` paints 3D Perlin fBm noise
+onto each surface in the object's own coordinates, so the pattern stays stuck
+to the object as it or the camera moves. Where the noise is positive, pigment
+piles up (the same hue, darker and richer, and denser); where it is negative,
+the wash thins toward the paper. Intensity, scale, octaves (how much fine
+detail) and an optional warp (which swirls the blotches into flows) are
+adjustable; intensity 0 turns it off.
 `SpecularPass` is a thresholded Blinn–Phong mask that marks the highlights.
 These passes share one world-space light position.
 
-The Leva Lighting folder groups the controls into Diffuse, Color Override,
-Specular, and Dilution subfolders. The Sobel section controls edge strength and
-integer source-pixel radius. The Blur section sets each blur's radius. The Edge
-Darkening section sets its strength. The Substrate FX section toggles
-distortion and lighting, and shows each one's settings while it is on. There is
-no background control: the paper is the background.
+The Leva panel opens with **Inspect**, which picks the debug view. The rest is
+grouped the way a painter thinks about the image: **Light**
+(position, with Diffuse intensity and Specular highlights), **Pigment** (colors,
+dilution, Turbulence, and Wetness for the paint blur), **Edges** (darkening and
+its width, with Detection holding the sobel settings and bounding boxes), and
+**Substrate** (height map, color, scale, and the Distortion and Lighting
+effects, each with its own toggle). **Session** at the bottom saves or resets. There is no background control: the paper is the
+background.
 
 ## Empty pixels and inspection
 
-Intermediate targets stay neutral: the scene capture clears to transparent black; raw and
-normalized depth clear to zero with alpha coverage zero. The checkerboard exists
+Intermediate targets stay neutral: the scene capture clears to transparent
+black; depth clears to zero with alpha coverage zero. The checkerboard exists
 only in `DebugPass`, marking absent data in every non-output probe. Output
 is the only opaque/composited view. Its checker cells are fixed screen-space
 squares, so resizing the window does not stretch them.
 
-While inspecting normalized depth, `show bounding boxes` draws the registered
-subjects' transformed per-mesh bounds in orange after `DebugPass` displays the
-FBO. It never changes normalized-depth data or output.
+While inspecting depth or sobel, `bounding boxes` (Edges › Detection) draws the registered subjects'
+transformed per-mesh bounds in orange after `DebugPass` displays the FBO. It
+never changes depth data or output.
 
-Raw depth is previewed through the active camera near/far range, but its stored
-value remains a scene-unit distance for later edge and pigment effects.
-
-All intermediate targets follow the canvas's device-pixel ratio. Normalized
-depth samples raw depth with each fragment's projected screen UV, rather than
-assuming its FBO has the same pixel grid. This keeps the captures aligned when
-browser zoom changes.
+All intermediate targets follow the canvas's device-pixel ratio, so the
+captures stay aligned when browser zoom changes.
 
 Dilution is inspected as coverage grayscale; its checkerboard appears only for
 zero coverage, rather than for partially diluted pixels. Diffuse composition is

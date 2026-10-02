@@ -4,8 +4,11 @@ import { useFBO } from '@react-three/drei';
 import * as THREE from 'three';
 import { FBO_OPTIONS, SCENE_PASS_FRAME_ORDER } from '../../config';
 
-/** Captures the unstyled scene with its original materials (the scene probe). */
-export function ScenePass({ outputRef }) {
+/**
+ * Captures the unstyled scene with its original materials (the scene probe).
+ * Nothing downstream reads it, so it only renders while `active` (viewed).
+ */
+export function ScenePass({ outputRef, active = true }) {
   const { gl, scene, camera } = useThree();
   const target = useFBO(FBO_OPTIONS);
   const savedClearColor = useRef(new THREE.Color()).current;
@@ -13,6 +16,7 @@ export function ScenePass({ outputRef }) {
   if (outputRef) outputRef.current = target;
 
   useFrame(() => {
+    if (!active) return;
     const previousTarget = gl.getRenderTarget();
     const previousClearAlpha = gl.getClearAlpha();
     gl.getClearColor(savedClearColor);

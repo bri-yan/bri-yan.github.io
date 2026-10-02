@@ -1,21 +1,72 @@
 import { useFrame } from '@react-three/fiber';
+import * as THREE from 'three';
 import { OUTPUT_FRAME_ORDER } from '../../config';
 import { useFullscreenPass } from '../utils/passHooks';
 import outputFragment from '../../shaders/outputFragment.frag?raw';
 
-/** Draws the finished, opaque painting to the screen. */
-export function OutputPass({ sourceRef }) {
+const DEG_TO_RAD = Math.PI / 180;
+
+/**
+ * Draws the finished painting to screen: edge-darkened paint on paper with
+ * specular highlights lifted to bare paper, and toggleable substrate effects.
+ * Distortion shifts the paint along the paper slope; lighting shades
+ * everything by paper normals rebuilt from that slope.
+ */
+export function OutputPass({
+  paintRef,
+  specularRef,
+  substrateRef,
+  paperColor,
+  substrateScale,
+  distortionEnabled,
+  distortion,
+  lightingEnabled,
+  lightAngle,
+  lightStrength,
+  roughness,
+}) {
   const { uniforms, render } = useFullscreenPass(
     outputFragment,
     () => ({
-      tSource: { value: null },
+      tPaint: { value: null },
+      tSpecular: { value: null },
+      tSubstrate: { value: null },
+      uCssPixelToUv: { value: new THREE.Vector2() },
+      uSubstrateTexelSize: { value: new THREE.Vector2() },
+      uPixelsPerPaperUnit: { value: 1 },
+      uPaperColor: { value: paperColor },
+      uDistortionEnabled: { value: true },
+      uDistortion: { value: 0 },
+      uLightingEnabled: { value: true },
+      uLightDirection: { value: new THREE.Vector3() },
+      uLightStrength: { value: 0 },
+      uRoughness: { value: 1 },
     }),
     { offscreen: false }
   );
 
-  useFrame(() => {
-    if (!sourceRef?.current) return;
-    uniforms.tSource.value = sourceRef.current.texture;
+  useFrame(({ gl }) => {
+    const paint = paintRef.current;
+    const specular = specularRef.current;
+    const substrate = substrateRef.current;
+    if (!paint || !specular || !substrate) return;
+
+    const pixelRatio = gl.getPixelRatio();
+    const angle = lightAngle * DEG_TO_RAD;
+    uniforms.tPaint.value = paint.texture;
+    uniforms.tSpecular.value = specular.texture;
+    uniforms.tSubstrate.value = substrate.texture;
+    uniforms.uCssPixelToUv.value.set(pixelRatio / paint.width, pixelRatio / paint.height);
+    uniforms.uSubstrateTexelSize.value.set(1 / substrate.width, 1 / substrate.height);
+    uniforms.uPixelsPerPaperUnit.value = pixelRatio * Math.max(substrateScale, 0.5);
+    uniforms.uPaperColor.value = paperColor;
+    uniforms.uDistortionEnabled.value = distortionEnabled;
+    uniforms.uDistortion.value = distortion;
+    uniforms.uLightingEnabled.value = lightingEnabled;
+    // Angle 0° = light from the right, counter-clockwise on screen; y is screen-down.
+    uniforms.uLightDirection.value.set(Math.cos(angle), -Math.sin(angle), 1).normalize();
+    uniforms.uLightStrength.value = lightStrength;
+    uniforms.uRoughness.value = roughness;
     render();
   }, OUTPUT_FRAME_ORDER);
 

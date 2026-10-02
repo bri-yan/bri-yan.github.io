@@ -5,16 +5,16 @@ import { useFullscreenPass } from '../utils/passHooks';
 import sobelDirectionalFragment from '../../shaders/sobelDirectionalFragment.frag?raw';
 import sobelCombineFragment from '../../shaders/sobelCombineFragment.frag?raw';
 
-/** Produces continuous normalized-depth edges from private horizontal and vertical gradients. */
-export function SobelPass({ normalizedDepthRef, outputRef, strength, radius }) {
+/** Produces continuous depth edges from private horizontal and vertical gradients. */
+export function SobelPass({ depthRef, outputRef, strength, radius }) {
   const horizontal = useFullscreenPass(sobelDirectionalFragment, () => ({
-    tNormalizedDepth: { value: null },
+    tDepth: { value: null },
     uTexelSize: { value: new THREE.Vector2() },
     uDirection: { value: 0 },
     uRadius: { value: 1 },
   }));
   const vertical = useFullscreenPass(sobelDirectionalFragment, () => ({
-    tNormalizedDepth: { value: null },
+    tDepth: { value: null },
     uTexelSize: { value: new THREE.Vector2() },
     uDirection: { value: 1 },
     uRadius: { value: 1 },
@@ -28,16 +28,16 @@ export function SobelPass({ normalizedDepthRef, outputRef, strength, radius }) {
   if (outputRef) outputRef.current = combined.target;
 
   useFrame(() => {
-    const normalizedDepth = normalizedDepthRef.current;
-    if (!normalizedDepth) return;
+    const depth = depthRef.current;
+    if (!depth) return;
 
     const texelSize = horizontal.uniforms.uTexelSize.value;
-    texelSize.set(1 / normalizedDepth.width, 1 / normalizedDepth.height);
-    horizontal.uniforms.tNormalizedDepth.value = normalizedDepth.texture;
+    texelSize.set(1 / depth.width, 1 / depth.height);
+    horizontal.uniforms.tDepth.value = depth.texture;
     horizontal.uniforms.uRadius.value = radius;
     horizontal.render();
 
-    vertical.uniforms.tNormalizedDepth.value = normalizedDepth.texture;
+    vertical.uniforms.tDepth.value = depth.texture;
     vertical.uniforms.uTexelSize.value.copy(texelSize);
     vertical.uniforms.uRadius.value = radius;
     vertical.render();

@@ -1,8 +1,6 @@
 uniform sampler2D tInput;
 uniform int uChannel; // 0 = rgb, 1 = alpha as grayscale, 2 = rgb × alpha
-uniform int uMode; // DEBUG_MODES in constants.js: 0 color, 1 raw depth, 2 normalized depth, 3 coverage, 4 substrate, 5 composition, 6 signed
-uniform float uNear;
-uniform float uFar;
+uniform int uMode; // DEBUG_MODES in constants.js: 0 color, 1 depth, 2 coverage, 3 substrate, 4 composition, 5 signed
 uniform int uShowSubstrateHeight;
 
 varying vec2 vUv;
@@ -12,12 +10,11 @@ const int RGB_CHANNEL = 0;
 const int ALPHA_CHANNEL = 1;
 const int PREMULTIPLIED_RGB_CHANNEL = 2;
 const int COLOR_MODE = 0;
-const int RAW_DEPTH_MODE = 1;
-const int NORMALIZED_DEPTH_MODE = 2;
-const int COVERAGE_MODE = 3;
-const int SUBSTRATE_MODE = 4;
-const int COMPOSITION_MODE = 5;
-const int SIGNED_MODE = 6;
+const int DEPTH_MODE = 1;
+const int COVERAGE_MODE = 2;
+const int SUBSTRATE_MODE = 3;
+const int COMPOSITION_MODE = 4;
+const int SIGNED_MODE = 5;
 
 vec3 checkerboard() {
   float checker = mod(
@@ -35,10 +32,6 @@ vec3 colorChannels(vec4 inputSample) {
   return inputSample.rgb;
 }
 
-float normalizedRawDepth(float depth) {
-  return clamp((depth - uNear) / max(uFar - uNear, 0.0001), 0.0, 1.0);
-}
-
 void main() {
   vec4 inputSample = texture2D(tInput, vUv);
   vec3 checker = checkerboard();
@@ -50,8 +43,13 @@ void main() {
   }
 
   // Density thins pigment over the checkerboard instead of the binary coverage cutoff.
-  // Signed vectors (e.g. gradient) map [-1, 1] to [0, 1]; zero reads mid-gray.
+  // Signed values (e.g. turbulence) map [-1, 1] to [0, 1]; zero reads
+  // mid-gray, and absent coverage (A = 0) shows the checkerboard.
   if (uMode == SIGNED_MODE) {
+    if (inputSample.a <= 0.0) {
+      gl_FragColor = vec4(checker, 1.0);
+      return;
+    }
     gl_FragColor = vec4(clamp(0.5 + 0.5 * inputSample.rgb, 0.0, 1.0), 1.0);
     return;
   }
@@ -73,12 +71,7 @@ void main() {
     return;
   }
 
-  if (uMode == RAW_DEPTH_MODE) {
-    gl_FragColor = vec4(vec3(normalizedRawDepth(inputSample.r)), 1.0);
-    return;
-  }
-
-  if (uMode == NORMALIZED_DEPTH_MODE) {
+  if (uMode == DEPTH_MODE) {
     gl_FragColor = vec4(vec3(clamp(inputSample.r, 0.0, 1.0)), 1.0);
     return;
   }
