@@ -71,16 +71,23 @@ priority order.
   photo. A is a clamped 0–1 height: a 3-octave gradient-noise fBm, slightly
   vertically elongated and laterally warped (the paper tooth), plus fine grain
   and a faint broad drift. It uses a sin-free hash for GPU stability and is
-  evaluated in top-left-anchored CSS pixels divided by `scale`, so it stays
-  fixed through camera moves, resizes, and browser zoom. RGB is the paper color
+  evaluated in CSS pixels from the screen center divided by the zoomed scale
+  (`scale` × camera zoom, from `src/pipeline/utils/paperZoom.js`: initial
+  camera distance ÷ distance to the default controls' target, floored at
+  `MIN_PAPER_SCALE`). It stays fixed through orbiting, panning, and DPR changes
+  but grows about the screen center as the camera zooms in, so zooming in
+  zooms into the paper; `OrbitControls` is `makeDefault` so the target is
+  readable. RGB is the paper color
   lit softly from the upper left across the height's slope (plus a slight
   height tint), so the visible tooth is the stored height. Default color is the
   near-white `#f7f1ec`. Unlike coverage signals, its debug view
   never checkerboards; the Substrate `height map` toggle displays alpha as
   grayscale. Its target is HalfFloat so 1-texel height differences are smooth.
   `output` reads it directly: the paper slope ∇h comes from central
-  differences of its alpha, as height change per paper unit (× DPR × scale,
-  so it's O(1) and independent of zoom and `scale`), pointing uphill with x
+  differences of its alpha, as height change per paper unit (× DPR × zoomed
+  scale, so it's O(1) and independent of zoom and `scale`). Distortion is
+  multiplied by the zoom magnification so the paint's shift grows with the
+  paper, pointing uphill with x
   right and y screen-down. There is no separate gradient target.
 - `edge-darkening` follows Montesdeoca §5.2.1: `Ed = k · Eb`, where `Eb` is
   `sobel-blur`'s un-premultiplied edge (the premultiplied blur keeps the rim
@@ -208,12 +215,23 @@ It is styled as a printed figure plate: small-caps serif labels (Cormorant SC
 and EB Garamond, loaded in `index.html`) on a frosted vellum sheet (translucent
 paper tint plus backdrop blur, so the ink reads over every debug view while the
 render shows through); hairline ink wires in flowing curves; and the stage
-being viewed resting in a soft pastel wash of the base pigment color (the
-Color Override base color mixed toward paper white, with blurred, wavering
-edges; `App` passes it in as `washColor`). Hover and focus show a fainter
-wash. Stage labels are display-only and
+being viewed marked by a single watercolor droplet of the base pigment color
+just before its label (where its incoming wires land; a turbulence-displaced
+circle with a small glint) and its label inked in that pigment deepened toward
+the ink (the Color Override base color; `App` passes it in as `washColor`).
+The drop pops in with a slight overshoot; focus shows a faint drop. Stage labels are display-only and
 kept short (e.g. `diffuse comp`); the caption's "now showing" spells the
 viewed stage's key with spaces (e.g. `diffuse composition blur`).
+The caption title is also the fold toggle: clicking "Fig. 1 — the watercolor
+pipeline" (a real button with `aria-expanded`) folds the plate up under its
+caption line, leaving the title and "now showing" visible, and the small inked
+tick to the left of the title turns to point at the folded plate. Folded, the
+caption drops its bottom gap and rule so the strip's padding is even above and
+below the text. The plate collapses by
+animating a one-row grid to `0fr` (content stays rendered, so label
+measurement still works) and is `inert` while folded. The folded state is a
+per-viewer convenience in `localStorage` (`pipeline-diagram-collapsed`, every
+access guarded so it defaults to unfolded when storage is unavailable).
 Update metadata, mounts,
 controls, and docs together when changing passes.
 

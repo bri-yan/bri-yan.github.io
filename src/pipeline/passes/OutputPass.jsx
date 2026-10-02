@@ -1,7 +1,8 @@
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
-import { OUTPUT_FRAME_ORDER } from '../../config';
+import { MIN_PAPER_SCALE, OUTPUT_FRAME_ORDER } from '../../config';
 import { useFullscreenPass } from '../utils/passHooks';
+import { zoomedPaperScale } from '../utils/paperZoom';
 import outputFragment from '../../shaders/outputFragment.frag?raw';
 
 const DEG_TO_RAD = Math.PI / 180;
@@ -45,23 +46,27 @@ export function OutputPass({
     { offscreen: false }
   );
 
-  useFrame(({ gl }) => {
+  useFrame((state) => {
+    const { gl } = state;
     const paint = paintRef.current;
     const specular = specularRef.current;
     const substrate = substrateRef.current;
     if (!paint || !specular || !substrate) return;
 
     const pixelRatio = gl.getPixelRatio();
+    const paperScale = zoomedPaperScale(state, substrateScale);
+    // Distortion is a shift on the paper, so it magnifies along with it.
+    const magnification = paperScale / Math.max(substrateScale, MIN_PAPER_SCALE);
     const angle = lightAngle * DEG_TO_RAD;
     uniforms.tPaint.value = paint.texture;
     uniforms.tSpecular.value = specular.texture;
     uniforms.tSubstrate.value = substrate.texture;
     uniforms.uCssPixelToUv.value.set(pixelRatio / paint.width, pixelRatio / paint.height);
     uniforms.uSubstrateTexelSize.value.set(1 / substrate.width, 1 / substrate.height);
-    uniforms.uPixelsPerPaperUnit.value = pixelRatio * Math.max(substrateScale, 0.5);
+    uniforms.uPixelsPerPaperUnit.value = pixelRatio * paperScale;
     uniforms.uPaperColor.value = paperColor;
     uniforms.uDistortionEnabled.value = distortionEnabled;
-    uniforms.uDistortion.value = distortion;
+    uniforms.uDistortion.value = distortion * magnification;
     uniforms.uLightingEnabled.value = lightingEnabled;
     // Angle 0° = light from the right, counter-clockwise on screen; y is screen-down.
     uniforms.uLightDirection.value.set(Math.cos(angle), -Math.sin(angle), 1).normalize();

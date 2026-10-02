@@ -1,7 +1,7 @@
 uniform vec2 uResolution;
 uniform float uPixelRatio;
 uniform vec3 uSubstrateColor;
-uniform float uSubstrateScale;
+uniform float uSubstrateScale; // CSS pixels per paper unit, zoom included
 
 varying vec2 vUv;
 
@@ -49,9 +49,10 @@ float paperHeight(vec2 point) {
 }
 
 void main() {
-  // Top-left-anchored CSS pixels keep the paper fixed through resize, DPR, and camera changes.
-  vec2 cssPixel = vec2(vUv.x, 1.0 - vUv.y) * uResolution / uPixelRatio;
-  vec2 paperPosition = cssPixel / max(uSubstrateScale, 0.5);
+  // CSS pixels from the screen center (where camera zoom converges) keep the
+  // paper fixed through DPR and orbiting while it scales with zoom.
+  vec2 cssPixel = (vec2(vUv.x, 1.0 - vUv.y) - 0.5) * uResolution / uPixelRatio;
+  vec2 paperPosition = cssPixel / uSubstrateScale;
   float height = paperHeight(paperPosition);
 
   // Soft light from the upper left over the tooth's slope gives the embossed relief.

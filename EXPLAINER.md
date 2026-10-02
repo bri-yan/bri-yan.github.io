@@ -31,14 +31,14 @@ only visible pixels, it first renders the whole scene into the depth buffer
 alone, then draws each subject only where it is the frontmost surface.
 `OutputPass` draws the finished painting to the screen.
 
-`SubstratePass` generates stationary procedural paper independently of the
+`SubstratePass` generates procedural paper independently of the
 scene, modeled on a photo of cold-press watercolor paper. Alpha stores a
 normalized 0–1 height: small, slightly vertically elongated, gently warped
 noise bumps that form the paper's tooth, with fine grain and a faint broad
 drift. RGB is the near-white paper tint lit softly from the upper left across
 that height, so the visible bumps are the stored height. The pattern is anchored
-to CSS pixels, so it stays put under camera movement, resizing, and browser
-zoom. `OutputPass` reads its height to shape the painting. The Substrate section's `height map` toggle displays its alpha
+to CSS pixels, so it stays put while orbiting or panning, but it scales with
+camera zoom about the screen center, so zooming in also zooms into the paper. `OutputPass` reads its height to shape the painting. The Substrate section's `height map` toggle displays its alpha
 as grayscale from any debug view, until another view is picked; normal
 substrate inspection displays the paper RGB without a checkerboard.
 

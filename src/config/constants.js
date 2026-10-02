@@ -194,6 +194,8 @@ export const DEFAULT_SOBEL_STRENGTH = 2.06;
 export const DEFAULT_SOBEL_RADIUS = 1;
 export const DEFAULT_SUBSTRATE_COLOR = new THREE.Color(0xf7f1ec);
 export const DEFAULT_SUBSTRATE_SCALE = 2.5;
+// Floor on the zoomed substrate scale: finer tooth would alias on the pixel grid.
+export const MIN_PAPER_SCALE = 0.5;
 export const DEFAULT_COMPOSITION_BLUR_RADIUS = 12; // CSS pixels, ≈3σ
 export const DEFAULT_SOBEL_BLUR_RADIUS = 10;
 export const BLUR_MAX_RADIUS = 16;

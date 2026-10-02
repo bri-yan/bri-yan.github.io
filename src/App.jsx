@@ -16,7 +16,7 @@ export default function App() {
       <Canvas camera={CANVAS_CAMERA} dpr={[1, 2]}>
         <MultiPassPipeline {...controls}>
           <TorusKnotScene />
-          <OrbitControls enableDamping dampingFactor={0.05} />
+          <OrbitControls makeDefault enableDamping dampingFactor={0.05} />
         </MultiPassPipeline>
       </Canvas>
       <PipelineDiagram
