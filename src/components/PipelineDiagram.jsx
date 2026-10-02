@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { PIPELINE_STAGES } from '../config';
+import { Plate } from './Plate';
 import './PipelineDiagram.css';
 
 // Each stage is a label centered in its column, which is as wide as its widest
@@ -168,37 +169,13 @@ function useLabelWidths(rootRef) {
   return widths;
 }
 
-const COLLAPSED_KEY = 'pipeline-diagram-collapsed';
-
-/** Folded state survives reloads for this viewer; storage may be unavailable. */
-function useFolded() {
-  const [folded, setFolded] = useState(() => {
-    try {
-      return localStorage.getItem(COLLAPSED_KEY) === '1';
-    } catch {
-      return false;
-    }
-  });
-  const toggle = () =>
-    setFolded((value) => {
-      try {
-        localStorage.setItem(COLLAPSED_KEY, value ? '0' : '1');
-      } catch {
-        // Folding still works for this visit.
-      }
-      return !value;
-    });
-  return [folded, toggle];
-}
-
 /**
  * Interactive graph generated from the same stage definition as Debug.view.
- * washColor tints the selected stage's pigment drop and label; it follows
- * the base pigment color. The caption folds the plate away to just its title line.
+ * Set on the shared figure plate (Fig. 1); its pigment accents follow the
+ * base pigment color inherited as --plate-wash.
  */
-export function PipelineDiagram({ activeView = 'output', onSelectView, washColor }) {
+export function PipelineDiagram({ activeView = 'output', onSelectView }) {
   const rootRef = useRef(null);
-  const [folded, toggleFolded] = useFolded();
   const probing = activeView !== 'output';
   const labelWidths = useLabelWidths(rootRef);
   const layout = useMemo(() => layoutStages(PIPELINE_STAGES, labelWidths), [labelWidths]);
@@ -223,7 +200,7 @@ export function PipelineDiagram({ activeView = 'output', onSelectView, washColor
     const onClick = (event) => {
       if (Math.hypot(event.clientX - down.x, event.clientY - down.y) > 5) return;
       if (rootRef.current?.contains(event.target)) return;
-      if (event.target.closest?.('[class*="leva"]')) return;
+      if (event.target.closest?.('.debug-panel, [class*="leva"]')) return;
       onSelectView?.('output');
     };
     const onKeyDown = (event) => {
@@ -240,115 +217,100 @@ export function PipelineDiagram({ activeView = 'output', onSelectView, washColor
   }, [probing, onSelectView]);
 
   return (
-    <figure
-      className={`pipeline-diagram${folded ? ' pipeline-diagram--folded' : ''}`}
-      ref={rootRef}
-      aria-label="Render pipeline diagram"
-      style={washColor ? { '--pd-wash': washColor } : undefined}
-    >
-      <figcaption className="pd-caption">
-        <button
-          type="button"
-          className="pd-caption__title"
-          aria-expanded={!folded}
-          aria-controls="pd-plate"
-          title={folded ? 'unfold the figure' : 'fold the figure away'}
-          onClick={toggleFolded}
-        >
-          <svg className="pd-fold" viewBox="0 0 10 10" width="10" height="10" aria-hidden="true">
-            <path d="M 2 3.5 Q 3.9 5.2 5 6.9 Q 6.1 5.1 8 3.4" />
-          </svg>
-          Fig. 1 <em>— the watercolor pipeline</em>
-        </button>
-        <span className="pd-caption__probe">
+    <Plate
+      id="pd-plate"
+      className="pipeline-diagram"
+      rootRef={rootRef}
+      label="Render pipeline diagram"
+      storageKey="pipeline-diagram-collapsed"
+      title="Fig. 1"
+      subtitle="— the watercolor pipeline"
+      aside={
+        <>
           now showing <em>{probing ? activeView.replaceAll('-', ' ') : 'the painting'}</em>
-        </span>
-      </figcaption>
+        </>
+      }
+    >
+      <svg
+        className="pd-svg"
+        viewBox={`0 0 ${layout.width} ${layout.height}`}
+        width={layout.width}
+        height={layout.height}
+      >
+        <defs>
+          {/* A watercolor droplet's edge: round, but never quite a circle. */}
+          <filter id="pd-drop" x="-50%" y="-50%" width="200%" height="200%">
+            <feTurbulence type="fractalNoise" baseFrequency="0.2" numOctaves="2" seed="3" result="noise" />
+            <feDisplacementMap in="SourceGraphic" in2="noise" scale="2.5" />
+          </filter>
+        </defs>
 
-      <div className="pd-plate" id="pd-plate" inert={folded}>
-        <div className="pd-plate__inner">
-          <svg
-            className="pd-svg"
-            viewBox={`0 0 ${layout.width} ${layout.height}`}
-            width={layout.width}
-            height={layout.height}
-          >
-            <defs>
-              {/* A watercolor droplet's edge: round, but never quite a circle. */}
-              <filter id="pd-drop" x="-50%" y="-50%" width="200%" height="200%">
-                <feTurbulence type="fractalNoise" baseFrequency="0.2" numOctaves="2" seed="3" result="noise" />
-                <feDisplacementMap in="SourceGraphic" in2="noise" scale="2.5" />
-              </filter>
-            </defs>
+        {edges.map(({ from, to }) => {
+          const x1 = labelEdge(from, 1);
+          const x2 = labelEdge(to, -1);
+          const y1 = from.y + NODE_HEIGHT / 2;
+          const y2 = to.y + NODE_HEIGHT / 2;
+          // Every bend lives in the gap after the source's column, clear of the
+          // widest label on either side, so wires sharing a gap bend together
+          // and never touch a label. Skips then run along their free lane.
+          const bendStart = layout.columnX[from.depth] + layout.columnWidth[from.depth] + WIRE_GAP;
+          const bendEnd = layout.columnX[from.depth + 1] - WIRE_GAP;
+          const handle = (bendEnd - bendStart) / 2;
+          const d =
+            Math.abs(y2 - y1) < 0.5
+              ? `M ${x1} ${y1} H ${x2}`
+              : `M ${x1} ${y1} H ${bendStart} C ${bendStart + handle} ${y1}, ${bendEnd - handle} ${y2}, ${bendEnd} ${y2} H ${x2}`;
+          return <path key={`${from.key}-${to.key}`} className="pd-wire" d={d} />;
+        })}
 
-            {edges.map(({ from, to }) => {
-              const x1 = labelEdge(from, 1);
-              const x2 = labelEdge(to, -1);
-              const y1 = from.y + NODE_HEIGHT / 2;
-              const y2 = to.y + NODE_HEIGHT / 2;
-              // Every bend lives in the gap after the source's column, clear of the
-              // widest label on either side, so wires sharing a gap bend together
-              // and never touch a label. Skips then run along their free lane.
-              const bendStart = layout.columnX[from.depth] + layout.columnWidth[from.depth] + WIRE_GAP;
-              const bendEnd = layout.columnX[from.depth + 1] - WIRE_GAP;
-              const handle = (bendEnd - bendStart) / 2;
-              const d =
-                Math.abs(y2 - y1) < 0.5
-                  ? `M ${x1} ${y1} H ${x2}`
-                  : `M ${x1} ${y1} H ${bendStart} C ${bendStart + handle} ${y1}, ${bendEnd - handle} ${y2}, ${bendEnd} ${y2} H ${x2}`;
-              return <path key={`${from.key}-${to.key}`} className="pd-wire" d={d} />;
-            })}
+        {[...layout.nodes.values()].map((stage) => {
+          const clickable = Boolean(stage.debugView);
+          const active = stage.debugView === activeView;
+          const { cx } = stage;
+          const halfWidth = (labelWidths[stage.key] ?? FALLBACK_LABEL_WIDTH) / 2;
+          const baseline = stage.y + NODE_HEIGHT / 2 + 4;
+          const classes = ['pd-node', active && 'pd-node--active'].filter(Boolean).join(' ');
 
-            {[...layout.nodes.values()].map((stage) => {
-              const clickable = Boolean(stage.debugView);
-              const active = stage.debugView === activeView;
-              const { cx } = stage;
-              const halfWidth = (labelWidths[stage.key] ?? FALLBACK_LABEL_WIDTH) / 2;
-              const baseline = stage.y + NODE_HEIGHT / 2 + 4;
-              const classes = ['pd-node', active && 'pd-node--active'].filter(Boolean).join(' ');
+          return (
+            <g
+              key={stage.key}
+              className={classes}
+              role={clickable ? 'button' : undefined}
+              tabIndex={clickable ? 0 : undefined}
+              aria-pressed={clickable ? active : undefined}
+              onClick={clickable ? () => select(stage) : undefined}
+              onKeyDown={
+                clickable
+                  ? (event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        select(stage);
+                      }
+                    }
+                  : undefined
+              }
+            >
+              <title>{stage.hint}</title>
+              <rect className="pd-node__hit" x={stage.x} y={stage.y} width={stage.width} height={NODE_HEIGHT} />
+              {/* The incoming wires land in the drop, just before the label. */}
+              <g className="pd-node__drop" filter="url(#pd-drop)">
+                <circle cx={cx - halfWidth - DROP_OFFSET} cy={stage.y + NODE_HEIGHT / 2} r={DROP_RADIUS} />
+                <circle
+                  className="pd-node__glint"
+                  cx={cx - halfWidth - DROP_OFFSET - 0.8}
+                  cy={stage.y + NODE_HEIGHT / 2 - 1}
+                  r="1"
+                />
+              </g>
+              <text data-stage={stage.key} x={cx} y={baseline}>
+                {stage.label}
+              </text>
+            </g>
+          );
+        })}
+      </svg>
 
-              return (
-                <g
-                  key={stage.key}
-                  className={classes}
-                  role={clickable ? 'button' : undefined}
-                  tabIndex={clickable ? 0 : undefined}
-                  aria-pressed={clickable ? active : undefined}
-                  onClick={clickable ? () => select(stage) : undefined}
-                  onKeyDown={
-                    clickable
-                      ? (event) => {
-                          if (event.key === 'Enter' || event.key === ' ') {
-                            event.preventDefault();
-                            select(stage);
-                          }
-                        }
-                      : undefined
-                  }
-                >
-                  <title>{stage.hint}</title>
-                  <rect className="pd-node__hit" x={stage.x} y={stage.y} width={stage.width} height={NODE_HEIGHT} />
-                  {/* The incoming wires land in the drop, just before the label. */}
-                  <g className="pd-node__drop" filter="url(#pd-drop)">
-                    <circle cx={cx - halfWidth - DROP_OFFSET} cy={stage.y + NODE_HEIGHT / 2} r={DROP_RADIUS} />
-                    <circle
-                      className="pd-node__glint"
-                      cx={cx - halfWidth - DROP_OFFSET - 0.8}
-                      cy={stage.y + NODE_HEIGHT / 2 - 1}
-                      r="1"
-                    />
-                  </g>
-                  <text data-stage={stage.key} x={cx} y={baseline}>
-                    {stage.label}
-                  </text>
-                </g>
-              );
-            })}
-          </svg>
-
-          <p className="pd-note">select a stage to view it; escape returns to the painting</p>
-        </div>
-      </div>
-    </figure>
+      <p className="pd-note">select a stage to view it; escape returns to the painting</p>
+    </Plate>
   );
 }

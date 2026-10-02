@@ -1,0 +1,170 @@
+/* Fig. 2, the Leva controls, on the shared figure plate (Plate.css). Leva's
+   theme tokens (DebugPanel.jsx) set its colors and type; the rules below
+   reach what tokens can't. Leva's classes are hashed, so they select by tag
+   inside .debug-panel, which outranks Stitches' single class. */
+
+.debug-panel {
+  right: 12px;
+  width: 320px;
+}
+
+/* Long sessions with every folder open scroll inside the plate, which never
+   runs past the window bottom. The resize grip sets --dp-body-height; moving
+   the panel sets --dp-top. */
+.debug-panel .plate__inner {
+  max-height: calc(100vh - var(--dp-top, 12px) - 60px);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(59, 49, 41, 0.3) transparent;
+}
+
+/* Height applies only while open, so folding still collapses to the caption. */
+.debug-panel:not(.plate--folded) .plate__inner {
+  height: var(--dp-body-height, auto);
+}
+
+/* ── grips ──────────────────────────────────────────────────
+   Inked like the fold chevron: ink-soft, pigment on hover. The dotted grip in
+   the caption moves the panel; the hatched corner resizes it. */
+.dp-grip {
+  display: inline-flex;
+  align-self: center;
+  touch-action: none;
+  outline: none;
+}
+
+.dp-grip svg {
+  overflow: visible;
+}
+
+.dp-grip circle {
+  fill: var(--plate-ink-soft);
+  transition: fill 150ms ease;
+}
+
+.dp-grip path {
+  fill: none;
+  stroke: var(--plate-ink-soft);
+  stroke-width: 1.1;
+  stroke-linecap: round;
+  transition: stroke 150ms ease;
+}
+
+.dp-grip:hover circle,
+.dp-grip:focus-visible circle {
+  fill: var(--plate-wash-ink);
+}
+
+.dp-grip:hover path {
+  stroke: var(--plate-wash-ink);
+}
+
+.dp-grip:focus-visible {
+  outline: 0.8px dotted var(--plate-ink-soft);
+  outline-offset: 3px;
+}
+
+.dp-grip--move {
+  cursor: grab;
+}
+
+.dp-grip--move:active {
+  cursor: grabbing;
+}
+
+.dp-grip--resize {
+  position: absolute;
+  bottom: 3px;
+  left: 3px;
+  padding: 2px;
+  cursor: nesw-resize;
+}
+
+/* Control names read like the figure's captions: italic, not small caps. */
+.debug-panel label {
+  font-family: 'EB Garamond', serif;
+  font-size: 14px;
+  font-style: italic;
+  letter-spacing: 0;
+  color: var(--plate-ink-soft);
+}
+
+/* Values in lining, tabular figures so columns of numbers line up. */
+.debug-panel input,
+.debug-panel select {
+  font-family: 'EB Garamond', serif;
+  font-size: 13px;
+  font-variant-numeric: lining-nums tabular-nums;
+  color: var(--plate-ink);
+}
+
+/* Session actions as caption type rather than filled buttons. */
+.debug-panel button:not(.plate__title) {
+  background: transparent;
+  color: var(--plate-ink);
+  font-family: 'Cormorant SC', 'EB Garamond', serif;
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-decoration: underline dotted transparent;
+  text-underline-offset: 3px;
+  transition: color 150ms ease, text-decoration-color 150ms ease;
+}
+
+.debug-panel button:not(.plate__title):hover,
+.debug-panel button:not(.plate__title):focus-visible {
+  background: transparent;
+  color: var(--plate-wash-ink);
+  text-decoration-color: currentColor;
+}
+
+/* ── ledger ─────────────────────────────────────────────────
+   Leva's hashed classes leave only structure and Stitches' variant suffixes
+   to select on. A control row is the div whose label sits two divs down. */
+
+/* Every control sits on its own ruled line, padded evenly above and below
+   (the theme's rowGap is 0 so the padding alone sets the rhythm). */
+.debug-panel div:has(> div > div > label) {
+  padding: 4px 0;
+  border-bottom: 0.5px solid rgba(59, 49, 41, 0.2);
+}
+
+/* A section's last row leaves its line to the section rule below, whether it
+   ends the section directly or ends its last subsection (folder > wrapper >
+   content > row, at most one level of subfolders). */
+.debug-panel [class*='isRoot-true'] > div > div > div > div:last-child,
+.debug-panel [class*='isRoot-true'] > div > div > div > div:last-child > div > div > div:last-child {
+  border-bottom: none;
+}
+
+/* Top-level sections are divided by a stronger hairline rule. Leva draws its
+   own (here transparent) rule with a three-class selector, so this needs four. */
+.debug-panel.debug-panel [class*='isRoot-true'] > div:not(:first-of-type) {
+  /* The last row's padding already sits above the rule, so the margin is the
+     smaller half: last row's text to rule and rule to title text both ≈ 11.5px. */
+  margin-top: 4px;
+  padding-top: 9.7px;
+  border-top: 0.8px solid rgba(59, 49, 41, 0.55);
+}
+
+/* ── folder chevrons ────────────────────────────────────────
+   Leva's filled triangle is repainted as the plates' inked chevron. Leva
+   still rotates the svg to show open/closed, so only its look changes. A
+   folder title is the div followed by its folder's non-root wrapper. */
+.debug-panel div:has(+ div[class*='isRoot-false']) > svg {
+  width: 10px;
+  height: 10px;
+  margin: 0 6px 0 0;
+  opacity: 1;
+  background-color: var(--plate-ink-soft);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M 2 3.5 Q 3.9 5.2 5 6.9 Q 6.1 5.1 8 3.4' fill='none' stroke='black' stroke-width='1.1' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M 2 3.5 Q 3.9 5.2 5 6.9 Q 6.1 5.1 8 3.4' fill='none' stroke='black' stroke-width='1.1' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat;
+  transition: transform 300ms ease, background-color 150ms ease;
+}
+
+.debug-panel div:has(+ div[class*='isRoot-false']) > svg path {
+  display: none;
+}
+
+.debug-panel div:has(+ div[class*='isRoot-false']):hover > svg {
+  background-color: var(--plate-wash-ink);
+}

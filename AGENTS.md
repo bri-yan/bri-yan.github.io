@@ -211,27 +211,31 @@ the gap after the source's column, between the widest labels on either side,
 as one smooth cubic S-curve. Wires sharing a gap therefore bend together
 (the fan out of `scene` is aligned, and merging wires join like streams) and
 never cut through a label. There are no end dots.
-It is styled as a printed figure plate: small-caps serif labels (Cormorant SC
+It is Fig. 1 on the shared figure plate (`src/components/Plate.jsx` +
+`Plate.css`, also used by the debug panel): small-caps serif labels (Cormorant SC
 and EB Garamond, loaded in `index.html`) on a frosted vellum sheet (translucent
 paper tint plus backdrop blur, so the ink reads over every debug view while the
 render shows through); hairline ink wires in flowing curves; and the stage
 being viewed marked by a single watercolor droplet of the base pigment color
 just before its label (where its incoming wires land; a turbulence-displaced
 circle with a small glint) and its label inked in that pigment deepened toward
-the ink (the Color Override base color; `App` passes it in as `washColor`).
-The drop pops in with a slight overshoot; focus shows a faint drop. `output` carries the drop whenever the painting is shown, including by default. Every pigment accent (hovered and focused labels, the caption's "now showing" name, the fold chevron's hover) takes the same deepened base pigment (`--pd-wash-ink`); there is no fixed accent color. Stage labels are display-only and
+the ink (the Color Override base color, which `App` sets as `--plate-wash` on
+`<html>`).
+The drop pops in with a slight overshoot; focus shows a faint drop. `output` carries the drop whenever the painting is shown, including by default. Every pigment accent (hovered and focused labels, the caption's "now showing" name, the fold chevron's hover) takes the same deepened base pigment (`--plate-wash-ink`, on `:root` in `Plate.css`); there is no fixed accent color. Stage labels are display-only and
 kept short (e.g. `diffuse comp`); the caption's "now showing" spells the
 viewed stage's key with spaces (e.g. `diffuse composition blur`).
-The caption title is also the fold toggle: clicking "Fig. 1 — the watercolor
-pipeline" (a real button with `aria-expanded`) folds the plate up under its
-caption line, leaving the title and "now showing" visible, and the small inked
+The caption title is also the fold toggle (all of this lives in `Plate`):
+clicking "Fig. 1 — the watercolor pipeline" (a real button with
+`aria-expanded`) folds the plate up under its caption line, leaving the title
+and the caption's aside ("now showing") visible, and the small inked
 tick to the left of the title turns to point at the folded plate. Folded, the
 caption drops its bottom gap and rule so the strip's padding is even above and
 below the text. The plate collapses by
 animating a one-row grid to `0fr` (content stays rendered, so label
 measurement still works) and is `inert` while folded. The folded state is a
-per-viewer convenience in `localStorage` (`pipeline-diagram-collapsed`, every
-access guarded so it defaults to unfolded when storage is unavailable).
+per-viewer convenience in `localStorage` under each plate's `storageKey`
+(`pipeline-diagram-collapsed`, `debug-panel-collapsed`; every access guarded so
+it defaults to unfolded when storage is unavailable).
 Update metadata, mounts,
 controls, and docs together when changing passes.
 
@@ -261,6 +265,36 @@ painting, then the Session:
   effect's settings show only while it is enabled.
 - **Session**: save, reset to defaults, copy values.
 
+It is presented as **Fig. 2 — the controls** (`src/components/DebugPanel.jsx`):
+the same plate docked top-right, holding `<Leva fill flat titleBar={false}>`
+(no drag or search; the plate's caption folds it), so it renders in place
+rather than as Leva's fixed dark root. `PLATE_THEME` maps Leva's Stitches
+tokens onto the plate: clear `elevation1`/`elevation2` so the vellum shows, a
+faint ink tint for fields, ink and ink-soft text, Cormorant SC for folders, and
+accents (`accent1–3`, slider fills, focus, checkboxes) built from
+`var(--plate-wash-ink)` so they follow the base color live. `DebugPanel.css`
+reaches what tokens can't with tag selectors scoped to `.debug-panel` (Leva's
+classes are hashed): EB Garamond italic labels, lining tabular figures in
+inputs, Session buttons as small-caps caption type, ledger lines (each
+control row, the div two levels above its `label`, padded 4px above and below
+with a faint hairline beneath; the theme's `rowGap` is 0 so every row is the
+same height; a section's last row, directly or in its last subsection, drops its line so only the section rule shows), a darker hairline between top-level sections (selected through
+Stitches' `isRoot-true` variant class, with doubled `.debug-panel` to outrank
+Leva's own rule), and folder chevrons repainted as the plates' inked chevron
+(Leva's triangle path hidden, the chevron drawn as a CSS mask on the same svg,
+so Leva's open/closed rotation still applies). The body scrolls
+inside the plate when every folder is open. The panel moves and resizes:
+a dotted grip at the right of its caption drags it (arrow keys nudge it 10px;
+double-click re-docks it top-right), and a hatched grip at the bottom-left
+corner resizes it, keeping the right edge and top fixed (min 260px wide, body
+min 120px). `Plate` takes `style` and a `corner` element (hidden while
+folded) for this. The frame `{ left, top, width, bodyHeight }` is a per-viewer
+convenience in `localStorage` (`debug-panel-frame`, guarded; absent = docked),
+clamped at render so a smaller window never strands the panel off screen;
+`--dp-top` keeps the scrolling body above the window bottom and
+`--dp-body-height` applies only while unfolded so folding still collapses. Clicks inside the panel never
+return the graph to `output`.
+
 Control keys match the pipeline prop names (e.g. `diffuseAmount`), so each
 folder's values spread straight into `MultiPassPipeline`, saved sessions stay
 compatible, and reset restores each folder from `DEFAULTS` by key. Escape,
@@ -282,7 +316,9 @@ click-out, and re-click return the debug view to `output`.
 - `src/pipeline/WatercolorSubjects.jsx`: registration context and hook.
 - `src/shaders/`: capture, substrate, depth, output, and debug shaders;
   `src/shaders/chunks/oklab.glsl` is shared OKLab pigment concentration.
-- `src/components/PipelineDiagram.jsx`: graph derived from `PIPELINE_STAGES`.
+- `src/components/Plate.jsx`: the shared folding figure plate (vellum, caption, fold).
+- `src/components/PipelineDiagram.jsx`: graph derived from `PIPELINE_STAGES` (Fig. 1).
+- `src/components/DebugPanel.jsx`: the themed Leva panel (Fig. 2).
 - `EXPLAINER.md`: implemented behavior overview.
 
 ## Adding the next pass

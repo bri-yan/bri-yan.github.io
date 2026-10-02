@@ -1,143 +1,17 @@
-/* The pipeline set as a figure plate in a printed sketchbook: small-caps
+/* Fig. 1, the pipeline, on the shared figure plate (Plate.css): small-caps
    serif labels straight on the page, hairline ink wires that bend in smooth
    S-curves, and the stage being viewed marked by a watercolor droplet of the
-   base pigment color, its label inked in that pigment. It sits on a frosted sheet of vellum: the render blurs
-   softly behind the type, so the ink reads over any debug view while the
-   painting still shows through. */
+   base pigment color, its label inked in that pigment. */
 
 .pipeline-diagram {
-  --pd-ink: #3b3129;
-  --pd-ink-soft: #6b5f54;
-  --pd-ink-faint: #8a7d70;
-  --pd-wash: #00ffff; /* overridden inline with the base pigment color */
-  /* The base pigment deepened toward the ink: every pigment accent (selected
-     and hovered labels, the caption's viewed stage, the fold chevron's hover). */
-  --pd-wash-ink: color-mix(in oklab, var(--pd-wash) 55%, var(--pd-ink));
-
-  position: absolute;
-  top: 12px;
   left: 12px;
-  box-sizing: border-box;
-  max-width: calc(100vw - 24px);
-  margin: 0;
-  padding: 12px 18px;
-  border-radius: 2px;
-  background: rgba(250, 248, 242, 0.62);
-  backdrop-filter: blur(9px) saturate(0.7);
-  -webkit-backdrop-filter: blur(9px) saturate(0.7);
-  box-shadow: 0 0 0 0.5px rgba(59, 49, 41, 0.18);
-  color: var(--pd-ink);
-  font-family: 'EB Garamond', Garamond, 'Times New Roman', serif;
-  user-select: none;
-}
-
-/* ── caption ────────────────────────────────────────────── */
-
-.pd-caption {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 24px;
-  padding-bottom: 6px;
-  border-bottom: 0.8px solid rgba(59, 49, 41, 0.55);
-  transition: border-color 300ms ease, padding-bottom 350ms ease;
-}
-
-/* The title doubles as the fold toggle, styled as plain caption type. */
-.pd-caption__title {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 0.3em;
-  padding: 0;
-  border: 0;
-  background: none;
-  color: inherit;
-  cursor: pointer;
-  font-family: 'Cormorant SC', 'EB Garamond', serif;
-  font-size: 14px;
-  font-weight: 600;
-  letter-spacing: 0.12em;
-}
-
-.pd-caption__title:focus-visible {
-  outline: 0.8px dotted var(--pd-ink-soft);
-  outline-offset: 3px;
-}
-
-/* A small inked tick that turns to point at the folded plate. */
-.pd-fold {
-  align-self: center;
-  margin-right: 0.15em;
-  overflow: visible;
-  transition: transform 300ms ease;
-}
-
-.pd-fold path {
-  fill: none;
-  stroke: var(--pd-ink-soft);
-  stroke-width: 1.1;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-.pd-caption__title:hover .pd-fold path,
-.pd-caption__title:focus-visible .pd-fold path {
-  stroke: var(--pd-wash-ink);
-}
-
-.pipeline-diagram--folded .pd-fold {
-  transform: rotate(-90deg);
-}
-
-/* ── plate (folds away under the caption) ───────────────── */
-
-.pd-plate {
-  display: grid;
-  grid-template-rows: 1fr;
-  transition: grid-template-rows 350ms ease, opacity 250ms ease;
-}
-
-.pd-plate__inner {
-  min-height: 0;
-  overflow: hidden;
-}
-
-/* Spacing lives inside the clipped content so the folded plate is truly 0 high. */
-.pd-plate__inner > .pd-svg {
-  margin-top: 8px;
-}
-
-.pipeline-diagram--folded .pd-plate {
-  grid-template-rows: 0fr;
-  opacity: 0;
-}
-
-.pipeline-diagram--folded .pd-caption {
-  /* No rule below the folded caption, so drop its gap too and the strip's
-     padding is even above and below the text. */
-  padding-bottom: 0;
-  border-bottom-color: transparent;
-}
-
-.pd-caption__title em,
-.pd-caption__probe {
-  font-family: 'EB Garamond', serif;
-  font-size: 14px;
-  font-style: italic;
-  font-weight: 400;
-  letter-spacing: 0;
-  color: var(--pd-ink-soft);
-}
-
-.pd-caption__probe em {
-  color: var(--pd-wash-ink);
 }
 
 /* ── wires ──────────────────────────────────────────────── */
 
 .pd-wire {
   fill: none;
-  stroke: var(--pd-ink);
+  stroke: var(--plate-ink);
   stroke-opacity: 0.42;
   stroke-width: 0.85;
   stroke-linecap: round;
@@ -159,7 +33,7 @@
   font-weight: 600;
   letter-spacing: 0.06em;
   text-anchor: middle;
-  fill: var(--pd-ink);
+  fill: var(--plate-ink);
   transition: fill 150ms ease;
 }
 
@@ -178,7 +52,7 @@
 }
 
 .pd-node__drop circle {
-  fill: color-mix(in oklab, var(--pd-wash) 78%, var(--pd-ink));
+  fill: color-mix(in oklab, var(--plate-wash) 78%, var(--plate-ink));
   fill-opacity: 0.8;
 }
 
@@ -194,7 +68,7 @@
 
 .pd-node[role='button']:hover text,
 .pd-node[role='button']:focus-visible text {
-  fill: var(--pd-wash-ink);
+  fill: var(--plate-wash-ink);
 }
 
 .pd-node[role='button']:focus-visible .pd-node__drop {
@@ -203,7 +77,7 @@
 }
 
 .pd-node.pd-node--active text {
-  fill: var(--pd-wash-ink);
+  fill: var(--plate-wash-ink);
 }
 
 .pd-node--active .pd-node__drop {
@@ -218,5 +92,5 @@
   font-size: 12px;
   font-style: italic;
   text-align: right;
-  color: var(--pd-ink-faint);
+  color: var(--plate-ink-faint);
 }

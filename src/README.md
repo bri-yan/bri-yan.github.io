@@ -6,7 +6,8 @@
 - `pipeline/`: scene captures, paint-layer, edge, substrate, output, and debug
   passes plus fullscreen-quad helpers.
 - `shaders/`: GLSL used by the active image-space passes.
-- `components/`: the test scene and pipeline graph UI.
+- `components/`: the test scene and the overlay UI: a shared figure `Plate`,
+  the pipeline graph (Fig. 1), and the themed Leva panel (Fig. 2).
 
 Before adding or removing a pass, read the synchronization rules in
 `../AGENTS.md`.

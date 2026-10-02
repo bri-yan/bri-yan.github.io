@@ -96,7 +96,9 @@ adjustable; intensity 0 turns it off.
 `SpecularPass` is a thresholded Blinn–Phong mask that marks the highlights.
 These passes share one world-space light position.
 
-The Leva panel opens with **Inspect**, which picks the debug view. The rest is
+The Leva panel sits on the same sketchbook plate as the pipeline graph (Fig. 2 —
+the controls, in ink on vellum with pigment-colored sliders that follow the base
+color) and opens with **Inspect**, which picks the debug view. The rest is
 grouped the way a painter thinks about the image: **Light**
 (position, with Diffuse intensity and Specular highlights), **Pigment** (colors,
 dilution, Turbulence, and Wetness for the paint blur), **Edges** (darkening and

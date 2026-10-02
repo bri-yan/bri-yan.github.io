@@ -1,0 +1,134 @@
+/* A figure plate in a printed sketchbook, laid on a frosted sheet of vellum:
+   the render blurs softly behind the type, so the ink reads over any debug
+   view while the painting still shows through. Every overlay (the pipeline
+   graph, the controls) is one of these plates. */
+
+:root {
+  --plate-ink: #3b3129;
+  --plate-ink-soft: #6b5f54;
+  --plate-ink-faint: #8a7d70;
+  --plate-paper: #fbf9f4;
+  --plate-wash: #00ffff; /* App sets it on <html> to the base pigment color */
+  /* The base pigment deepened toward the ink: every pigment accent. On :root
+     so Leva's portaled popovers, outside any plate, resolve it too. */
+  --plate-wash-ink: color-mix(in oklab, var(--plate-wash) 55%, var(--plate-ink));
+}
+
+.plate {
+  position: absolute;
+  top: 12px;
+  box-sizing: border-box;
+  max-width: calc(100vw - 24px);
+  margin: 0;
+  padding: 12px 18px;
+  border-radius: 2px;
+  background: rgba(250, 248, 242, 0.62);
+  backdrop-filter: blur(9px) saturate(0.7);
+  -webkit-backdrop-filter: blur(9px) saturate(0.7);
+  box-shadow: 0 0 0 0.5px rgba(59, 49, 41, 0.18);
+  color: var(--plate-ink);
+  font-family: 'EB Garamond', Garamond, 'Times New Roman', serif;
+  user-select: none;
+}
+
+/* ── caption ────────────────────────────────────────────── */
+
+.plate__caption {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 24px;
+  padding-bottom: 6px;
+  border-bottom: 0.8px solid rgba(59, 49, 41, 0.55);
+  transition: border-color 300ms ease, padding-bottom 350ms ease;
+}
+
+/* The title doubles as the fold toggle, styled as plain caption type. */
+.plate__title {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.3em;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+  font-family: 'Cormorant SC', 'EB Garamond', serif;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+}
+
+.plate__title:focus-visible {
+  outline: 0.8px dotted var(--plate-ink-soft);
+  outline-offset: 3px;
+}
+
+.plate__title em,
+.plate__aside {
+  font-family: 'EB Garamond', serif;
+  font-size: 14px;
+  font-style: italic;
+  font-weight: 400;
+  letter-spacing: 0;
+  color: var(--plate-ink-soft);
+}
+
+.plate__aside em {
+  color: var(--plate-wash-ink);
+}
+
+/* A small inked tick that turns to point at the folded plate. */
+.plate__fold {
+  align-self: center;
+  margin-right: 0.15em;
+  overflow: visible;
+  transition: transform 300ms ease;
+}
+
+.plate__fold path {
+  fill: none;
+  stroke: var(--plate-ink-soft);
+  stroke-width: 1.1;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.plate__title:hover .plate__fold path,
+.plate__title:focus-visible .plate__fold path {
+  stroke: var(--plate-wash-ink);
+}
+
+.plate--folded .plate__fold {
+  transform: rotate(-90deg);
+}
+
+/* ── body (folds away under the caption) ────────────────── */
+
+.plate__body {
+  display: grid;
+  grid-template-rows: 1fr;
+  transition: grid-template-rows 350ms ease, opacity 250ms ease;
+}
+
+.plate__inner {
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Spacing lives inside the clipped content so the folded body is truly 0 high. */
+.plate__inner > :first-child {
+  margin-top: 8px;
+}
+
+.plate--folded .plate__body {
+  grid-template-rows: 0fr;
+  opacity: 0;
+}
+
+.plate--folded .plate__caption {
+  /* No rule below the folded caption, so drop its gap too and the strip's
+     padding is even above and below the text. */
+  padding-bottom: 0;
+  border-bottom-color: transparent;
+}
