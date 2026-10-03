@@ -1,8 +1,10 @@
-import { useMemo, useRef } from 'react';
-import { button, folder, useControls } from 'leva';
+import { useEffect, useMemo, useRef } from 'react';
+import { button, folder, levaStore, useControls } from 'leva';
 import {
+  BOUNDS_VIEWS,
   DEBUG_CHANNELS,
   DEBUG_VIEWS,
+  SUBSTRATE_VIEW,
   DEFAULT_COLOR_OVERRIDE_BASE_COLOR,
   DEFAULT_COLOR_OVERRIDE_SHADOW_COLOR,
   DEFAULT_DIFFUSE_AMOUNT,
@@ -25,6 +27,8 @@ import {
   DEFAULT_GRANULATION_INTENSITY,
   DEFAULT_DRY_BRUSH_AMOUNT,
   DEFAULT_DRY_BRUSH_SOFTNESS,
+  DEFAULT_DRY_BRUSH_LIGHT_THRESHOLD,
+  DEFAULT_DRY_BRUSH_LIGHT_SOFTNESS,
   TURBULENCE_MAX_OCTAVES,
   BLUR_MAX_RADIUS,
   DEFAULT_SUBSTRATE_DISTORTION,
@@ -60,6 +64,8 @@ const DEFAULTS = {
   granulationIntensity: DEFAULT_GRANULATION_INTENSITY,
   dryBrushAmount: DEFAULT_DRY_BRUSH_AMOUNT,
   dryBrushSoftness: DEFAULT_DRY_BRUSH_SOFTNESS,
+  dryBrushLightThreshold: DEFAULT_DRY_BRUSH_LIGHT_THRESHOLD,
+  dryBrushLightSoftness: DEFAULT_DRY_BRUSH_LIGHT_SOFTNESS,
   edgeDarkening: DEFAULT_EDGE_DARKENING,
   substrateDistortionEnabled: true,
   substrateDistortion: DEFAULT_SUBSTRATE_DISTORTION,
@@ -102,15 +108,7 @@ export function usePipelineControls() {
   const initial = (key) => saved[key] ?? DEFAULTS[key];
 
   const [inspect, setInspect] = useControls('Inspect', () => ({
-    view: {
-      value: 'output',
-      options: DEBUG_VIEWS,
-      // Picking a view explicitly leaves the substrate height map.
-      onChange: (_, __, { initial: isInitial }) => {
-        if (!isInitial) setSubstrate({ showSubstrateHeight: false });
-      },
-      transient: false,
-    },
+    view: { value: 'output', options: DEBUG_VIEWS, transient: false },
     channel: {
       value: 'rgb',
       options: DEBUG_CHANNELS,
@@ -143,13 +141,15 @@ export function usePipelineControls() {
       turbulenceWarp: slider(saved, 'turbulenceWarp', 0, 3, 0.05, 'warp'),
     }),
     // Paper-height effects weighted by the light: granulation settles pigment
-    // into the tooth in shadow; dry brush skips the peaks in bright light.
+    // into the tooth in shadow; dry brush skips the peaks above a light threshold.
     Granulation: folder({
       granulationIntensity: slider(saved, 'granulationIntensity', 0, 1, 0.01, 'intensity'),
     }),
     'Dry brush': folder({
       dryBrushAmount: slider(saved, 'dryBrushAmount', 0, 1, 0.01, 'amount'),
+      dryBrushLightThreshold: slider(saved, 'dryBrushLightThreshold', 0, 1, 0.01, 'threshold'),
       dryBrushSoftness: slider(saved, 'dryBrushSoftness', 0.01, 0.3, 0.01, 'softness'),
+      dryBrushLightSoftness: slider(saved, 'dryBrushLightSoftness', 0.01, 0.3, 0.01, 'transition'),
     }),
     // CSS pixels; 0 passes the paint through unblurred.
     Wetness: folder({
@@ -164,7 +164,6 @@ export function usePipelineControls() {
     Detection: folder({
       sobelStrength: slider(saved, 'sobelStrength', 0, 4, 0.01, 'sobel strength'),
       sobelRadius: slider(saved, 'sobelRadius', 1, 6, 1, 'sobel radius'),
-      // Drawn over the depth and sobel views.
       showBoundingBoxes: { label: 'bounding boxes', value: initial('showBoundingBoxes') },
     }),
   }));
@@ -198,6 +197,16 @@ export function usePipelineControls() {
     }),
   }));
 
+  // View-specific toggles stay in the panel but can't be flipped until the
+  // view they act on is showing.
+  useEffect(() => {
+    const enabledAt = {
+      'Edges.Detection.showBoundingBoxes': BOUNDS_VIEWS.has(inspect.view),
+      'Substrate.showSubstrateHeight': inspect.view === SUBSTRATE_VIEW,
+    };
+    for (const [path, enabled] of Object.entries(enabledAt)) levaStore.disableInputAtPath(path, !enabled);
+  }, [inspect.view]);
+
   const values = { ...light, ...pigment, ...edges, ...substrate };
   const valuesRef = useRef(values);
   valuesRef.current = values;
@@ -220,8 +229,7 @@ export function usePipelineControls() {
 
   return {
     ...values,
-    // The height toggle overrides the selected view with the substrate height map.
-    debugView: substrate.showSubstrateHeight ? 'substrate' : inspect.view,
+    debugView: inspect.view,
     debugChannel: inspect.channel,
     setDebugView: (view) => setInspect({ view }),
   };

@@ -20,6 +20,8 @@ body {
   padding: 0;
   min-width: 320px;
   min-height: 100vh;
+  /* The canvas fills the window, so there is nothing to rubber-band. */
+  overscroll-behavior: none;
 }
 
 #root {

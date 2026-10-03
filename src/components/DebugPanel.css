@@ -14,6 +14,8 @@
 .debug-panel .plate__inner {
   max-height: calc(100vh - var(--dp-top, 12px) - 60px);
   overflow-y: auto;
+  /* Scrolling to either end stays in the panel instead of moving the page. */
+  overscroll-behavior: contain;
   scrollbar-width: thin;
   scrollbar-color: rgba(59, 49, 41, 0.3) transparent;
 }
@@ -64,20 +66,22 @@
   outline-offset: 3px;
 }
 
-.dp-grip--move {
-  cursor: grab;
-}
-
-.dp-grip--move:active {
-  cursor: grabbing;
-}
-
 .dp-grip--resize {
   position: absolute;
   bottom: 3px;
   left: 3px;
   padding: 2px;
   cursor: nesw-resize;
+}
+
+/* The whole caption row is the drag handle; the title inside still folds on a click. */
+.debug-panel .plate__caption {
+  cursor: grab;
+  touch-action: none;
+}
+
+.debug-panel .plate__caption:active {
+  cursor: grabbing;
 }
 
 /* Control names read like the figure's captions: italic, not small caps. */

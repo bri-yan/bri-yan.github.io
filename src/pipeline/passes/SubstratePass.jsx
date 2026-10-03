@@ -3,6 +3,7 @@ import { useFrame } from '@react-three/fiber';
 import { SIGNED_FBO_OPTIONS, SUBSTRATE_PASS_FRAME_ORDER } from '../../config';
 import { useFullscreenPass } from '../utils/passHooks';
 import { zoomedPaperScale } from '../utils/paperZoom';
+import { pixelsPerStageUnit } from '../utils/viewScale';
 import substrateFragment from '../../shaders/substrateFragment.frag?raw';
 
 /**
@@ -25,9 +26,8 @@ export function SubstratePass({ outputRef, color, scale }) {
   if (outputRef) outputRef.current = target;
 
   useFrame((state) => {
-    const { gl } = state;
     uniforms.uResolution.value.set(target.width, target.height);
-    uniforms.uPixelRatio.value = gl.getPixelRatio();
+    uniforms.uPixelRatio.value = pixelsPerStageUnit(state);
     uniforms.uSubstrateColor.value = color;
     uniforms.uSubstrateScale.value = zoomedPaperScale(state, scale);
     render();

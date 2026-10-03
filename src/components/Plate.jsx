@@ -25,7 +25,8 @@ function useFolded(storageKey) {
 /**
  * A figure plate from a printed sketchbook on frosted vellum: a small-caps
  * caption whose title folds the body away (remembered under storageKey), with
- * an optional aside on the right, and an optional corner element (e.g. a
+ * an optional aside on the right, optional extra props for the caption row
+ * (e.g. to make it a drag handle), and an optional corner element (e.g. a
  * resize grip) that hides while folded. Shared by every overlay so they read
  * as one set of figures.
  */
@@ -35,6 +36,7 @@ export function Plate({
   title,
   subtitle,
   aside,
+  captionProps,
   corner,
   storageKey,
   rootRef,
@@ -51,7 +53,7 @@ export function Plate({
       aria-label={label}
       style={style}
     >
-      <figcaption className="plate__caption">
+      <figcaption className="plate__caption" {...captionProps}>
         <button
           type="button"
           className="plate__title"

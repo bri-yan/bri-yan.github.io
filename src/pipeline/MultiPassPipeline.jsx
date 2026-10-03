@@ -23,12 +23,15 @@ import {
   DEFAULT_GRANULATION_INTENSITY,
   DEFAULT_DRY_BRUSH_AMOUNT,
   DEFAULT_DRY_BRUSH_SOFTNESS,
+  DEFAULT_DRY_BRUSH_LIGHT_THRESHOLD,
+  DEFAULT_DRY_BRUSH_LIGHT_SOFTNESS,
   DEFAULT_SUBSTRATE_DISTORTION,
   DEFAULT_SUBSTRATE_LIGHT_ANGLE,
   DEFAULT_SUBSTRATE_LIGHT_STRENGTH,
   DEFAULT_SUBSTRATE_ROUGHNESS,
   PIPELINE_FBO_KEYS,
   PIPELINE_STAGES,
+  SUBSTRATE_VIEW,
 } from '../config';
 import { BlurPass } from './passes/BlurPass';
 import { EdgeDarkeningPass } from './passes/EdgeDarkeningPass';
@@ -83,6 +86,8 @@ export function MultiPassPipeline({
   granulationIntensity = DEFAULT_GRANULATION_INTENSITY,
   dryBrushAmount = DEFAULT_DRY_BRUSH_AMOUNT,
   dryBrushSoftness = DEFAULT_DRY_BRUSH_SOFTNESS,
+  dryBrushLightThreshold = DEFAULT_DRY_BRUSH_LIGHT_THRESHOLD,
+  dryBrushLightSoftness = DEFAULT_DRY_BRUSH_LIGHT_SOFTNESS,
   edgeDarkening = DEFAULT_EDGE_DARKENING,
   substrateDistortionEnabled = true,
   substrateDistortion = DEFAULT_SUBSTRATE_DISTORTION,
@@ -144,6 +149,8 @@ export function MultiPassPipeline({
           outputRef={fbos.dryBrush}
           amount={dryBrushAmount}
           softness={dryBrushSoftness}
+          lightThreshold={dryBrushLightThreshold}
+          lightSoftness={dryBrushLightSoftness}
         />
         <TurbulencePass
           outputRef={fbos.turbulence}
@@ -190,6 +197,7 @@ export function MultiPassPipeline({
           granulationRef={fbos.granulation}
           dryBrushRef={fbos.dryBrush}
           paperColor={substrate}
+          paperOnly={debugView === SUBSTRATE_VIEW}
           substrateScale={substrateScale}
           distortionEnabled={substrateDistortionEnabled}
           distortion={substrateDistortion}

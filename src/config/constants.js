@@ -186,6 +186,10 @@ export const DEBUG_VIEWS = [
   ),
 ];
 export const DEBUG_CHANNELS = ['rgb', 'alpha', 'rgb*a'];
+// Views that own an Inspect-dependent control: the subject bounds draw over
+// edge detection's views, and the height map reads the substrate's alpha.
+export const BOUNDS_VIEWS = new Set(['depth', 'sobel']);
+export const SUBSTRATE_VIEW = 'substrate';
 
 export const FBO_OPTIONS = {
   minFilter: THREE.LinearFilter,
@@ -229,15 +233,30 @@ export const DEFAULT_TURBULENCE_SCALE = 1.5; // noise cycles per object unit
 export const DEFAULT_TURBULENCE_OCTAVES = 3;
 export const TURBULENCE_MAX_OCTAVES = 6; // keep in sync with MAX_OCTAVES in turbulenceFragment.frag
 export const DEFAULT_TURBULENCE_WARP = 0;
-export const DEFAULT_GRANULATION_INTENSITY = 0.27;
-export const DEFAULT_DRY_BRUSH_AMOUNT = 0.44;
-export const DEFAULT_DRY_BRUSH_SOFTNESS = 0.11;
+export const DEFAULT_GRANULATION_INTENSITY = 0.2;
+export const DEFAULT_DRY_BRUSH_AMOUNT = 0.4;
+export const DEFAULT_DRY_BRUSH_SOFTNESS = 0.05;
+export const DEFAULT_DRY_BRUSH_LIGHT_THRESHOLD = 0.6; // diffuse level above which dry brush applies
+export const DEFAULT_DRY_BRUSH_LIGHT_SOFTNESS = 0.25;
 export const DEFAULT_EDGE_DARKENING = 1.25; // k in Ed = k·Eb
 export const DEFAULT_SUBSTRATE_DISTORTION = 6.5; // CSS pixels per unit slope
 export const DEFAULT_SUBSTRATE_LIGHT_ANGLE = 120; // degrees, counter-clockwise from the right
 export const DEFAULT_SUBSTRATE_LIGHT_STRENGTH = 0.1;
 export const DEFAULT_SUBSTRATE_ROUGHNESS = 1;
 export const CANVAS_CAMERA = { position: [0, 0, 5], fov: 75 };
+
+// The pipeline is authored on a virtual stage: every "CSS pixel" length (blur
+// radii, paper scale, distortion, ...) is measured as if the window's short
+// side were STAGE_REFERENCE_SIZE, then scaled to the real window, so a phone
+// and an ultrawide show the same painting. The render resolution is capped on
+// the short side so cost doesn't grow with the screen.
+export const STAGE_REFERENCE_SIZE = 800;
+export const RENDER_MAX_SHORT_SIDE = 1440; // device pixels
+
+// Wheel zoom eases toward its target distance instead of jumping per notch.
+export const ZOOM_SMOOTHING = 8; // higher settles faster (1/s)
+export const ZOOM_SENSITIVITY = 0.0012; // log-distance change per wheel pixel
+export const ZOOM_PINCH_BOOST = 8; // trackpad pinch (ctrl+wheel) reports far smaller deltas
 
 export const FULLSCREEN_QUAD_NDC = [-1, 1, 1, -1, 0, 1];
 export const FULLSCREEN_QUAD_SIZE = 2;

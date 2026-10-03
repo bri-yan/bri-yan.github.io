@@ -1,14 +1,19 @@
 import { useEffect, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
-import { DEBUG_CHANNELS, DEBUG_MODES, DEBUG_VIEW_FRAME_ORDER, PIPELINE_STAGES } from '../../config';
+import {
+  BOUNDS_VIEWS,
+  DEBUG_CHANNELS,
+  DEBUG_MODES,
+  DEBUG_VIEW_FRAME_ORDER,
+  PIPELINE_STAGES,
+  SUBSTRATE_VIEW,
+} from '../../config';
 import { useFullscreenPass } from '../utils/passHooks';
 import { useWatercolorSubjects } from '../WatercolorSubjects';
 import debugFragment from '../../shaders/debugFragment.frag?raw';
 
 const BOUNDS_COLOR = 0xffa000;
-// Bounding boxes belong to edge detection, so they overlay its views.
-const BOUNDS_VIEWS = new Set(['depth', 'sobel']);
 
 function useDepthBoundsOverlay() {
   const subjects = useWatercolorSubjects();
@@ -91,7 +96,9 @@ const VIEW_MODES = Object.fromEntries(
 /**
  * Dev tool: draws a single pass's FBO to the screen, replacing the compositor
  * output. `passes` maps view names to FBO refs; when `view` has no entry
- * (e.g. 'output') the pass does nothing and the normal output stands.
+ * (e.g. 'output') the pass does nothing and the normal output stands. The
+ * substrate view is the output drawn without paint (see OutputPass), so only
+ * its height-map toggle draws here.
  */
 export function DebugPass({
   passes,
@@ -107,18 +114,17 @@ export function DebugPass({
       tInput: { value: null },
       uChannel: { value: 0 },
       uMode: { value: 0 },
-      uShowSubstrateHeight: { value: 0 },
     }),
     { offscreen: false }
   );
 
   useFrame(({ gl, camera }) => {
+    if (view === SUBSTRATE_VIEW && !showSubstrateHeight) return;
     const source = passes[view];
     if (!source?.current) return;
     uniforms.tInput.value = source.current.texture;
     uniforms.uChannel.value = Math.max(0, DEBUG_CHANNELS.indexOf(channel));
     uniforms.uMode.value = VIEW_MODES[view] ?? DEBUG_MODES.color;
-    uniforms.uShowSubstrateHeight.value = showSubstrateHeight ? 1 : 0;
     render();
     if (showBoundingBoxes && BOUNDS_VIEWS.has(view)) renderBounds(gl, camera);
   }, DEBUG_VIEW_FRAME_ORDER);

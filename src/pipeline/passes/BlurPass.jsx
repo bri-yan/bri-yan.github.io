@@ -2,6 +2,7 @@ import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { BLUR_FBO_OPTIONS, BLUR_MAX_TAPS, BLUR_PASS_FRAME_ORDER } from '../../config';
 import { useFullscreenPass } from '../utils/passHooks';
+import { pixelsPerStageUnit } from '../utils/viewScale';
 import gaussianBlurFragment from '../../shaders/gaussianBlurFragment.frag?raw';
 
 const blurUniforms = () => ({
@@ -13,9 +14,9 @@ const blurUniforms = () => ({
   uUnpremultiplyOutput: { value: false },
 });
 
-/** Sizes a Gaussian so `radius` CSS pixels spans ~3σ, with at most BLUR_MAX_TAPS taps per side. */
-function blurKernel(radius, pixelRatio) {
-  const radiusPx = Math.max(0, radius) * pixelRatio;
+/** Sizes a Gaussian so `radius` stage pixels spans ~3σ, with at most BLUR_MAX_TAPS taps per side. */
+function blurKernel(radius, pixelsPerUnit) {
+  const radiusPx = Math.max(0, radius) * pixelsPerUnit;
   const taps = Math.min(Math.ceil(radiusPx), BLUR_MAX_TAPS);
   const tapSpacingPx = taps > 0 ? radiusPx / taps : 1;
   return { taps, tapSpacingPx, sigma: Math.max(radiusPx / 3 / tapSpacingPx, 0.001) };
@@ -38,11 +39,11 @@ export function BlurPass({ inputRef, outputRef, radius, iterations = 1 }) {
 
   if (outputRef) outputRef.current = vertical.target;
 
-  useFrame(({ gl }) => {
+  useFrame((state) => {
     const input = inputRef.current;
     if (!input) return;
 
-    const { taps, tapSpacingPx, sigma } = blurKernel(radius, gl.getPixelRatio());
+    const { taps, tapSpacingPx, sigma } = blurKernel(radius, pixelsPerStageUnit(state));
     const passCount = Math.max(1, Math.floor(iterations));
     for (const pass of [horizontal, vertical]) {
       pass.uniforms.uTaps.value = taps;

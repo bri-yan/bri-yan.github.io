@@ -64,6 +64,23 @@ Prioritized `useFrame` callbacks disable React Three Fiber's automatic render.
 `MultiPassPipeline` mounts flat sibling passes that communicate by FBO refs in
 priority order.
 
+## Stage and render scale
+
+The pipeline is authored on a **virtual stage**: every "CSS pixel" length (blur
+radii, paper scale, distortion) is in stage pixels, measured as if the window's
+short side were `STAGE_REFERENCE_SIZE` (800). `pixelsPerStageUnit(state)` in
+`src/pipeline/utils/viewScale.js` is the one conversion to device pixels
+(`gl.getPixelRatio() × shortSide ÷ STAGE_REFERENCE_SIZE`); `BlurPass`,
+`SubstratePass`, and `OutputPass` use it instead of the raw pixel ratio, so a
+phone and an ultrawide show the same painting in the same proportions. Never
+read `gl.getPixelRatio()` for a CSS-pixel length. `useRenderDpr()` caps the
+canvas density so the short side never renders more than
+`RENDER_MAX_SHORT_SIDE` (1440) device pixels (constant cost on large screens;
+the browser upscales). `ContainFit` fits the camera to the short side (vertical
+FOV kept in landscape, widened in portrait), so the subject takes the same share
+of the screen in any window shape. Sobel `radius` stays in source pixels. The
+overlay plates are fixed CSS size and are not part of the stage.
+
 ## Data and debug contract
 
 - `scene` empty pixels are transparent black; `depth` empty pixels have alpha
@@ -83,9 +100,11 @@ priority order.
   readable. RGB is the paper color
   lit softly from the upper left across the height's slope (plus a slight
   height tint), so the visible tooth is the stored height. Default color is the
-  near-white `#f7f1ec`. Unlike coverage signals, its debug view
-  never checkerboards; the Substrate `height map` toggle displays alpha as
-  grayscale. Its target is HalfFloat so 1-texel height differences are smooth.
+  near-white `#f7f1ec`. Its debug view is the output drawn without the
+  paint (`OutputPass` `paperOnly`: flat paper color under the same lighting,
+  so it looks exactly like the paper under the painting, never a
+  checkerboard); the Substrate `height map` toggle instead draws alpha as
+  grayscale through `DebugPass`. Its target is HalfFloat so 1-texel height differences are smooth.
   `output` reads it directly: the paper slope ∇h comes from central
   differences of its alpha, as height change per paper unit (× DPR × zoomed
   scale, so it's O(1) and independent of zoom and `scale`). Distortion is
@@ -159,8 +178,9 @@ priority order.
   **Granulation** settles pigment into the valleys, weighted toward shadow:
   `g = intensity · (1 − diffuse)^1.5 · (1 − 2h) · coverage`, signed like
   turbulence (+ collects in valleys, − drains off peaks), HalfFloat, signed
-  debug view. **Dry brush** leaves the peaks bare, reaching further in bright
-  light: `reach = amount · diffuse`, threshold
+  debug view. **Dry brush** leaves the peaks bare wherever the light is above
+  a threshold, evenly: `lit = smoothstep(lt − ls, lt + ls, diffuse)`
+  (`lt` = light threshold, `ls` = light softness), `reach = amount · lit`, threshold
   `t = 1 + s − reach · (1 + 2s)`, `d = smoothstep(t − s, t + s, h) · coverage`
   (`s` = softness; amount 0 skips nothing), `mask` debug view (dark where the brush laid paint, white where it left the paper bare, checkerboard off the object; the `coverage` view only showed A, which is solid on the object).
 - `turbulence` is a scene capture of **3D Perlin gradient-noise fBm evaluated
@@ -197,8 +217,8 @@ priority order.
   in alpha, so absent pixels remain checkerboard in debug; it reaches output
   through `sobel-blur` and `edge-darkening`.
 - `BlurPass` is a reusable separable Gaussian blur of any RGBA pass (`inputRef`,
-  `outputRef`, `radius`). `radius` is in CSS pixels (≈3σ, scaled by device
-  pixel ratio so zoom doesn't change it); 0 passes the input through. Taps stay
+  `outputRef`, `radius`). `radius` is in stage pixels (≈3σ, scaled by
+  `pixelsPerStageUnit` so zoom and window size don't change it); 0 passes the input through. Taps stay
   ≤1 texel apart up to 32 per side, then spread evenly. Color is blurred
   premultiplied by alpha and un-premultiplied on the final write, so alpha
   keeps its meaning (coverage/density) and empty pixels' RGB never bleeds in;
@@ -289,15 +309,17 @@ painting, then the Session:
   color`, `dilution`; **Turbulence** › `intensity` (0–1, 0 = off), `scale`
   (noise cycles per object unit), `octaves` (1–6), `warp` (0 = plain fBm);
   **Granulation** › `intensity` (0–1, 0 = off); **Dry brush** › `amount`
-  (0–1, 0 = off), `softness` (0.01–0.3, how feathered the bare peaks are);
+  (0–1, 0 = off), `threshold` (0–1, diffuse level above which it applies),
+  `softness` (0.01–0.3, how feathered the bare peaks are), `transition`
+  (0.01–0.3, fade width around the threshold);
   **Wetness** › `paint blur` (diffuse composition blur, CSS px, 0–16, 0 = off).
 - **Edges**: `darkening` (`k`, 0–5, 0 = off), `width` (sobel blur radius, the
   thesis's `W`, CSS px, 0–16); **Detection** › `sobel strength`, `sobel radius`
   (integer source pixels), `bounding boxes` (orange subject bounds drawn over
-  the depth and sobel views; `DebugPass` draws them after the probe without
-  changing it).
-- **Substrate**: `height map` first (overrides any view with the substrate's
-  grayscale height; picking a view from Inspect or the graph turns it off),
+  the depth and sobel views, and togglable only while viewing one of them;
+  `DebugPass` draws them after the probe without changing it).
+- **Substrate**: `height map` first (disabled unless viewing `substrate`;
+  displays its grayscale height instead of the tinted paper),
   `color`, `scale`; **Distortion** › `enabled`, `amount` (0–8 CSS px);
   **Lighting** › `enabled`, `angle` (degrees, 0 = from the right,
   counter-clockwise; default 120), `strength` (`ds`), `roughness` (`r`). Each
@@ -323,11 +345,14 @@ Leva's own rule), and folder chevrons repainted as the plates' inked chevron
 (Leva's triangle path hidden, the chevron drawn as a CSS mask on the same svg,
 so Leva's open/closed rotation still applies). The body scrolls
 inside the plate when every folder is open. The panel moves and resizes:
-a dotted grip at the right of its caption drags it (arrow keys nudge it 10px;
+dragging anywhere on its caption row moves it (after 4px, so a plain click on
+the title still folds it; the dotted grip also takes arrow keys, 10px, and
 double-click re-docks it top-right), and a hatched grip at the bottom-left
 corner resizes it, keeping the right edge and top fixed (min 260px wide, body
-min 120px). `Plate` takes `style` and a `corner` element (hidden while
-folded) for this. The frame `{ left, top, width, bodyHeight }` is a per-viewer
+min 120px). The panel stays inside the same 12px inset from the window edge
+that Fig. 1 keeps from the top and left (mirrored right and bottom, where the
+caption stays reachable). `Plate` takes `style`, `captionProps` (the drag
+handlers) and a `corner` element (hidden while folded) for this. The frame `{ left, top, width, bodyHeight }` is a per-viewer
 convenience in `localStorage` (`debug-panel-frame`, guarded; absent = docked),
 clamped at render so a smaller window never strands the panel off screen;
 `--dp-top` keeps the scrolling body above the window bottom and
@@ -353,6 +378,8 @@ click-out, and re-click return the debug view to `output`.
 - `src/pipeline/passes/GranulationPass.jsx`, `DryBrushPass.jsx`: paper-height settling and bare-paper masks weighted by diffuse, applied in output.
 - `src/pipeline/passes/EdgeDarkeningPass.jsx`: diffuse blur concentrated along blurred sobel edges.
 - `src/pipeline/passes/OutputPass.jsx`: the finished painting to screen: highlights, substrate distortion, and lighting over edge darkening.
+- `src/pipeline/utils/viewScale.js`: stage-pixel conversion and the render density cap.
+- `src/components/ContainFit.jsx`, `SmoothZoom.jsx`: short-side camera fit and damped wheel zoom.
 - `src/pipeline/WatercolorSubjects.jsx`: registration context and hook.
 - `src/shaders/`: capture, substrate, depth, output, and debug shaders;
   `src/shaders/chunks/oklab.glsl` is shared OKLab pigment concentration.

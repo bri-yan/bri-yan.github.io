@@ -13,6 +13,7 @@ uniform vec2 uCssPixelToUv;
 uniform vec2 uSubstrateTexelSize;
 uniform float uPixelsPerPaperUnit; // device pixels per paper unit (DPR × scale)
 uniform vec3 uPaperColor;
+uniform bool uPaperOnly; // draw the paper alone, without the paint (substrate view)
 uniform bool uDistortionEnabled;
 uniform float uDistortion; // CSS pixels of shift per unit slope
 uniform bool uLightingEnabled;
@@ -61,7 +62,7 @@ void main() {
   paint.a *= 1.0 - texture2D(tSpecular, uv).a;
 
   // Paint over the flat paper color (substrate RGB already bakes its own relief).
-  vec3 color = mix(uPaperColor, paint.rgb, paint.a);
+  vec3 color = uPaperOnly ? uPaperColor : mix(uPaperColor, paint.rgb, paint.a);
 
   // Lighting: normal = up + a lean toward the valley; Id = 1 − ds·(1 − L·N).
   if (uLightingEnabled) {

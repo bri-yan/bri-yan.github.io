@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { MIN_PAPER_SCALE, OUTPUT_FRAME_ORDER } from '../../config';
 import { useFullscreenPass } from '../utils/passHooks';
 import { zoomedPaperScale } from '../utils/paperZoom';
+import { pixelsPerStageUnit } from '../utils/viewScale';
 import oklabChunk from '../../shaders/chunks/oklab.glsl?raw';
 import outputFragment from '../../shaders/outputFragment.frag?raw';
 
@@ -16,6 +17,8 @@ const DEG_TO_RAD = Math.PI / 180;
  * Distortion shifts the paint along the paper slope; granulation and dry brush
  * are then applied at the undistorted pixel so they stay on the paper tooth;
  * lighting shades everything by paper normals rebuilt from that slope.
+ * `paperOnly` leaves the paint out, so the paper reads exactly as it does
+ * under the painting (the substrate view).
  */
 export function OutputPass({
   paintRef,
@@ -24,6 +27,7 @@ export function OutputPass({
   granulationRef,
   dryBrushRef,
   paperColor,
+  paperOnly = false,
   substrateScale,
   distortionEnabled,
   distortion,
@@ -44,6 +48,7 @@ export function OutputPass({
       uSubstrateTexelSize: { value: new THREE.Vector2() },
       uPixelsPerPaperUnit: { value: 1 },
       uPaperColor: { value: paperColor },
+      uPaperOnly: { value: false },
       uDistortionEnabled: { value: true },
       uDistortion: { value: 0 },
       uLightingEnabled: { value: true },
@@ -55,7 +60,6 @@ export function OutputPass({
   );
 
   useFrame((state) => {
-    const { gl } = state;
     const paint = paintRef.current;
     const specular = specularRef.current;
     const substrate = substrateRef.current;
@@ -63,7 +67,7 @@ export function OutputPass({
     const dryBrush = dryBrushRef.current;
     if (!paint || !specular || !substrate || !granulation || !dryBrush) return;
 
-    const pixelRatio = gl.getPixelRatio();
+    const pixelRatio = pixelsPerStageUnit(state); // device pixels per stage pixel
     const paperScale = zoomedPaperScale(state, substrateScale);
     // Distortion is a shift on the paper, so it magnifies along with it.
     const magnification = paperScale / Math.max(substrateScale, MIN_PAPER_SCALE);
@@ -77,6 +81,7 @@ export function OutputPass({
     uniforms.uSubstrateTexelSize.value.set(1 / substrate.width, 1 / substrate.height);
     uniforms.uPixelsPerPaperUnit.value = pixelRatio * paperScale;
     uniforms.uPaperColor.value = paperColor;
+    uniforms.uPaperOnly.value = paperOnly;
     uniforms.uDistortionEnabled.value = distortionEnabled;
     uniforms.uDistortion.value = distortion * magnification;
     uniforms.uLightingEnabled.value = lightingEnabled;
