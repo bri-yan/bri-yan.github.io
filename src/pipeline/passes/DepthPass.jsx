@@ -1,8 +1,9 @@
 import { useMemo, useRef } from 'react';
-import { useFrame, useThree } from '@react-three/fiber';
+import { useThree } from '@react-three/fiber';
 import { useFBO } from '@react-three/drei';
 import * as THREE from 'three';
 import { DEPTH_FBO_OPTIONS, DEPTH_PASS_FRAME_ORDER } from '../../config';
+import { usePaintFrame } from '../PaintingFrame';
 import { renderObjectWithMaterial } from '../utils/renderObjectWithMaterial';
 import { useWatercolorSubjects } from '../WatercolorSubjects';
 import depthVertex from '../../shaders/depthVertex.vert?raw';
@@ -81,7 +82,7 @@ export function DepthPass({ outputRef }) {
 
   if (outputRef) outputRef.current = target;
 
-  useFrame(() => {
+  usePaintFrame(() => {
     camera.updateMatrixWorld();
     const previousTarget = gl.getRenderTarget();
     const previousOverride = scene.overrideMaterial;

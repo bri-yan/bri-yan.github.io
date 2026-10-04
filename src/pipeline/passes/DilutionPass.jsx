@@ -1,5 +1,5 @@
-import { useFrame } from '@react-three/fiber';
 import { DILUTION_PASS_FRAME_ORDER } from '../../config';
+import { usePaintFrame } from '../PaintingFrame';
 import { useFullscreenPass } from '../utils/passHooks';
 import dilutionFragment from '../../shaders/dilutionFragment.frag?raw';
 
@@ -15,7 +15,7 @@ export function DilutionPass({ diffuseRef, outputRef, strength }) {
 
   if (outputRef) outputRef.current = target;
 
-  useFrame(() => {
+  usePaintFrame(() => {
     const diffuse = diffuseRef.current;
     if (!diffuse) return;
     uniforms.tDiffuse.value = diffuse.texture;

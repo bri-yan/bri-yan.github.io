@@ -49,6 +49,7 @@ import { TurbulencePass } from './passes/TurbulencePass';
 import { DepthPass } from './passes/DepthPass';
 import { OutputPass } from './passes/OutputPass';
 import { DebugPass } from './passes/DebugPass';
+import { PaintingFrameProvider } from './PaintingFrame';
 import { WatercolorSubjectsProvider } from './WatercolorSubjects';
 
 const toColor = (value) => (value?.isColor ? value : new THREE.Color(value));
@@ -56,7 +57,8 @@ const toColor = (value) => (value?.isColor ? value : new THREE.Color(value));
 /**
  * The watercolor pipeline. Sibling passes capture the scene (color, depth,
  * lighting), build a paint layer, and finish it on paper in the output pass,
- * which draws to screen.
+ * which draws to screen. The passes before output repaint only when the
+ * painting can have changed (PaintingFrameProvider).
  */
 export function MultiPassPipeline({
   children,
@@ -112,107 +114,114 @@ export function MultiPassPipeline({
       ),
     [fbos]
   );
+  // The painting is on screen unless DebugPass draws a probe over it (the
+  // substrate view is the output without paint, unless showing its height).
+  const paintingShown =
+    debugView === 'output' || (debugView === SUBSTRATE_VIEW && !showSubstrateHeight);
 
   return (
     <>
       <WatercolorSubjectsProvider>
-        {children}
-        <SubstratePass outputRef={fbos.substrate} color={substrate} scale={substrateScale} />
-        <ScenePass outputRef={fbos.scene} active={debugView === 'scene'} />
-        <DepthPass outputRef={fbos.depth} />
-        <DiffusePass
-          outputRef={fbos.diffuse}
-          lightPosition={lightPosition}
-          diffuseAmount={diffuseAmount}
-        />
-        <ColorOverridePass
-          diffuseRef={fbos.diffuse}
-          outputRef={fbos.colorOverride}
-          baseColor={colorOverrideBase}
-          shadowColor={colorOverrideShadow}
-          enabled={colorOverrideEnabled}
-        />
-        <DilutionPass
-          diffuseRef={fbos.diffuse}
-          outputRef={fbos.dilution}
-          strength={dilutionStrength}
-        />
-        <GranulationPass
-          diffuseRef={fbos.diffuse}
-          substrateRef={fbos.substrate}
-          outputRef={fbos.granulation}
-          intensity={granulationIntensity}
-        />
-        <DryBrushPass
-          diffuseRef={fbos.diffuse}
-          substrateRef={fbos.substrate}
-          outputRef={fbos.dryBrush}
-          amount={dryBrushAmount}
-          softness={dryBrushSoftness}
-          lightThreshold={dryBrushLightThreshold}
-          lightSoftness={dryBrushLightSoftness}
-        />
-        <TurbulencePass
-          outputRef={fbos.turbulence}
-          scale={turbulenceScale}
-          octaves={turbulenceOctaves}
-          warp={turbulenceWarp}
-        />
-        <DiffuseCompositionPass
-          colorOverrideRef={fbos.colorOverride}
-          dilutionRef={fbos.dilution}
-          turbulenceRef={fbos.turbulence}
-          outputRef={fbos.diffuseComposition}
-          turbulenceIntensity={turbulenceIntensity}
-        />
-        <SpecularPass
-          outputRef={fbos.specular}
-          lightPosition={lightPosition}
-          shininess={specularShininess}
-          strength={specularStrength}
-          threshold={specularThreshold}
-        />
-        <SobelPass
-          depthRef={fbos.depth}
-          outputRef={fbos.sobel}
-          strength={sobelStrength}
-          radius={sobelRadius}
-        />
-        <BlurPass inputRef={fbos.sobel} outputRef={fbos.sobelBlur} radius={sobelBlurRadius} />
-        <BlurPass
-          inputRef={fbos.diffuseComposition}
-          outputRef={fbos.diffuseCompositionBlur}
-          radius={compositionBlurRadius}
-        />
-        <EdgeDarkeningPass
-          paintRef={fbos.diffuseCompositionBlur}
-          edgesRef={fbos.sobelBlur}
-          outputRef={fbos.edgeDarkening}
-          strength={edgeDarkening}
-        />
-        <OutputPass
-          paintRef={fbos.edgeDarkening}
-          specularRef={fbos.specular}
-          substrateRef={fbos.substrate}
-          granulationRef={fbos.granulation}
-          dryBrushRef={fbos.dryBrush}
-          paperColor={substrate}
-          paperOnly={debugView === SUBSTRATE_VIEW}
-          substrateScale={substrateScale}
-          distortionEnabled={substrateDistortionEnabled}
-          distortion={substrateDistortion}
-          lightingEnabled={substrateLightingEnabled}
-          lightAngle={substrateLightAngle}
-          lightStrength={substrateLightStrength}
-          roughness={substrateRoughness}
-        />
-        <DebugPass
-          passes={debugSources}
-          view={debugView}
-          channel={debugChannel}
-          showBoundingBoxes={showBoundingBoxes}
-          showSubstrateHeight={showSubstrateHeight}
-        />
+        <PaintingFrameProvider>
+          {children}
+          <SubstratePass outputRef={fbos.substrate} color={substrate} scale={substrateScale} />
+          <ScenePass outputRef={fbos.scene} active={debugView === 'scene'} />
+          <DepthPass outputRef={fbos.depth} />
+          <DiffusePass
+            outputRef={fbos.diffuse}
+            lightPosition={lightPosition}
+            diffuseAmount={diffuseAmount}
+          />
+          <ColorOverridePass
+            diffuseRef={fbos.diffuse}
+            outputRef={fbos.colorOverride}
+            baseColor={colorOverrideBase}
+            shadowColor={colorOverrideShadow}
+            enabled={colorOverrideEnabled}
+          />
+          <DilutionPass
+            diffuseRef={fbos.diffuse}
+            outputRef={fbos.dilution}
+            strength={dilutionStrength}
+          />
+          <GranulationPass
+            diffuseRef={fbos.diffuse}
+            substrateRef={fbos.substrate}
+            outputRef={fbos.granulation}
+            intensity={granulationIntensity}
+          />
+          <DryBrushPass
+            diffuseRef={fbos.diffuse}
+            substrateRef={fbos.substrate}
+            outputRef={fbos.dryBrush}
+            amount={dryBrushAmount}
+            softness={dryBrushSoftness}
+            lightThreshold={dryBrushLightThreshold}
+            lightSoftness={dryBrushLightSoftness}
+          />
+          <TurbulencePass
+            outputRef={fbos.turbulence}
+            scale={turbulenceScale}
+            octaves={turbulenceOctaves}
+            warp={turbulenceWarp}
+          />
+          <DiffuseCompositionPass
+            colorOverrideRef={fbos.colorOverride}
+            dilutionRef={fbos.dilution}
+            turbulenceRef={fbos.turbulence}
+            outputRef={fbos.diffuseComposition}
+            turbulenceIntensity={turbulenceIntensity}
+          />
+          <SpecularPass
+            outputRef={fbos.specular}
+            lightPosition={lightPosition}
+            shininess={specularShininess}
+            strength={specularStrength}
+            threshold={specularThreshold}
+          />
+          <SobelPass
+            depthRef={fbos.depth}
+            outputRef={fbos.sobel}
+            strength={sobelStrength}
+            radius={sobelRadius}
+          />
+          <BlurPass inputRef={fbos.sobel} outputRef={fbos.sobelBlur} radius={sobelBlurRadius} />
+          <BlurPass
+            inputRef={fbos.diffuseComposition}
+            outputRef={fbos.diffuseCompositionBlur}
+            radius={compositionBlurRadius}
+          />
+          <EdgeDarkeningPass
+            paintRef={fbos.diffuseCompositionBlur}
+            edgesRef={fbos.sobelBlur}
+            outputRef={fbos.edgeDarkening}
+            strength={edgeDarkening}
+          />
+          <OutputPass
+            paintRef={fbos.edgeDarkening}
+            specularRef={fbos.specular}
+            substrateRef={fbos.substrate}
+            granulationRef={fbos.granulation}
+            dryBrushRef={fbos.dryBrush}
+            paperColor={substrate}
+            paperOnly={debugView === SUBSTRATE_VIEW}
+            substrateScale={substrateScale}
+            distortionEnabled={substrateDistortionEnabled}
+            distortion={substrateDistortion}
+            lightingEnabled={substrateLightingEnabled}
+            lightAngle={substrateLightAngle}
+            lightStrength={substrateLightStrength}
+            roughness={substrateRoughness}
+            cursorEnabled={paintingShown}
+          />
+          <DebugPass
+            passes={debugSources}
+            view={debugView}
+            channel={debugChannel}
+            showBoundingBoxes={showBoundingBoxes}
+            showSubstrateHeight={showSubstrateHeight}
+          />
+        </PaintingFrameProvider>
       </WatercolorSubjectsProvider>
     </>
   );

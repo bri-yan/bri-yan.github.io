@@ -258,12 +258,24 @@ export const ZOOM_SMOOTHING = 8; // higher settles faster (1/s)
 export const ZOOM_SENSITIVITY = 0.0012; // log-distance change per wheel pixel
 export const ZOOM_PINCH_BOOST = 8; // trackpad pinch (ctrl+wheel) reports far smaller deltas
 
+// The painting's own cursor, drawn by OutputPass: a perfect ink ring around a
+// window onto the bare substrate. Sized in CSS pixels like a system cursor (not
+// stage pixels), so it keeps its size at any window size or zoom.
+export const CURSOR_RADIUS = 6; // CSS px, to the middle of the line
+export const CURSOR_LINE_WIDTH = 1; // CSS px
+export const CURSOR_DISTORTION = 0.75; // CSS px per unit paper slope; the ring's own, gentler than the paint's
+export const CURSOR_PRESSED_SCALE = 0.88; // radius multiplier while a button is held
+export const CURSOR_PRESS_SMOOTHING = 20; // higher settles faster (1/s)
+
 export const FULLSCREEN_QUAD_NDC = [-1, 1, 1, -1, 0, 1];
 export const FULLSCREEN_QUAD_SIZE = 2;
 
 // Prioritized frame callbacks disable R3F's automatic render. The pipeline
 // therefore owns the complete frame: captures first, then reductions, output, debug.
 export const UNIFORM_SYNC_FRAME_ORDER = -1;
+// After SmoothZoom (-2) and OrbitControls' update (-1) move the camera, before
+// any pass: decides whether this frame repaints (see PaintingFrame).
+export const PAINTING_CHECK_FRAME_ORDER = -0.5;
 export const SUBSTRATE_PASS_FRAME_ORDER = 0;
 export const SCENE_PASS_FRAME_ORDER = 1;
 export const DEPTH_PASS_FRAME_ORDER = 2;

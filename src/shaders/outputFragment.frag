@@ -1,7 +1,8 @@
 // The finished painting, drawn to screen: substrate effects over the paint
 // layer in thesis order (Montesdeoca §5.3): distortion → granulation and dry
-// brush (§5.1.2) → highlight lift → paint over paper → lighting. The paper
-// slope comes straight from the substrate height by central differences.
+// brush (§5.1.2) → highlight lift → paint over paper → lighting, then the
+// cursor on top. The paper slope comes straight from the substrate height by
+// central differences.
 // concentratePigment comes from chunks/oklab.glsl, prepended by the pass.
 
 uniform sampler2D tPaint; // straight RGB pigment, A = density
@@ -20,6 +21,14 @@ uniform bool uLightingEnabled;
 uniform vec3 uLightDirection; // normalized, y screen-down, z toward viewer
 uniform float uLightStrength; // ds
 uniform float uRoughness; // r
+uniform bool uCursorVisible;
+uniform vec2 uCursorPosition; // device pixels, gl_FragCoord's frame
+uniform float uCursorRadius; // device pixels, to the middle of the line
+uniform float uCursorLineWidth; // device pixels
+uniform float uCursorDistortion; // device pixels of shift per unit slope
+
+// Near-black with the warmth of the plates' ink.
+const vec3 CURSOR_INK = vec3(0.05, 0.045, 0.04);
 
 varying vec2 vUv;
 
@@ -69,6 +78,18 @@ void main() {
     vec3 normal = normalize(vec3(-uRoughness * slope, 1.0));
     float diffuse = max(dot(uLightDirection, normal), 0.0);
     color *= 1.0 - uLightStrength * (1.0 - diffuse);
+  }
+
+  // Cursor: a window onto the bare substrate, ringed in ink. The ring is a
+  // perfect circle nudged by the paper slope like the paint, while the paper
+  // seen through it is read undistorted, so the tooth stays put as it passes.
+  if (uCursorVisible) {
+    vec2 fromCursor = (gl_FragCoord.xy - uCursorPosition) * vec2(1.0, -1.0) + uCursorDistortion * slope;
+    float radius = length(fromCursor);
+    float inside = 1.0 - smoothstep(uCursorRadius - 0.5, uCursorRadius + 0.5, radius);
+    color = mix(color, texture2D(tSubstrate, vUv).rgb, inside);
+    float ring = 1.0 - smoothstep(-0.5, 0.5, abs(radius - uCursorRadius) - 0.5 * uCursorLineWidth);
+    color = mix(color, CURSOR_INK, ring);
   }
 
   gl_FragColor = vec4(color, 1.0);

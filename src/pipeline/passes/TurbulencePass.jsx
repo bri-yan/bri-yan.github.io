@@ -1,8 +1,9 @@
 import { useMemo, useRef } from 'react';
-import { useFrame, useThree } from '@react-three/fiber';
+import { useThree } from '@react-three/fiber';
 import { useFBO } from '@react-three/drei';
 import * as THREE from 'three';
 import { SIGNED_FBO_OPTIONS, TURBULENCE_PASS_FRAME_ORDER } from '../../config';
+import { usePaintFrame } from '../PaintingFrame';
 import { renderSceneWithOverride } from '../utils/renderSceneWithOverride';
 import turbulenceVertex from '../../shaders/turbulenceVertex.vert?raw';
 import turbulenceFragment from '../../shaders/turbulenceFragment.frag?raw';
@@ -28,7 +29,7 @@ export function TurbulencePass({ outputRef, scale, octaves, warp }) {
 
   if (outputRef) outputRef.current = target;
 
-  useFrame(() => {
+  usePaintFrame(() => {
     material.uniforms.uScale.value = scale;
     material.uniforms.uOctaves.value = Math.round(octaves);
     material.uniforms.uWarp.value = warp;

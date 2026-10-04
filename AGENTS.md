@@ -57,12 +57,29 @@ color-override        dilution              │               sobel             
 | `4.2` | `BlurPass` ×2 | Gaussian blurs of `fbos.sobel` → `fbos.sobelBlur` and `fbos.diffuseComposition` → `fbos.diffuseCompositionBlur`. |
 | `4.25` | `EdgeDarkeningPass` | Paint layer in `fbos.edgeDarkening`: diffuse blur concentrated along `fbos.sobelBlur` edges. |
 | `4.3` | `GranulationPass`, `DryBrushPass` | Substrate height × `fbos.diffuse`: signed settling in HalfFloat `fbos.granulation`; bare-paper mask in `fbos.dryBrush`. Read by output. |
-| `5` | `OutputPass` | The finished painting, drawn to screen: edge-darkened paint, highlights lifted, on paper with toggleable substrate distortion and lighting (paper slope computed inline). |
+| `5` | `OutputPass` | The finished painting, drawn to screen: edge-darkened paint, highlights lifted, on paper with toggleable substrate distortion and lighting (paper slope computed inline), then the cursor. |
 | `6` | `DebugPass` | Replaces output with the selected probe. |
 
 Prioritized `useFrame` callbacks disable React Three Fiber's automatic render.
 `MultiPassPipeline` mounts flat sibling passes that communicate by FBO refs in
 priority order.
+
+**The painting repaints only when it can have changed**
+(`src/pipeline/PaintingFrame.jsx`). Every pass before `output` registers with
+`usePaintFrame` instead of `useFrame`, so it runs only on frames that repaint;
+its FBO keeps the last result otherwise. `PaintingFrameProvider` decides at
+`PAINTING_CHECK_FRAME_ORDER` (−0.5: after `SmoothZoom` and OrbitControls move
+the camera, before any pass): it repaints when the camera's world or
+projection matrix, a registered subject mesh's world matrix (compared within
+`1e-4`, about a tenth of a pixel, because OrbitControls' damping never quite
+stops), or the drawing-buffer size changed, or when the pipeline or any
+painting pass re-rendered (a prop change, a new subject, a hot reload). Nothing
+in the painting is time-animated; anything that should be must move a tracked
+matrix or re-render. `OutputPass` and `DebugPass` still draw every frame (one
+fullscreen pass each), so a still painting costs one draw per frame and the
+cursor keeps the display's frame rate; the full pipeline (~20 draws) runs only
+while the view moves or a control changes. Before this, every frame repainted
+everything and a 1440×900 window ran ~40 fps, which made the cursor lag.
 
 ## Stage and render scale
 
@@ -73,7 +90,9 @@ short side were `STAGE_REFERENCE_SIZE` (800). `pixelsPerStageUnit(state)` in
 (`gl.getPixelRatio() × shortSide ÷ STAGE_REFERENCE_SIZE`); `BlurPass`,
 `SubstratePass`, and `OutputPass` use it instead of the raw pixel ratio, so a
 phone and an ultrawide show the same painting in the same proportions. Never
-read `gl.getPixelRatio()` for a CSS-pixel length. `useRenderDpr()` caps the
+read `gl.getPixelRatio()` for a CSS-pixel length. (The one exception is the
+cursor, which is deliberately sized in real CSS pixels like a system cursor;
+see the `output` contract.) `useRenderDpr()` caps the
 canvas density so the short side never renders more than
 `RENDER_MAX_SHORT_SIDE` (1440) device pixels (constant cost on large screens;
 the browser upscales). `ContainFit` fits the camera to the short side (vertical
@@ -145,6 +164,24 @@ overlay plates are fixed CSS size and are not part of the stage.
   flat paper. It is opaque; the paper color is the background, so there is no
   separate background control. Depth-aware distortion (§5.3.1's front-object
   test) is deferred.
+- **The cursor** is drawn last in `output`, in place of the system cursor: a
+  perfect near-black ink ring (`CURSOR_INK`) around a window onto the bare
+  substrate, so wherever it points, paper or painting, it shows the substrate
+  pass's own RGB (with its baked relief, unlit, read at the undistorted pixel
+  so the tooth stays fixed while the cursor moves). The ring itself is nudged
+  by the paper slope (`CURSOR_DISTORTION`, 0.75 px per unit slope, its own and
+  not magnified by zoom); it has no granulation or dry brush. Its lengths are
+  real CSS pixels converted with `gl.getPixelRatio()` (radius
+  `CURSOR_RADIUS` 6 to the line's middle, `CURSOR_LINE_WIDTH` 1), placed by
+  `gl_FragCoord`, so it keeps a system cursor's size at any window size or
+  zoom. Holding a button eases the radius to `CURSOR_PRESSED_SCALE` (0.88).
+  `usePaintingCursor` (`src/pipeline/utils/paintingCursor.js`) tracks the
+  mouse on `window` and sets `cursor: none` on the canvas; the cursor shows
+  only while the canvas is the event target (or holds pointer capture, as
+  OrbitControls does mid-drag), so the plates keep their own system cursors,
+  and never for touch. It is enabled only while the painting is on screen
+  (`output`, or `substrate` without its height map); debug probes keep the
+  system cursor. There is no control for it.
 - `diffuse` is a grayscale flat-to-Lambert response in RGB with geometric
   coverage in alpha. `color-override` maps that response from shadow to base
   pigment color; when disabled it applies the base pigment color under the
@@ -377,7 +414,9 @@ click-out, and re-click return the debug view to `output`.
 - `src/pipeline/passes/TurbulencePass.jsx`: object-space Perlin fBm capture for pigment turbulence.
 - `src/pipeline/passes/GranulationPass.jsx`, `DryBrushPass.jsx`: paper-height settling and bare-paper masks weighted by diffuse, applied in output.
 - `src/pipeline/passes/EdgeDarkeningPass.jsx`: diffuse blur concentrated along blurred sobel edges.
-- `src/pipeline/passes/OutputPass.jsx`: the finished painting to screen: highlights, substrate distortion, and lighting over edge darkening.
+- `src/pipeline/passes/OutputPass.jsx`: the finished painting to screen: highlights, substrate distortion, and lighting over edge darkening, then the cursor.
+- `src/pipeline/PaintingFrame.jsx`: the repaint check and `usePaintFrame`.
+- `src/pipeline/utils/paintingCursor.js`: mouse tracking and system-cursor hiding for the painted cursor.
 - `src/pipeline/utils/viewScale.js`: stage-pixel conversion and the render density cap.
 - `src/components/ContainFit.jsx`, `SmoothZoom.jsx`: short-side camera fit and damped wheel zoom.
 - `src/pipeline/WatercolorSubjects.jsx`: registration context and hook.
@@ -390,7 +429,9 @@ click-out, and re-click return the debug view to `output`.
 
 ## Adding the next pass
 
-1. Add the pass/shader and explicit frame priority.
+1. Add the pass/shader and explicit frame priority. Passes that build the
+   painting use `usePaintFrame`, not `useFrame`; anything new that changes
+   the image over time must make the repaint check fire.
 2. Add a `PIPELINE_STAGES` entry (with `debugMode` if it needs a non-color
    display), mount the pass with its FBO refs, and add only live controls.
    Debug sources and modes are derived from the stage entry. Reusing

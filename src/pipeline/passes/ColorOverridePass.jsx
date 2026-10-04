@@ -1,5 +1,5 @@
-import { useFrame } from '@react-three/fiber';
 import { COLOR_OVERRIDE_PASS_FRAME_ORDER } from '../../config';
+import { usePaintFrame } from '../PaintingFrame';
 import { useFullscreenPass } from '../utils/passHooks';
 import colorOverrideFragment from '../../shaders/colorOverrideFragment.frag?raw';
 
@@ -17,7 +17,7 @@ export function ColorOverridePass({ diffuseRef, outputRef, baseColor, shadowColo
 
   if (outputRef) outputRef.current = target;
 
-  useFrame(() => {
+  usePaintFrame(() => {
     const diffuse = diffuseRef.current;
     if (!diffuse) return;
     uniforms.tDiffuse.value = diffuse.texture;

@@ -1,5 +1,5 @@
-import { useFrame } from '@react-three/fiber';
 import { DIFFUSE_COMPOSITION_PASS_FRAME_ORDER } from '../../config';
+import { usePaintFrame } from '../PaintingFrame';
 import { useFullscreenPass } from '../utils/passHooks';
 import oklabChunk from '../../shaders/chunks/oklab.glsl?raw';
 import diffuseCompositionFragment from '../../shaders/diffuseCompositionFragment.frag?raw';
@@ -26,7 +26,7 @@ export function DiffuseCompositionPass({
 
   if (outputRef) outputRef.current = target;
 
-  useFrame(() => {
+  usePaintFrame(() => {
     const colorOverride = colorOverrideRef.current;
     const dilution = dilutionRef.current;
     const turbulence = turbulenceRef.current;

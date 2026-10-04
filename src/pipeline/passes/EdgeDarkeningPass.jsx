@@ -1,5 +1,5 @@
-import { useFrame } from '@react-three/fiber';
 import { EDGE_DARKENING_PASS_FRAME_ORDER } from '../../config';
+import { usePaintFrame } from '../PaintingFrame';
 import { useFullscreenPass } from '../utils/passHooks';
 import oklabChunk from '../../shaders/chunks/oklab.glsl?raw';
 import edgeDarkeningFragment from '../../shaders/edgeDarkeningFragment.frag?raw';
@@ -16,7 +16,7 @@ export function EdgeDarkeningPass({ paintRef, edgesRef, outputRef, strength }) {
 
   if (outputRef) outputRef.current = target;
 
-  useFrame(() => {
+  usePaintFrame(() => {
     const paint = paintRef.current;
     const edges = edgesRef.current;
     if (!paint || !edges) return;

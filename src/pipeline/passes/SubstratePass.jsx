@@ -1,6 +1,6 @@
 import * as THREE from 'three';
-import { useFrame } from '@react-three/fiber';
 import { SIGNED_FBO_OPTIONS, SUBSTRATE_PASS_FRAME_ORDER } from '../../config';
+import { usePaintFrame } from '../PaintingFrame';
 import { useFullscreenPass } from '../utils/passHooks';
 import { zoomedPaperScale } from '../utils/paperZoom';
 import { pixelsPerStageUnit } from '../utils/viewScale';
@@ -25,7 +25,7 @@ export function SubstratePass({ outputRef, color, scale }) {
 
   if (outputRef) outputRef.current = target;
 
-  useFrame((state) => {
+  usePaintFrame((state) => {
     uniforms.uResolution.value.set(target.width, target.height);
     uniforms.uPixelRatio.value = pixelsPerStageUnit(state);
     uniforms.uSubstrateColor.value = color;

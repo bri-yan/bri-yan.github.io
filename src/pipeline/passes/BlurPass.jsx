@@ -1,6 +1,6 @@
-import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { BLUR_FBO_OPTIONS, BLUR_MAX_TAPS, BLUR_PASS_FRAME_ORDER } from '../../config';
+import { usePaintFrame } from '../PaintingFrame';
 import { useFullscreenPass } from '../utils/passHooks';
 import { pixelsPerStageUnit } from '../utils/viewScale';
 import gaussianBlurFragment from '../../shaders/gaussianBlurFragment.frag?raw';
@@ -39,7 +39,7 @@ export function BlurPass({ inputRef, outputRef, radius, iterations = 1 }) {
 
   if (outputRef) outputRef.current = vertical.target;
 
-  useFrame((state) => {
+  usePaintFrame((state) => {
     const input = inputRef.current;
     if (!input) return;
 

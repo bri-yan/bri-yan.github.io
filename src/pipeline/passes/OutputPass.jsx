@@ -1,6 +1,16 @@
+import { useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
-import { MIN_PAPER_SCALE, OUTPUT_FRAME_ORDER } from '../../config';
+import {
+  CURSOR_DISTORTION,
+  CURSOR_LINE_WIDTH,
+  CURSOR_PRESS_SMOOTHING,
+  CURSOR_PRESSED_SCALE,
+  CURSOR_RADIUS,
+  MIN_PAPER_SCALE,
+  OUTPUT_FRAME_ORDER,
+} from '../../config';
+import { usePaintingCursor } from '../utils/paintingCursor';
 import { useFullscreenPass } from '../utils/passHooks';
 import { zoomedPaperScale } from '../utils/paperZoom';
 import { pixelsPerStageUnit } from '../utils/viewScale';
@@ -10,6 +20,7 @@ import outputFragment from '../../shaders/outputFragment.frag?raw';
 const fragmentShader = `${oklabChunk}\n${outputFragment}`;
 
 const DEG_TO_RAD = Math.PI / 180;
+const drawingBufferSize = new THREE.Vector2();
 
 /**
  * Draws the finished painting to screen: edge-darkened paint on paper with
@@ -18,7 +29,8 @@ const DEG_TO_RAD = Math.PI / 180;
  * are then applied at the undistorted pixel so they stay on the paper tooth;
  * lighting shades everything by paper normals rebuilt from that slope.
  * `paperOnly` leaves the paint out, so the paper reads exactly as it does
- * under the painting (the substrate view).
+ * under the painting (the substrate view). While `cursorEnabled`, it also
+ * draws the cursor over the canvas in place of the system one.
  */
 export function OutputPass({
   paintRef,
@@ -35,7 +47,10 @@ export function OutputPass({
   lightAngle,
   lightStrength,
   roughness,
+  cursorEnabled = false,
 }) {
+  const cursor = usePaintingCursor(cursorEnabled);
+  const press = useRef(0);
   const { uniforms, render } = useFullscreenPass(
     fragmentShader,
     () => ({
@@ -55,11 +70,16 @@ export function OutputPass({
       uLightDirection: { value: new THREE.Vector3() },
       uLightStrength: { value: 0 },
       uRoughness: { value: 1 },
+      uCursorVisible: { value: false },
+      uCursorPosition: { value: new THREE.Vector2() },
+      uCursorRadius: { value: 0 },
+      uCursorLineWidth: { value: 0 },
+      uCursorDistortion: { value: 0 },
     }),
     { offscreen: false }
   );
 
-  useFrame((state) => {
+  useFrame((state, delta) => {
     const paint = paintRef.current;
     const specular = specularRef.current;
     const substrate = substrateRef.current;
@@ -89,6 +109,19 @@ export function OutputPass({
     uniforms.uLightDirection.value.set(Math.cos(angle), -Math.sin(angle), 1).normalize();
     uniforms.uLightStrength.value = lightStrength;
     uniforms.uRoughness.value = roughness;
+
+    // The cursor is sized in CSS pixels and placed in device pixels
+    // (gl_FragCoord), so it keeps a system cursor's size at any zoom.
+    const { uv, onCanvas, pressed } = cursor.current;
+    const cssPixel = state.gl.getPixelRatio(); // device pixels per CSS pixel
+    press.current = THREE.MathUtils.damp(press.current, pressed ? 1 : 0, CURSOR_PRESS_SMOOTHING, delta);
+    state.gl.getDrawingBufferSize(drawingBufferSize);
+    uniforms.uCursorVisible.value = cursorEnabled && onCanvas;
+    uniforms.uCursorPosition.value.copy(uv).multiply(drawingBufferSize);
+    uniforms.uCursorRadius.value =
+      CURSOR_RADIUS * THREE.MathUtils.lerp(1, CURSOR_PRESSED_SCALE, press.current) * cssPixel;
+    uniforms.uCursorLineWidth.value = CURSOR_LINE_WIDTH * cssPixel;
+    uniforms.uCursorDistortion.value = CURSOR_DISTORTION * cssPixel;
     render();
   }, OUTPUT_FRAME_ORDER);
 

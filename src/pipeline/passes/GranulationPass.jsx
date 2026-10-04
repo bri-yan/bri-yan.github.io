@@ -1,5 +1,5 @@
-import { useFrame } from '@react-three/fiber';
 import { GRANULATION_PASS_FRAME_ORDER, SIGNED_FBO_OPTIONS } from '../../config';
+import { usePaintFrame } from '../PaintingFrame';
 import { useFullscreenPass } from '../utils/passHooks';
 import granulationFragment from '../../shaders/granulationFragment.frag?raw';
 
@@ -20,7 +20,7 @@ export function GranulationPass({ diffuseRef, substrateRef, outputRef, intensity
 
   if (outputRef) outputRef.current = target;
 
-  useFrame(() => {
+  usePaintFrame(() => {
     const diffuse = diffuseRef.current;
     const substrate = substrateRef.current;
     if (!diffuse || !substrate) return;

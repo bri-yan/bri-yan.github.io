@@ -120,6 +120,22 @@ its width, with Detection holding the sobel settings and bounding boxes), and
 effects, each with its own toggle). **Session** at the bottom saves or resets. There is no background control: the paper is the
 background.
 
+## The cursor and repainting
+
+Over the painting, the system cursor is replaced by one `OutputPass` draws: a
+small black ink ring that works as a window onto the bare paper. Inside it the
+painting is lifted, so wherever it points, over the paint or the empty sheet,
+you see the substrate itself, fixed to the paper as the ring moves across it.
+The ring is a perfect circle the paper tooth nudges very slightly, and it
+tightens while a button is held. It is sized in real screen pixels like a
+system cursor. The plates and the debug views keep the normal cursor.
+
+The painting is only repainted when it can have changed: when the camera
+moves, the window resizes, or a control changes. Otherwise every pass keeps
+its last result and only the final composite redraws, which is one cheap pass.
+That keeps the cursor at the display's frame rate over a still painting
+instead of waiting on the whole pipeline every frame.
+
 ## Empty pixels and inspection
 
 Intermediate targets stay neutral: the scene capture clears to transparent

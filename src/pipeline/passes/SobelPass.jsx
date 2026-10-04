@@ -1,6 +1,6 @@
-import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { SOBEL_PASS_FRAME_ORDER } from '../../config';
+import { usePaintFrame } from '../PaintingFrame';
 import { useFullscreenPass } from '../utils/passHooks';
 import sobelDirectionalFragment from '../../shaders/sobelDirectionalFragment.frag?raw';
 import sobelCombineFragment from '../../shaders/sobelCombineFragment.frag?raw';
@@ -27,7 +27,7 @@ export function SobelPass({ depthRef, outputRef, strength, radius }) {
 
   if (outputRef) outputRef.current = combined.target;
 
-  useFrame(() => {
+  usePaintFrame(() => {
     const depth = depthRef.current;
     if (!depth) return;
 

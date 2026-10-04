@@ -1,5 +1,5 @@
-import { useFrame } from '@react-three/fiber';
 import { DRY_BRUSH_PASS_FRAME_ORDER } from '../../config';
+import { usePaintFrame } from '../PaintingFrame';
 import { useFullscreenPass } from '../utils/passHooks';
 import dryBrushFragment from '../../shaders/dryBrushFragment.frag?raw';
 
@@ -24,7 +24,7 @@ export function DryBrushPass({
 
   if (outputRef) outputRef.current = target;
 
-  useFrame(() => {
+  usePaintFrame(() => {
     const diffuse = diffuseRef.current;
     const substrate = substrateRef.current;
     if (!diffuse || !substrate) return;

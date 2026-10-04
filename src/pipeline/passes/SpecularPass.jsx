@@ -1,8 +1,9 @@
 import { useMemo, useRef } from 'react';
-import { useFrame, useThree } from '@react-three/fiber';
+import { useThree } from '@react-three/fiber';
 import { useFBO } from '@react-three/drei';
 import * as THREE from 'three';
 import { FBO_OPTIONS, SPECULAR_PASS_FRAME_ORDER } from '../../config';
+import { usePaintFrame } from '../PaintingFrame';
 import { renderSceneWithOverride } from '../utils/renderSceneWithOverride';
 import lightingVertex from '../../shaders/lightingVertex.vert?raw';
 import specularFragment from '../../shaders/specularFragment.frag?raw';
@@ -30,7 +31,7 @@ export function SpecularPass({ outputRef, lightPosition, shininess, strength, th
 
   if (outputRef) outputRef.current = target;
 
-  useFrame(() => {
+  usePaintFrame(() => {
     camera.updateMatrixWorld();
     if (Array.isArray(lightPosition)) lightPositionView.fromArray(lightPosition);
     else lightPositionView.copy(lightPosition);

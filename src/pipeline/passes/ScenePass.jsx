@@ -1,8 +1,9 @@
 import { useRef } from 'react';
-import { useFrame, useThree } from '@react-three/fiber';
+import { useThree } from '@react-three/fiber';
 import { useFBO } from '@react-three/drei';
 import * as THREE from 'three';
 import { FBO_OPTIONS, SCENE_PASS_FRAME_ORDER } from '../../config';
+import { usePaintFrame } from '../PaintingFrame';
 
 /**
  * Captures the unstyled scene with its original materials (the scene probe).
@@ -15,7 +16,7 @@ export function ScenePass({ outputRef, active = true }) {
 
   if (outputRef) outputRef.current = target;
 
-  useFrame(() => {
+  usePaintFrame(() => {
     if (!active) return;
     const previousTarget = gl.getRenderTarget();
     const previousClearAlpha = gl.getClearAlpha();

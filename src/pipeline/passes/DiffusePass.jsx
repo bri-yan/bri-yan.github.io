@@ -1,8 +1,9 @@
 import { useMemo, useRef } from 'react';
-import { useFrame, useThree } from '@react-three/fiber';
+import { useThree } from '@react-three/fiber';
 import { useFBO } from '@react-three/drei';
 import * as THREE from 'three';
 import { DIFFUSE_PASS_FRAME_ORDER, FBO_OPTIONS } from '../../config';
+import { usePaintFrame } from '../PaintingFrame';
 import { renderSceneWithOverride } from '../utils/renderSceneWithOverride';
 import lightingVertex from '../../shaders/lightingVertex.vert?raw';
 import diffuseFragment from '../../shaders/diffuseFragment.frag?raw';
@@ -28,7 +29,7 @@ export function DiffusePass({ outputRef, lightPosition, diffuseAmount }) {
 
   if (outputRef) outputRef.current = target;
 
-  useFrame(() => {
+  usePaintFrame(() => {
     camera.updateMatrixWorld();
     if (Array.isArray(lightPosition)) lightPositionView.fromArray(lightPosition);
     else lightPositionView.copy(lightPosition);
