@@ -55,9 +55,8 @@ const CAPTION_VISIBLE = 40; // the caption always stays this far inside the bott
 const clamp = (value, min, max) => Math.min(Math.max(value, min), Math.max(min, max));
 
 /**
- * Keeps the panel inside the same inset from the window edge that the
- * pipeline plate sits at (EDGE from the top and left; mirrored on the right
- * and bottom, where the caption stays reachable).
+ * Keeps the panel inside an EDGE inset from the window edge (on the bottom,
+ * enough of it that the caption stays reachable).
  */
 const bounded = (left, top, width) => ({
   left: clamp(left, EDGE, window.innerWidth - EDGE - width),
@@ -191,10 +190,10 @@ function usePanelFrame(rootRef) {
 }
 
 /**
- * The Leva controls as Fig. 2, docked opposite the pipeline graph. Dragging
- * the caption moves it, within the same inset from the window edge as Fig. 1
- * (the dotted grip also takes arrow keys; double-click re-docks), and the
- * inked corner at the bottom left resizes it.
+ * The Leva controls as Fig. 1, docked top-right. Dragging the caption moves
+ * it, within a 12px inset from the window edge (the dotted grip also takes
+ * arrow keys; double-click re-docks), and the inked corner at the bottom left
+ * resizes it.
  */
 export function DebugPanel() {
   const rootRef = useRef(null);
@@ -208,7 +207,7 @@ export function DebugPanel() {
       style={style}
       label="Debug controls"
       storageKey="debug-panel-collapsed"
-      title="Fig. 2"
+      title="Fig. 1"
       subtitle="— the controls"
       captionProps={{ onPointerDown: startDrag('move'), onClickCapture: swallowDragClick }}
       aside={

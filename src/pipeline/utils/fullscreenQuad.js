@@ -13,10 +13,13 @@ export function createFullscreenQuad(initialMaterial = null) {
   return { scene, camera, mesh };
 }
 
-/** Renders a fullscreen quad with the given material to the target (null = screen). */
+/**
+ * Renders a fullscreen quad with the given material to the target (null =
+ * screen). The quad covers every pixel, so the target is never cleared first
+ * (the pipeline turns the renderer's autoClear off).
+ */
 export function renderFullscreenQuad(gl, { scene, camera, mesh }, material, target) {
   mesh.material = material;
   gl.setRenderTarget(target);
-  gl.clear();
   gl.render(scene, camera);
 }

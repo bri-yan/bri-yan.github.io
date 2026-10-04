@@ -1,10 +1,6 @@
-import { useEffect, useMemo, useRef } from 'react';
-import { button, folder, levaStore, useControls } from 'leva';
+import { useMemo, useRef } from 'react';
+import { button, folder, useControls } from 'leva';
 import {
-  BOUNDS_VIEWS,
-  DEBUG_CHANNELS,
-  DEBUG_VIEWS,
-  SUBSTRATE_VIEW,
   DEFAULT_COLOR_OVERRIDE_BASE_COLOR,
   DEFAULT_COLOR_OVERRIDE_SHADOW_COLOR,
   DEFAULT_DIFFUSE_AMOUNT,
@@ -40,7 +36,6 @@ import {
 const STORAGE_KEY = 'watercolor-pipeline-controls-v2';
 const LEGACY_STORAGE_KEY = 'watercolor-pipeline-controls';
 const DEFAULTS = {
-  showBoundingBoxes: false,
   lightPosition: DEFAULT_LIGHT_POSITION,
   diffuseAmount: DEFAULT_DIFFUSE_AMOUNT,
   colorOverrideBaseColor: `#${DEFAULT_COLOR_OVERRIDE_BASE_COLOR.getHexString()}`,
@@ -54,7 +49,6 @@ const DEFAULTS = {
   sobelRadius: DEFAULT_SOBEL_RADIUS,
   substrateColor: `#${DEFAULT_SUBSTRATE_COLOR.getHexString()}`,
   substrateScale: DEFAULT_SUBSTRATE_SCALE,
-  showSubstrateHeight: false,
   compositionBlurRadius: DEFAULT_COMPOSITION_BLUR_RADIUS,
   sobelBlurRadius: DEFAULT_SOBEL_BLUR_RADIUS,
   turbulenceIntensity: DEFAULT_TURBULENCE_INTENSITY,
@@ -78,9 +72,7 @@ const DEFAULTS = {
 function loadSaved() {
   try {
     localStorage.removeItem(LEGACY_STORAGE_KEY);
-    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY)) ?? {};
-    if (saved.showBoundingBoxes === undefined) saved.showBoundingBoxes = saved.showNormalizedDepthBounds;
-    return saved;
+    return JSON.parse(localStorage.getItem(STORAGE_KEY)) ?? {};
   } catch {
     return {};
   }
@@ -96,25 +88,14 @@ const slider = (saved, key, min, max, step, label) => ({
 });
 
 /**
- * Leva controls for the active pipeline only: the Inspect tools first, then
- * folders grouped the way a painter thinks about the image (Light, Pigment,
- * Edges, Substrate), then the Session. Control keys match the pipeline prop
- * names, so each folder's values spread straight into the pipeline. Debug
- * views are derived from the shared pipeline definition; session actions
- * persist only live tunables.
+ * Leva controls for the painting: folders grouped the way a painter thinks
+ * about the image (Light, Pigment, Edges, Substrate), then the Session.
+ * Control keys match the pipeline prop names, so each folder's values spread
+ * straight into the pipeline; session actions persist only live tunables.
  */
 export function usePipelineControls() {
   const saved = useMemo(loadSaved, []);
   const initial = (key) => saved[key] ?? DEFAULTS[key];
-
-  const [inspect, setInspect] = useControls('Inspect', () => ({
-    view: { value: 'output', options: DEBUG_VIEWS, transient: false },
-    channel: {
-      value: 'rgb',
-      options: DEBUG_CHANNELS,
-      render: (get) => get('Inspect.view') === 'scene',
-    },
-  }));
 
   const [light, setLight] = useControls('Light', () => ({
     lightPosition: { label: 'position', value: initial('lightPosition') },
@@ -164,13 +145,11 @@ export function usePipelineControls() {
     Detection: folder({
       sobelStrength: slider(saved, 'sobelStrength', 0, 4, 0.01, 'sobel strength'),
       sobelRadius: slider(saved, 'sobelRadius', 1, 6, 1, 'sobel radius'),
-      showBoundingBoxes: { label: 'bounding boxes', value: initial('showBoundingBoxes') },
     }),
   }));
 
   // Each effect toggles independently; its settings show only while it is on.
   const [substrate, setSubstrate] = useControls('Substrate', () => ({
-    showSubstrateHeight: { label: 'height map', value: initial('showSubstrateHeight') },
     substrateColor: { label: 'color', value: initial('substrateColor') },
     substrateScale: slider(saved, 'substrateScale', 0.5, 12, 0.1, 'scale'),
     Distortion: folder({
@@ -197,16 +176,6 @@ export function usePipelineControls() {
     }),
   }));
 
-  // View-specific toggles stay in the panel but can't be flipped until the
-  // view they act on is showing.
-  useEffect(() => {
-    const enabledAt = {
-      'Edges.Detection.showBoundingBoxes': BOUNDS_VIEWS.has(inspect.view),
-      'Substrate.showSubstrateHeight': inspect.view === SUBSTRATE_VIEW,
-    };
-    for (const [path, enabled] of Object.entries(enabledAt)) levaStore.disableInputAtPath(path, !enabled);
-  }, [inspect.view]);
-
   const values = { ...light, ...pigment, ...edges, ...substrate };
   const valuesRef = useRef(values);
   valuesRef.current = values;
@@ -227,10 +196,5 @@ export function usePipelineControls() {
     }),
   }));
 
-  return {
-    ...values,
-    debugView: inspect.view,
-    debugChannel: inspect.channel,
-    setDebugView: (view) => setInspect({ view }),
-  };
+  return values;
 }

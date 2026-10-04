@@ -1,12 +1,5 @@
 // Pigment turbulence noise (Montesdeoca §5.1.1): low-frequency 3D Perlin fBm
-// in object space. RGB = signed density offset in [-1, 1] (+ = more pigment;
-// written to all channels so the signed debug view reads as grayscale).
-
-uniform float uScale; // noise cycles per object unit
-uniform int uOctaves; // 1..MAX_OCTAVES
-uniform float uWarp; // domain warp strength; 0 = plain fBm
-
-varying vec3 vLocalPosition;
+// in object space, so the pattern rides with the mesh under any motion.
 
 const int MAX_OCTAVES = 6; // keep in sync with TURBULENCE_MAX_OCTAVES
 // Fixed rotation between octaves so their grids never line up.
@@ -42,12 +35,12 @@ float perlin(vec3 point) {
 }
 
 // Normalized by total amplitude, so more octaves add detail, not contrast.
-float fbm(vec3 point) {
+float fbm(vec3 point, int octaves) {
   float sum = 0.0;
   float amplitude = 0.5;
   float total = 0.0;
   for (int octave = 0; octave < MAX_OCTAVES; octave++) {
-    if (octave >= uOctaves) break;
+    if (octave >= octaves) break;
     sum += amplitude * perlin(point);
     total += amplitude;
     point = OCTAVE_ROTATION * point * 2.03 + vec3(17.1, -9.7, 5.3);
@@ -56,19 +49,17 @@ float fbm(vec3 point) {
   return sum / total;
 }
 
-void main() {
-  vec3 point = vLocalPosition * uScale;
-
-  // Domain warp: read the fBm where a second fBm "flow" carries the point.
-  if (uWarp > 0.0) {
+// Signed pigment density offset in [-1, 1] (+ = more pigment) at a point
+// already scaled to noise cycles. Warp > 0 reads the fBm where a second fBm
+// "flow" carries the point.
+float turbulence(vec3 point, int octaves, float warp) {
+  if (warp > 0.0) {
     vec3 flow = vec3(
-      fbm(point + vec3(1.7, 9.2, 3.1)),
-      fbm(point + vec3(8.3, 2.8, 6.5)),
-      fbm(point + vec3(4.4, 7.6, 0.9))
+      fbm(point + vec3(1.7, 9.2, 3.1), octaves),
+      fbm(point + vec3(8.3, 2.8, 6.5), octaves),
+      fbm(point + vec3(4.4, 7.6, 0.9), octaves)
     );
-    point += uWarp * flow;
+    point += warp * flow;
   }
-
-  float turbulence = clamp(fbm(point) * 2.0, -1.0, 1.0);
-  gl_FragColor = vec4(vec3(turbulence), 1.0);
+  return clamp(fbm(point, octaves) * 2.0, -1.0, 1.0);
 }

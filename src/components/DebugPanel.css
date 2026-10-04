@@ -1,4 +1,4 @@
-/* Fig. 2, the Leva controls, on the shared figure plate (Plate.css). Leva's
+/* Fig. 1, the Leva controls, on the shared figure plate (Plate.css). Leva's
    theme tokens (DebugPanel.jsx) set its colors and type; the rules below
    reach what tokens can't. Leva's classes are hashed, so they select by tag
    inside .debug-panel, which outranks Stitches' single class. */

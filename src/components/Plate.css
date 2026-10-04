@@ -1,7 +1,6 @@
 /* A figure plate in a printed sketchbook, laid on a frosted sheet of vellum:
-   the render blurs softly behind the type, so the ink reads over any debug
-   view while the painting still shows through. Every overlay (the pipeline
-   graph, the controls) is one of these plates. */
+   the render blurs softly behind the type, so the ink reads over the
+   painting while it still shows through. The controls sit on one. */
 
 :root {
   --plate-ink: #3b3129;
@@ -72,10 +71,6 @@
   font-weight: 400;
   letter-spacing: 0;
   color: var(--plate-ink-soft);
-}
-
-.plate__aside em {
-  color: var(--plate-wash-ink);
 }
 
 /* A small inked tick that turns to point at the folded plate. */

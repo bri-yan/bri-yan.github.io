@@ -7,121 +7,77 @@ import {
   CURSOR_PRESS_SMOOTHING,
   CURSOR_PRESSED_SCALE,
   CURSOR_RADIUS,
-  MIN_PAPER_SCALE,
   OUTPUT_FRAME_ORDER,
 } from '../../config';
 import { usePaintingCursor } from '../utils/paintingCursor';
 import { useFullscreenPass } from '../utils/passHooks';
 import { zoomedPaperScale } from '../utils/paperZoom';
 import { pixelsPerStageUnit } from '../utils/viewScale';
-import oklabChunk from '../../shaders/chunks/oklab.glsl?raw';
+import paperSlopeChunk from '../../shaders/chunks/paperSlope.glsl?raw';
 import outputFragment from '../../shaders/outputFragment.frag?raw';
 
-const fragmentShader = `${oklabChunk}\n${outputFragment}`;
+const fragmentShader = `${paperSlopeChunk}\n${outputFragment}`;
 
-const DEG_TO_RAD = Math.PI / 180;
 const drawingBufferSize = new THREE.Vector2();
+// A generous bound on the paper slope (per paper unit; the tooth stays well
+// under 8), so the cursor's reach covers wherever the slope can push the ring.
+const MAX_PAPER_SLOPE = 16;
+const PRESS_SETTLED = 1e-3;
 
 /**
- * Draws the finished painting to screen: edge-darkened paint on paper with
- * specular highlights lifted to bare paper, and toggleable substrate effects.
- * Distortion shifts the paint along the paper slope; granulation and dry brush
- * are then applied at the undistorted pixel so they stay on the paper tooth;
- * lighting shades everything by paper normals rebuilt from that slope.
- * `paperOnly` leaves the paint out, so the paper reads exactly as it does
- * under the painting (the substrate view). While `cursorEnabled`, it also
- * draws the cursor over the canvas in place of the system one.
+ * Draws every rendered frame to screen: the finished painting (CompositePass)
+ * with the cursor over it in place of the system one. The canvas renders on
+ * demand, so frames that only move the cursor cost this one cheap pass.
  */
-export function OutputPass({
-  paintRef,
-  specularRef,
-  substrateRef,
-  granulationRef,
-  dryBrushRef,
-  paperColor,
-  paperOnly = false,
-  substrateScale,
-  distortionEnabled,
-  distortion,
-  lightingEnabled,
-  lightAngle,
-  lightStrength,
-  roughness,
-  cursorEnabled = false,
-}) {
-  const cursor = usePaintingCursor(cursorEnabled);
+export function OutputPass({ paintingRef, substrateRef, substrateScale }) {
+  const cursor = usePaintingCursor();
   const press = useRef(0);
   const { uniforms, render } = useFullscreenPass(
     fragmentShader,
     () => ({
-      tPaint: { value: null },
-      tSpecular: { value: null },
+      tPainting: { value: null },
       tSubstrate: { value: null },
-      tGranulation: { value: null },
-      tDryBrush: { value: null },
-      uCssPixelToUv: { value: new THREE.Vector2() },
       uSubstrateTexelSize: { value: new THREE.Vector2() },
       uPixelsPerPaperUnit: { value: 1 },
-      uPaperColor: { value: paperColor },
-      uPaperOnly: { value: false },
-      uDistortionEnabled: { value: true },
-      uDistortion: { value: 0 },
-      uLightingEnabled: { value: true },
-      uLightDirection: { value: new THREE.Vector3() },
-      uLightStrength: { value: 0 },
-      uRoughness: { value: 1 },
       uCursorVisible: { value: false },
       uCursorPosition: { value: new THREE.Vector2() },
       uCursorRadius: { value: 0 },
       uCursorLineWidth: { value: 0 },
       uCursorDistortion: { value: 0 },
+      uCursorReach: { value: 0 },
     }),
     { offscreen: false }
   );
 
   useFrame((state, delta) => {
-    const paint = paintRef.current;
-    const specular = specularRef.current;
+    const painting = paintingRef.current;
     const substrate = substrateRef.current;
-    const granulation = granulationRef.current;
-    const dryBrush = dryBrushRef.current;
-    if (!paint || !specular || !substrate || !granulation || !dryBrush) return;
+    if (!painting || !substrate) return;
 
-    const pixelRatio = pixelsPerStageUnit(state); // device pixels per stage pixel
-    const paperScale = zoomedPaperScale(state, substrateScale);
-    // Distortion is a shift on the paper, so it magnifies along with it.
-    const magnification = paperScale / Math.max(substrateScale, MIN_PAPER_SCALE);
-    const angle = lightAngle * DEG_TO_RAD;
-    uniforms.tPaint.value = paint.texture;
-    uniforms.tSpecular.value = specular.texture;
+    uniforms.tPainting.value = painting.texture;
     uniforms.tSubstrate.value = substrate.texture;
-    uniforms.tGranulation.value = granulation.texture;
-    uniforms.tDryBrush.value = dryBrush.texture;
-    uniforms.uCssPixelToUv.value.set(pixelRatio / paint.width, pixelRatio / paint.height);
     uniforms.uSubstrateTexelSize.value.set(1 / substrate.width, 1 / substrate.height);
-    uniforms.uPixelsPerPaperUnit.value = pixelRatio * paperScale;
-    uniforms.uPaperColor.value = paperColor;
-    uniforms.uPaperOnly.value = paperOnly;
-    uniforms.uDistortionEnabled.value = distortionEnabled;
-    uniforms.uDistortion.value = distortion * magnification;
-    uniforms.uLightingEnabled.value = lightingEnabled;
-    // Angle 0° = light from the right, counter-clockwise on screen; y is screen-down.
-    uniforms.uLightDirection.value.set(Math.cos(angle), -Math.sin(angle), 1).normalize();
-    uniforms.uLightStrength.value = lightStrength;
-    uniforms.uRoughness.value = roughness;
+    uniforms.uPixelsPerPaperUnit.value = pixelsPerStageUnit(state) * zoomedPaperScale(state, substrateScale);
 
     // The cursor is sized in CSS pixels and placed in device pixels
     // (gl_FragCoord), so it keeps a system cursor's size at any zoom.
-    const { uv, onCanvas, pressed } = cursor.current;
+    const { uv, onCanvas, pressed, pressChangedAt } = cursor.current;
     const cssPixel = state.gl.getPixelRatio(); // device pixels per CSS pixel
-    press.current = THREE.MathUtils.damp(press.current, pressed ? 1 : 0, CURSOR_PRESS_SMOOTHING, delta);
+    const pressTarget = pressed ? 1 : 0;
+    // After an idle spell the frame delta spans it; the ease starts at the press.
+    const step = Math.min(delta, (performance.now() - pressChangedAt) / 1000);
+    press.current = THREE.MathUtils.damp(press.current, pressTarget, CURSOR_PRESS_SMOOTHING, step);
+    if (Math.abs(press.current - pressTarget) > PRESS_SETTLED) state.invalidate();
+    else press.current = pressTarget;
+    const radius = CURSOR_RADIUS * THREE.MathUtils.lerp(1, CURSOR_PRESSED_SCALE, press.current);
     state.gl.getDrawingBufferSize(drawingBufferSize);
-    uniforms.uCursorVisible.value = cursorEnabled && onCanvas;
+    uniforms.uCursorVisible.value = onCanvas;
     uniforms.uCursorPosition.value.copy(uv).multiply(drawingBufferSize);
-    uniforms.uCursorRadius.value =
-      CURSOR_RADIUS * THREE.MathUtils.lerp(1, CURSOR_PRESSED_SCALE, press.current) * cssPixel;
+    uniforms.uCursorRadius.value = radius * cssPixel;
     uniforms.uCursorLineWidth.value = CURSOR_LINE_WIDTH * cssPixel;
     uniforms.uCursorDistortion.value = CURSOR_DISTORTION * cssPixel;
+    uniforms.uCursorReach.value =
+      (radius + CURSOR_LINE_WIDTH + 1 + CURSOR_DISTORTION * MAX_PAPER_SLOPE) * cssPixel;
     render();
   }, OUTPUT_FRAME_ORDER);
 
