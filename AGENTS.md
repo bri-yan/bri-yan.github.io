@@ -219,7 +219,14 @@ overlay plates are fixed CSS size and are not part of the stage.
   a threshold, evenly: `lit = smoothstep(lt − ls, lt + ls, diffuse)`
   (`lt` = light threshold, `ls` = light softness), `reach = amount · lit`, threshold
   `t = 1 + s − reach · (1 + 2s)`, `d = smoothstep(t − s, t + s, h) · coverage`
-  (`s` = softness; amount 0 skips nothing), `mask` debug view (dark where the brush laid paint, white where it left the paper bare, checkerboard off the object; the `coverage` view only showed A, which is solid on the object).
+  (`s` = softness; amount 0 skips nothing). With `density` above 0, `h` there is
+  how far the point rises above the mean of a ring of eight height taps around
+  it, rescaled to the paper's spread so the dry area for a given amount is
+  unchanged: only local peaks count, so the flecks are smaller, denser, and
+  evenly spread instead of gathering on the paper's broad hills and merging into
+  large patches as the amount grows. The ring runs from 2 paper units at low
+  density to 0.3 at 1 (`DryBrushPass`); density 0 is the paper's own height.
+  `mask` debug view (dark where the brush laid paint, white where it left the paper bare, checkerboard off the object; the `coverage` view only showed A, which is solid on the object).
 - `turbulence` is a scene capture of **3D Perlin gradient-noise fBm evaluated
   at each surface's object-local position**, so the pattern rides with the
   mesh under any camera or object motion (no shower-door) and has no
@@ -346,7 +353,9 @@ painting, then the Session:
   color`, `dilution`; **Turbulence** › `intensity` (0–1, 0 = off), `scale`
   (noise cycles per object unit), `octaves` (1–6), `warp` (0 = plain fBm);
   **Granulation** › `intensity` (0–1, 0 = off); **Dry brush** › `amount`
-  (0–1, 0 = off), `threshold` (0–1, diffuse level above which it applies),
+  (0–1, 0 = off), `density` (0–1, 0 = the paper's own height; more breaks the
+  dry areas into smaller, denser, evenly spread flecks), `threshold` (0–1,
+  diffuse level above which it applies),
   `softness` (0.01–0.3, how feathered the bare peaks are), `transition`
   (0.01–0.3, fade width around the threshold);
   **Wetness** › `paint blur` (diffuse composition blur, CSS px, 0–16, 0 = off).

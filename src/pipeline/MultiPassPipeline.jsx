@@ -22,6 +22,7 @@ import {
   DEFAULT_TURBULENCE_WARP,
   DEFAULT_GRANULATION_INTENSITY,
   DEFAULT_DRY_BRUSH_AMOUNT,
+  DEFAULT_DRY_BRUSH_DENSITY,
   DEFAULT_DRY_BRUSH_SOFTNESS,
   DEFAULT_DRY_BRUSH_LIGHT_THRESHOLD,
   DEFAULT_DRY_BRUSH_LIGHT_SOFTNESS,
@@ -87,6 +88,7 @@ export function MultiPassPipeline({
   turbulenceWarp = DEFAULT_TURBULENCE_WARP,
   granulationIntensity = DEFAULT_GRANULATION_INTENSITY,
   dryBrushAmount = DEFAULT_DRY_BRUSH_AMOUNT,
+  dryBrushDensity = DEFAULT_DRY_BRUSH_DENSITY,
   dryBrushSoftness = DEFAULT_DRY_BRUSH_SOFTNESS,
   dryBrushLightThreshold = DEFAULT_DRY_BRUSH_LIGHT_THRESHOLD,
   dryBrushLightSoftness = DEFAULT_DRY_BRUSH_LIGHT_SOFTNESS,
@@ -155,9 +157,11 @@ export function MultiPassPipeline({
             substrateRef={fbos.substrate}
             outputRef={fbos.dryBrush}
             amount={dryBrushAmount}
+            density={dryBrushDensity}
             softness={dryBrushSoftness}
             lightThreshold={dryBrushLightThreshold}
             lightSoftness={dryBrushLightSoftness}
+            substrateScale={substrateScale}
           />
           <TurbulencePass
             outputRef={fbos.turbulence}

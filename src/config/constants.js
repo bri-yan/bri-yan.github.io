@@ -238,6 +238,7 @@ export const DEFAULT_DRY_BRUSH_AMOUNT = 0.4;
 export const DEFAULT_DRY_BRUSH_SOFTNESS = 0.05;
 export const DEFAULT_DRY_BRUSH_LIGHT_THRESHOLD = 0.6; // diffuse level above which dry brush applies
 export const DEFAULT_DRY_BRUSH_LIGHT_SOFTNESS = 0.25;
+export const DEFAULT_DRY_BRUSH_DENSITY = 0.3; // 0 = the paper's own height; more = smaller, denser flecks
 export const DEFAULT_EDGE_DARKENING = 1.25; // k in Ed = k·Eb
 export const DEFAULT_SUBSTRATE_DISTORTION = 6.5; // CSS pixels per unit slope
 export const DEFAULT_SUBSTRATE_LIGHT_ANGLE = 120; // degrees, counter-clockwise from the right

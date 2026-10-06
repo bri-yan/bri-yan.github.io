@@ -26,6 +26,7 @@ import {
   DEFAULT_TURBULENCE_WARP,
   DEFAULT_GRANULATION_INTENSITY,
   DEFAULT_DRY_BRUSH_AMOUNT,
+  DEFAULT_DRY_BRUSH_DENSITY,
   DEFAULT_DRY_BRUSH_SOFTNESS,
   DEFAULT_DRY_BRUSH_LIGHT_THRESHOLD,
   DEFAULT_DRY_BRUSH_LIGHT_SOFTNESS,
@@ -63,6 +64,7 @@ const DEFAULTS = {
   turbulenceWarp: DEFAULT_TURBULENCE_WARP,
   granulationIntensity: DEFAULT_GRANULATION_INTENSITY,
   dryBrushAmount: DEFAULT_DRY_BRUSH_AMOUNT,
+  dryBrushDensity: DEFAULT_DRY_BRUSH_DENSITY,
   dryBrushSoftness: DEFAULT_DRY_BRUSH_SOFTNESS,
   dryBrushLightThreshold: DEFAULT_DRY_BRUSH_LIGHT_THRESHOLD,
   dryBrushLightSoftness: DEFAULT_DRY_BRUSH_LIGHT_SOFTNESS,
@@ -147,6 +149,7 @@ export function usePipelineControls() {
     }),
     'Dry brush': folder({
       dryBrushAmount: slider(saved, 'dryBrushAmount', 0, 1, 0.01, 'amount'),
+      dryBrushDensity: slider(saved, 'dryBrushDensity', 0, 1, 0.01, 'density'),
       dryBrushLightThreshold: slider(saved, 'dryBrushLightThreshold', 0, 1, 0.01, 'threshold'),
       dryBrushSoftness: slider(saved, 'dryBrushSoftness', 0.01, 0.3, 0.01, 'softness'),
       dryBrushLightSoftness: slider(saved, 'dryBrushLightSoftness', 0.01, 0.3, 0.01, 'transition'),

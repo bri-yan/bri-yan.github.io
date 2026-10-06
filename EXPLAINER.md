@@ -102,7 +102,11 @@ settle into the paper's valleys and drain off its peaks, mostly in the shadows,
 so dark washes look grainy. **Dry brush** leaves the paper's peaks bare where a
 thinly loaded brush would skip them, mostly in the brightest light, so lit
 passages break up into speckled paper. Granulation has an intensity; dry brush
-has an amount and a softness. Both are applied in the output, after the paper
+has an amount, a softness, and a density: left to the paper's own height, its
+bare patches gather on the paper's broad hills and merge into large areas as
+the amount grows, while density counts only how far each point rises above the
+paper right around it, so the flecks are smaller, more numerous, and evenly
+spread. Both are applied in the output, after the paper
 distortion has slid the paint into the valleys but at the undistorted pixel,
 so the grain and the bare peaks sit exactly on the paper you see, stay crisp,
 and dry-brush gaps never pick up an edge-darkened rim.
