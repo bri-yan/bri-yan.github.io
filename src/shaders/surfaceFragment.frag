@@ -32,7 +32,8 @@ varying vec3 vViewPosition;
 varying vec3 vLocalPosition;
 
 void main() {
-  vec3 normal = normalize(vViewNormal);
+  // Back faces (open surfaces seen from behind) face the viewer, so flip them.
+  vec3 normal = normalize(vViewNormal) * (gl_FrontFacing ? 1.0 : -1.0);
   vec3 lightDirection = normalize(uLightPositionView - vViewPosition);
   float diffuse = mix(1.0, max(dot(normal, lightDirection), 0.0), uDiffuseAmount);
 

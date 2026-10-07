@@ -1,5 +1,5 @@
 /* eslint-disable react-refresh/only-export-components -- hooks share this provider context. */
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { createContext, useCallback, useContext, useLayoutEffect, useMemo, useRef, useState } from 'react';
 
 const WatercolorSubjectsContext = createContext(null);
 
@@ -15,12 +15,16 @@ export function WatercolorSubjectsProvider({ children }) {
   return <WatercolorSubjectsContext.Provider value={value}>{children}</WatercolorSubjectsContext.Provider>;
 }
 
-/** Register a mesh/group whose visible depth receives its own 0–1 range. */
+/**
+ * Register a mesh/group whose visible depth receives its own 0–1 range. It
+ * registers before paint, so a view that mounts new subjects never renders a
+ * frame with them unregistered (no depth range, so no edges).
+ */
 export function useWatercolorSubject(ref, id) {
   const context = useContext(WatercolorSubjectsContext);
   if (!context) throw new Error('useWatercolorSubject must be used inside MultiPassPipeline.');
   const { register } = context;
-  useEffect(() => register(ref, id), [id, ref, register]);
+  useLayoutEffect(() => register(ref, id), [id, ref, register]);
 }
 
 export function useWatercolorSubjects() {

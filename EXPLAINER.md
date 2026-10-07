@@ -94,7 +94,11 @@ rim. **Granulation** lets pigment settle into the paper's valleys and drain
 off its peaks, mostly in the shadows, so dark washes look grainy. **Dry
 brush** leaves the paper's peaks bare where a thinly loaded brush would skip
 them, mostly in the brightest light, so lit passages break up into speckled
-paper. **Specular highlights** are then left unpainted, like a watercolorist
+paper. Left to the paper's own height, the bare patches gather on its broad
+hills and merge into large areas as the amount grows; **density** instead
+counts only how far each point rises above the paper right around it, so the
+bare flecks come out smaller, more numerous, and evenly spread, and a larger
+amount adds flecks rather than blotches. **Specular highlights** are then left unpainted, like a watercolorist
 saving the white of the paper: the specular mask removes pigment, so bare
 paper shows. The paint is then laid over the flat paper color. **Lighting**
 shades the result as if the paper were lit from one side, using a surface
@@ -144,6 +148,28 @@ rather than color into them.
 ## Subjects
 
 `useWatercolorSubject(ref, id)` registers a mesh or group for object-local
-depth normalization. The torus knot is registered as `torus-knot`; add only
-intentional watercolor subjects, because each has its transformed mesh bounds
-evaluated on every repaint.
+depth normalization. Add only intentional watercolor subjects, because each has
+its transformed mesh bounds evaluated on every repaint.
+
+## Views
+
+The page shows one view at a time: a single object (torus knot, sphere, cube,
+icosahedron, torus, teapot) or a composition of several (the forms study: a
+hexagonal prism, a sphere, a cone standing on a low block, and an icosahedron,
+seen from higher up). The view select in the Scene section at the top of the
+controls switches between them, and the choice is remembered. Each object is a
+subject. Shapes are sized in their geometry, not by scaling the mesh, so the
+pigment turbulence, which follows the geometry's own coordinates, has the same
+mottling on every one. The camera is framed once for the first view; switching
+leaves it exactly where it is, so the painting changes under an unchanged
+view. The
+surface render draws both sides of every face, so open surfaces such as the
+teapot's lid gap and spout shade correctly.
+
+Switching goes through bare paper. The painting is unpainted the way a dry
+brush runs out of paint: the paper's peaks go bare first, then its valleys,
+until only paper is left, while the shading flattens, the wash thins, and what
+is left fades away, so no outline of the shape lingers. The
+new view is then painted in the same way backwards, valleys first. Each half
+takes under a second, and choosing the first view again mid-way simply
+reverses it.

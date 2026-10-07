@@ -1,5 +1,5 @@
 /* eslint-disable react-refresh/only-export-components -- hooks share this provider context. */
-import { createContext, useContext, useLayoutEffect, useMemo } from 'react';
+import { createContext, useCallback, useContext, useLayoutEffect, useMemo } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { PAINTING_CHECK_FRAME_ORDER } from '../config';
@@ -99,6 +99,17 @@ export function PaintingFrameProvider({ children }) {
   }, PAINTING_CHECK_FRAME_ORDER);
 
   return <PaintingFrameContext.Provider value={frame}>{children}</PaintingFrameContext.Provider>;
+}
+
+/** Returns a function that marks the painting stale and asks for a frame. */
+export function useRepaint() {
+  const frame = useContext(PaintingFrameContext);
+  if (!frame) throw new Error('useRepaint must be used inside MultiPassPipeline.');
+  const invalidate = useThree((state) => state.invalidate);
+  return useCallback(() => {
+    frame.stale = true;
+    invalidate();
+  }, [frame, invalidate]);
 }
 
 /**

@@ -22,6 +22,7 @@ import {
   DEFAULT_TURBULENCE_WARP,
   DEFAULT_GRANULATION_INTENSITY,
   DEFAULT_DRY_BRUSH_AMOUNT,
+  DEFAULT_DRY_BRUSH_DENSITY,
   DEFAULT_DRY_BRUSH_SOFTNESS,
   DEFAULT_DRY_BRUSH_LIGHT_THRESHOLD,
   DEFAULT_DRY_BRUSH_LIGHT_SOFTNESS,
@@ -32,9 +33,11 @@ import {
   DEFAULT_SUBSTRATE_LIGHT_STRENGTH,
   DEFAULT_SUBSTRATE_ROUGHNESS,
 } from '../config';
+import { DEFAULT_VIEW_ID, VIEW_OPTIONS, getView } from '../views';
 
 const STORAGE_KEY = 'watercolor-pipeline-controls-v2';
 const LEGACY_STORAGE_KEY = 'watercolor-pipeline-controls';
+const VIEW_STORAGE_KEY = 'watercolor-view';
 const DEFAULTS = {
   lightPosition: DEFAULT_LIGHT_POSITION,
   diffuseAmount: DEFAULT_DIFFUSE_AMOUNT,
@@ -57,6 +60,7 @@ const DEFAULTS = {
   turbulenceWarp: DEFAULT_TURBULENCE_WARP,
   granulationIntensity: DEFAULT_GRANULATION_INTENSITY,
   dryBrushAmount: DEFAULT_DRY_BRUSH_AMOUNT,
+  dryBrushDensity: DEFAULT_DRY_BRUSH_DENSITY,
   dryBrushSoftness: DEFAULT_DRY_BRUSH_SOFTNESS,
   dryBrushLightThreshold: DEFAULT_DRY_BRUSH_LIGHT_THRESHOLD,
   dryBrushLightSoftness: DEFAULT_DRY_BRUSH_LIGHT_SOFTNESS,
@@ -78,6 +82,16 @@ function loadSaved() {
   }
 }
 
+/** The last view this viewer chose; an unknown or unreadable value falls back to the default. */
+function loadSavedView() {
+  try {
+    const id = localStorage.getItem(VIEW_STORAGE_KEY);
+    return getView(id) ? id : DEFAULT_VIEW_ID;
+  } catch {
+    return DEFAULT_VIEW_ID;
+  }
+}
+
 const pick = (source, keys) => Object.fromEntries(keys.map((key) => [key, source[key]]));
 const slider = (saved, key, min, max, step, label) => ({
   ...(label && { label }),
@@ -88,14 +102,40 @@ const slider = (saved, key, min, max, step, label) => ({
 });
 
 /**
- * Leva controls for the painting: folders grouped the way a painter thinks
- * about the image (Light, Pigment, Edges, Substrate), then the Session.
- * Control keys match the pipeline prop names, so each folder's values spread
- * straight into the pipeline; session actions persist only live tunables.
+ * Leva controls for the painting: the Scene first, then folders grouped the
+ * way a painter thinks about the image (Light, Pigment, Edges, Substrate),
+ * then the Session. Control keys match the pipeline prop names, so each
+ * folder's values spread straight into the pipeline; session actions persist
+ * only live tunables. The view is the exception: it picks the scene, not a
+ * pipeline prop, so it is returned apart from the painting values (App strips
+ * it) and is remembered on its own, not by the session actions.
  */
 export function usePipelineControls() {
   const saved = useMemo(loadSaved, []);
   const initial = (key) => saved[key] ?? DEFAULTS[key];
+  const savedView = useMemo(loadSavedView, []);
+
+  // Pinned first with `order`: a folder registered later (a hot reload) would
+  // otherwise land after the ones already in the panel.
+  const [{ view }] = useControls(
+    'Scene',
+    () => ({
+      view: {
+        value: savedView,
+        options: VIEW_OPTIONS,
+        onChange: (value, _path, { initial: isInitial }) => {
+          if (isInitial) return;
+          try {
+            localStorage.setItem(VIEW_STORAGE_KEY, value);
+          } catch {
+            // The choice still holds for this visit.
+          }
+        },
+        transient: false, // re-render on change, so App swaps the scene
+      },
+    }),
+    { order: -1 }
+  );
 
   const [light, setLight] = useControls('Light', () => ({
     lightPosition: { label: 'position', value: initial('lightPosition') },
@@ -128,6 +168,7 @@ export function usePipelineControls() {
     }),
     'Dry brush': folder({
       dryBrushAmount: slider(saved, 'dryBrushAmount', 0, 1, 0.01, 'amount'),
+      dryBrushDensity: slider(saved, 'dryBrushDensity', 0, 1, 0.01, 'density'),
       dryBrushLightThreshold: slider(saved, 'dryBrushLightThreshold', 0, 1, 0.01, 'threshold'),
       dryBrushSoftness: slider(saved, 'dryBrushSoftness', 0.01, 0.3, 0.01, 'softness'),
       dryBrushLightSoftness: slider(saved, 'dryBrushLightSoftness', 0.01, 0.3, 0.01, 'transition'),
@@ -196,5 +237,5 @@ export function usePipelineControls() {
     }),
   }));
 
-  return values;
+  return { ...values, view };
 }

@@ -54,12 +54,30 @@ export const DEFAULT_DRY_BRUSH_AMOUNT = 0.4;
 export const DEFAULT_DRY_BRUSH_SOFTNESS = 0.05;
 export const DEFAULT_DRY_BRUSH_LIGHT_THRESHOLD = 0.6; // diffuse level above which dry brush applies
 export const DEFAULT_DRY_BRUSH_LIGHT_SOFTNESS = 0.25;
+// Dry brush density breaks the dry areas into smaller, denser flecks: 0 judges the
+// paper's own height, which clusters on its broad hills and merges into large
+// patches as the amount grows; more judges only how far each point rises above
+// the paper around it, at a ring radius (paper units) from the max down to the
+// min. See CompositePass.
+export const DEFAULT_DRY_BRUSH_DENSITY = 0.3;
+export const DRY_BRUSH_FLECK_MAX = 2;
+export const DRY_BRUSH_FLECK_MIN = 0.3;
+// Switching views unpaints the old painting to bare paper, then paints the new
+// one in; each half takes this long. While unpainted, the shading flattens
+// (diffuse intensity falls by this fraction) and the wash thins (dilution rises
+// toward 1 by this fraction).
+export const VIEW_TRANSITION_SECONDS = 0.72;
+export const TRANSITION_DIFFUSE_FALL = 0.6;
+export const TRANSITION_DILUTION_RISE = 1;
 export const DEFAULT_EDGE_DARKENING = 1.25; // k in Ed = k·Eb
 export const DEFAULT_SUBSTRATE_DISTORTION = 6.5; // CSS pixels per unit slope
 export const DEFAULT_SUBSTRATE_LIGHT_ANGLE = 120; // degrees, counter-clockwise from the right
 export const DEFAULT_SUBSTRATE_LIGHT_STRENGTH = 0.1;
 export const DEFAULT_SUBSTRATE_ROUGHNESS = 1;
 export const CANVAS_CAMERA = { position: [0, 0, 5], fov: 75 };
+
+// Most objects one view may hold.
+export const MAX_VIEW_OBJECTS = 5;
 
 // The pipeline is authored on a virtual stage: every "CSS pixel" length (blur
 // radii, paper scale, distortion, ...) is measured as if the window's short

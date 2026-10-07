@@ -23,6 +23,7 @@ import {
   DEFAULT_TURBULENCE_WARP,
   DEFAULT_GRANULATION_INTENSITY,
   DEFAULT_DRY_BRUSH_AMOUNT,
+  DEFAULT_DRY_BRUSH_DENSITY,
   DEFAULT_DRY_BRUSH_SOFTNESS,
   DEFAULT_DRY_BRUSH_LIGHT_THRESHOLD,
   DEFAULT_DRY_BRUSH_LIGHT_SOFTNESS,
@@ -38,6 +39,7 @@ import { SobelPass } from './passes/SobelPass';
 import { SubstratePass } from './passes/SubstratePass';
 import { SurfacePass } from './passes/SurfacePass';
 import { PaintingFrameProvider } from './PaintingFrame';
+import { TransitionProvider } from './Transition';
 import { WatercolorSubjectsProvider } from './WatercolorSubjects';
 
 const toColor = (value) => (value?.isColor ? value : new THREE.Color(value));
@@ -73,6 +75,7 @@ export function MultiPassPipeline({
   turbulenceWarp = DEFAULT_TURBULENCE_WARP,
   granulationIntensity = DEFAULT_GRANULATION_INTENSITY,
   dryBrushAmount = DEFAULT_DRY_BRUSH_AMOUNT,
+  dryBrushDensity = DEFAULT_DRY_BRUSH_DENSITY,
   dryBrushSoftness = DEFAULT_DRY_BRUSH_SOFTNESS,
   dryBrushLightThreshold = DEFAULT_DRY_BRUSH_LIGHT_THRESHOLD,
   dryBrushLightSoftness = DEFAULT_DRY_BRUSH_LIGHT_SOFTNESS,
@@ -105,55 +108,58 @@ export function MultiPassPipeline({
 
   return (
     <WatercolorSubjectsProvider>
-      <PaintingFrameProvider>
-        {children}
-        <SubstratePass outputRef={substrateRef} color={substrate} scale={substrateScale} />
-        <SurfacePass
-          outputRef={surfaceRef}
-          lightPosition={lightPosition}
-          diffuseAmount={diffuseAmount}
-          baseColor={colorOverrideBase}
-          shadowColor={colorOverrideShadow}
-          colorOverrideEnabled={colorOverrideEnabled}
-          dilution={dilutionStrength}
-          turbulenceIntensity={turbulenceIntensity}
-          turbulenceScale={turbulenceScale}
-          turbulenceOctaves={turbulenceOctaves}
-          turbulenceWarp={turbulenceWarp}
-          specularShininess={specularShininess}
-          specularStrength={specularStrength}
-          specularThreshold={specularThreshold}
-        />
-        <SobelPass surfaceRef={surfaceRef} outputRef={edgesRef} strength={sobelStrength} radius={sobelRadius} />
-        <EdgeDarkeningPass
-          paintRef={surfaceRef}
-          edgesRef={edgesRef}
-          outputRef={paintRef}
-          paintBlurRadius={compositionBlurRadius}
-          edgeBlurRadius={sobelBlurRadius}
-          strength={edgeDarkening}
-        />
-        <CompositePass
-          paintRef={paintRef}
-          surfaceRef={surfaceRef}
-          substrateRef={substrateRef}
-          outputRef={paintingRef}
-          paperColor={substrate}
-          substrateScale={substrateScale}
-          distortionEnabled={substrateDistortionEnabled}
-          distortion={substrateDistortion}
-          granulationIntensity={granulationIntensity}
-          dryBrushAmount={dryBrushAmount}
-          dryBrushSoftness={dryBrushSoftness}
-          dryBrushLightThreshold={dryBrushLightThreshold}
-          dryBrushLightSoftness={dryBrushLightSoftness}
-          lightingEnabled={substrateLightingEnabled}
-          lightAngle={substrateLightAngle}
-          lightStrength={substrateLightStrength}
-          roughness={substrateRoughness}
-        />
-        <OutputPass paintingRef={paintingRef} substrateRef={substrateRef} substrateScale={substrateScale} />
-      </PaintingFrameProvider>
+      <TransitionProvider>
+        <PaintingFrameProvider>
+          {children}
+          <SubstratePass outputRef={substrateRef} color={substrate} scale={substrateScale} />
+          <SurfacePass
+            outputRef={surfaceRef}
+            lightPosition={lightPosition}
+            diffuseAmount={diffuseAmount}
+            baseColor={colorOverrideBase}
+            shadowColor={colorOverrideShadow}
+            colorOverrideEnabled={colorOverrideEnabled}
+            dilution={dilutionStrength}
+            turbulenceIntensity={turbulenceIntensity}
+            turbulenceScale={turbulenceScale}
+            turbulenceOctaves={turbulenceOctaves}
+            turbulenceWarp={turbulenceWarp}
+            specularShininess={specularShininess}
+            specularStrength={specularStrength}
+            specularThreshold={specularThreshold}
+          />
+          <SobelPass surfaceRef={surfaceRef} outputRef={edgesRef} strength={sobelStrength} radius={sobelRadius} />
+          <EdgeDarkeningPass
+            paintRef={surfaceRef}
+            edgesRef={edgesRef}
+            outputRef={paintRef}
+            paintBlurRadius={compositionBlurRadius}
+            edgeBlurRadius={sobelBlurRadius}
+            strength={edgeDarkening}
+          />
+          <CompositePass
+            paintRef={paintRef}
+            surfaceRef={surfaceRef}
+            substrateRef={substrateRef}
+            outputRef={paintingRef}
+            paperColor={substrate}
+            substrateScale={substrateScale}
+            distortionEnabled={substrateDistortionEnabled}
+            distortion={substrateDistortion}
+            granulationIntensity={granulationIntensity}
+            dryBrushAmount={dryBrushAmount}
+            dryBrushDensity={dryBrushDensity}
+            dryBrushSoftness={dryBrushSoftness}
+            dryBrushLightThreshold={dryBrushLightThreshold}
+            dryBrushLightSoftness={dryBrushLightSoftness}
+            lightingEnabled={substrateLightingEnabled}
+            lightAngle={substrateLightAngle}
+            lightStrength={substrateLightStrength}
+            roughness={substrateRoughness}
+          />
+          <OutputPass paintingRef={paintingRef} substrateRef={substrateRef} substrateScale={substrateScale} />
+        </PaintingFrameProvider>
+      </TransitionProvider>
     </WatercolorSubjectsProvider>
   );
 }

@@ -2,8 +2,14 @@ import { useMemo, useRef } from 'react';
 import { useThree } from '@react-three/fiber';
 import { useFBO } from '@react-three/drei';
 import * as THREE from 'three';
-import { SURFACE_PASS_FRAME_ORDER, SURFACE_TARGET_OPTIONS } from '../../config';
+import {
+  SURFACE_PASS_FRAME_ORDER,
+  SURFACE_TARGET_OPTIONS,
+  TRANSITION_DILUTION_RISE,
+  TRANSITION_DIFFUSE_FALL,
+} from '../../config';
 import { usePaintFrame } from '../PaintingFrame';
+import { useTransition } from '../Transition';
 import { renderObjectWithMaterial } from '../utils/renderObjectWithMaterial';
 import { useWatercolorSubjects } from '../WatercolorSubjects';
 import oklabChunk from '../../shaders/chunks/oklab.glsl?raw';
@@ -55,7 +61,8 @@ function updateObjectDepthRange(object, camera, corner, range) {
  * Lambert light), and [1] diffuse, specular mask, per-subject depth, coverage.
  * A depth-only pre-pass of the whole scene comes first, so each pixel is
  * shaded once, by its frontmost surface. Subjects then render one at a time
- * with their own depth range; other meshes render first with depth −1.
+ * with their own depth range; other meshes render first with depth −1. Both
+ * materials are double-sided, so the back faces of open surfaces shade too.
  */
 export function SurfacePass({
   outputRef,
@@ -76,9 +83,14 @@ export function SurfacePass({
   const { gl, scene, camera } = useThree();
   const target = useFBO(SURFACE_TARGET_OPTIONS);
   const subjects = useWatercolorSubjects();
+  const transition = useTransition();
   const savedClearColor = useRef(new THREE.Color()).current;
   const scratch = useMemo(
-    () => ({ corner: new THREE.Vector3(), range: new THREE.Vector2(), hidden: [] }),
+    () => ({
+      corner: new THREE.Vector3(),
+      range: new THREE.Vector2(),
+      hidden: [],
+    }),
     []
   );
   // Both materials share the vertex source, so their depths match exactly.
@@ -89,6 +101,7 @@ export function SurfacePass({
         fragmentShader: 'void main() {}',
         glslVersion: THREE.GLSL3,
         colorWrite: false,
+        side: THREE.DoubleSide,
       }),
     []
   );
@@ -117,6 +130,8 @@ export function SurfacePass({
         },
         depthFunc: THREE.LessEqualDepth,
         depthWrite: false,
+        // Open or thin surfaces (the teapot's lid gap and spout) show back faces.
+        side: THREE.DoubleSide,
       }),
     []
   );
@@ -134,11 +149,13 @@ export function SurfacePass({
     if (Array.isArray(lightPosition)) lightView.fromArray(lightPosition);
     else lightView.copy(lightPosition);
     lightView.applyMatrix4(camera.matrixWorldInverse);
-    uniforms.uDiffuseAmount.value = diffuseAmount;
+    // A view transition flattens the shading and thins the wash as it unpaints.
+    const unpainted = transition.progress;
+    uniforms.uDiffuseAmount.value = diffuseAmount * (1 - TRANSITION_DIFFUSE_FALL * unpainted);
     uniforms.uBaseColor.value.copy(baseColor);
     uniforms.uShadowColor.value.copy(shadowColor);
     uniforms.uColorOverrideEnabled.value = colorOverrideEnabled;
-    uniforms.uDilution.value = dilution;
+    uniforms.uDilution.value = dilution + (1 - dilution) * TRANSITION_DILUTION_RISE * unpainted;
     uniforms.uTurbulenceIntensity.value = turbulenceIntensity;
     uniforms.uTurbulenceScale.value = turbulenceScale;
     uniforms.uTurbulenceOctaves.value = Math.round(turbulenceOctaves);
